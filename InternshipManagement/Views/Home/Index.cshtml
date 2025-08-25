@@ -2,7 +2,51 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero bg-primary-main text-white rounded-3 p-4 p-lg-5 shadow-sm">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center">
+        <div class="flex-grow-1">
+            <h1 class="display-5 fw-bold mb-3">Chào mừng bạn đến với hệ thống quản lý sinh viên thực tập</h1>
+            <p class="lead mb-4">
+                Quản lý Khoa, Giảng viên, Sinh viên, Đề tài; tra cứu và xuất báo cáo nhanh chóng.
+            </p>
+            <div class="d-flex gap-2">
+                <a class="btn btn-light btn-lg fw-semibold" href="/SinhVien">Bắt đầu quản lý</a>
+                <a class="btn btn-outline-light btn-lg" target="_blank" href="https://learn.microsoft.com/aspnet/core">
+                    Tài liệu ASP.NET Core
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mt-4">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Sinh viên</h5>
+                    <p class="card-text text-secondary">Tìm kiếm, lọc theo khoa, quản lý hồ sơ và kết quả thực tập.</p>
+                    <a href="/SinhVien" class="btn btn-primary-main">Đi tới danh sách</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Giảng viên</h5>
+                    <p class="card-text text-secondary">Danh sách giảng viên hướng dẫn, thống kê số lượng SV.</p>
+                    <a href="/GiangVien" class="btn btn-primary-main">Quản lý giảng viên</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Báo cáo</h5>
+                    <p class="card-text text-secondary">Xuất Word/Excel danh sách thực tập theo tiêu chí lọc.</p>
+                    <a href="/Reports" class="btn btn-primary-main">Mở trang báo cáo</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

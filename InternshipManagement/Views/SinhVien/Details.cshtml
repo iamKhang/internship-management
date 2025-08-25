@@ -1,0 +1,18 @@
+﻿@model InternshipManagement.Models.ViewModels.SinhVienListItemVm
+@{
+    ViewData["Title"] = "Chi tiết Sinh viên";
+}
+<h2>Chi tiết Sinh viên</h2>
+<dl class="row">
+    <dt class="col-sm-2">Mã SV</dt>
+    <dd class="col-sm-10">@Model.Masv</dd>
+    <dt class="col-sm-2">Họ tên</dt>
+    <dd class="col-sm-10">@Model.Hotensv</dd>
+    <dt class="col-sm-2">Khoa</dt>
+    <dd class="col-sm-10">@Model.TenKhoa (@Model.MaKhoa)</dd>
+    <dt class="col-sm-2">Năm sinh</dt>
+    <dd class="col-sm-10">@Model.NamSinh</dd>
+    <dt class="col-sm-2">Quê quán</dt>
+    <dd class="col-sm-10">@Model.QueQuan</dd>
+</dl>
+<a class="btn btn-secondary" href="@Url.Action("Index")">Quay lại</a>

@@ -1,0 +1,188 @@
+﻿@model InternshipManagement.Models.ViewModels.SinhVienIndexVm
+@{
+    ViewData["Title"] = "Danh sách Sinh viên";
+    // Nếu _ViewStart.cshtml đã set layout thì bỏ dòng dưới
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="mb-3">Danh sách Sinh viên</h2>
+
+@* ---- Alert TempData ---- *@
+@if (TempData["Success"] is string ok && !string.IsNullOrWhiteSpace(ok))
+{
+    <div class="alert alert-success shadow-sm">@ok</div>
+}
+@if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
+{
+    <div class="alert alert-danger shadow-sm">@err</div>
+}
+
+<form method="get" class="mb-4 p-3 border rounded-3 bg-white">
+    <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-6 col-lg-2">
+            <label class="form-label">Từ khoá</label>
+            <input class="form-control" name="Keyword"
+                   value="@Model?.Filter?.Keyword"
+                   placeholder="Tên, quê quán hoặc mã SV">
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+            <label class="form-label">Khoa</label>
+            <select class="form-select" name="MaKhoa">
+                <option value="">-- Chọn khoa --</option>
+                @foreach (var opt in Model.KhoaOptions)
+                {
+                    <option value="@opt.Value" selected="@(opt.Selected ? "selected" : null)">@opt.Text</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-3 col-lg">
+            <label class="form-label">Năm sinh từ</label>
+            <input class="form-control" type="number" name="NamSinhMin"
+                   value="@(Model?.Filter?.NamSinhMin?.ToString())">
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-3 col-lg">
+            <label class="form-label">Đến</label>
+            <input class="form-control" type="number" name="NamSinhMax"
+                   value="@(Model?.Filter?.NamSinhMax?.ToString())">
+        </div>
+
+        <div class="col-12 col-lg-auto d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-funnel-fill me-1"></i> Lọc
+            </button>
+            <a class="btn btn-outline-secondary" href="@Url.Action("Index")">
+                <i class="bi bi-arrow-clockwise me-1"></i> Xoá lọc
+            </a>
+            <a class="btn btn-success" href="@Url.Action("Create")">
+                <i class="bi bi-person-fill-add me-1"></i> Thêm SV
+            </a>
+        </div>
+
+    </div>
+</form>
+
+@if (Model?.Items != null && Model.Items.Any())
+{
+    <div class="table-responsive bg-white border rounded-3">
+        <table class="table table-striped align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã SV</th>
+                    <th>Họ tên</th>
+                    <th>Khoa</th>
+                    <th>Năm sinh</th>
+                    <th>Quê quán</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var x in Model.Items)
+                {
+                    <tr>
+                        <td>@x.Masv</td>
+                        <td>@x.Hotensv</td>
+                        <td>@x.TenKhoa</td>
+                        <td>@x.NamSinh</td>
+                        <td>@x.QueQuan</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Details", new { id = x.Masv })">Xem</a>
+                            <a class="btn btn-sm btn-outline-warning" href="@Url.Action("Edit", new { id = x.Masv })">Sửa</a>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteSvModal"
+                                    data-id="@x.Masv"
+                                    data-name="@x.Hotensv">
+                                Xoá
+                            </button>
+
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+
+    </div>
+}
+else
+{
+    <div class="alert alert-info">Chưa có dữ liệu phù hợp.</div>
+}
+
+@{
+    var total = Model?.Paging?.TotalRows ?? 0;
+    var pageSize = Math.Max(1, Model?.Paging?.PageSize ?? 20);
+    var page = Math.Max(1, Model?.Paging?.PageIndex ?? 1);
+    var totalPages = Math.Max(1, (int)Math.Ceiling((double)total / pageSize));
+}
+
+<nav class="mt-3" aria-label="paging">
+    <ul class="pagination">
+        <li class="page-item @(page <= 1 ? "disabled" : "")">
+            <a class="page-link" href="@Url.Action("Index", new {
+                Keyword = Model?.Filter?.Keyword,
+                MaKhoa = Model?.Filter?.MaKhoa,
+                NamSinhMin = Model?.Filter?.NamSinhMin,
+                NamSinhMax = Model?.Filter?.NamSinhMax,
+                PageIndex = page - 1,
+                PageSize = pageSize
+            })">«</a>
+        </li>
+        <li class="page-item disabled">
+            <span class="page-link">Trang @(page) / @totalPages (Tổng: @total)</span>
+        </li>
+        <li class="page-item @(page >= totalPages ? "disabled" : "")">
+            <a class="page-link" href="@Url.Action("Index", new {
+                Keyword = Model?.Filter?.Keyword,
+                MaKhoa = Model?.Filter?.MaKhoa,
+                NamSinhMin = Model?.Filter?.NamSinhMin,
+                NamSinhMax = Model?.Filter?.NamSinhMax,
+                PageIndex = page + 1,
+                PageSize = pageSize
+            })">»</a>
+        </li>
+    </ul>
+</nav>
+
+@* ---- Delete Modal (đặt ngoài mọi form khác) ---- *@
+<div class="modal fade" id="deleteSvModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận xoá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn chắc chắn muốn xoá sinh viên <strong id="delete-name"></strong>?
+                <div class="small text-muted mt-1">Thao tác này không thể hoàn tác.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+
+                <form method="post" asp-action="Delete" asp-controller="SinhVien" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="delete-id" />
+                    <button type="submit" class="btn btn-danger">Xoá</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+    <script>
+        // Gán dữ liệu cho modal khi mở
+        document.getElementById('deleteSvModal')
+            ?.addEventListener('show.bs.modal', function (e) {
+                const btn = e.relatedTarget;
+                const id = btn?.getAttribute('data-id');
+                const name = btn?.getAttribute('data-name');
+                document.getElementById('delete-id').value = id || '';
+                document.getElementById('delete-name').textContent = name || '';
+            });
+    </script>
+}

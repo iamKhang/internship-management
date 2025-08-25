@@ -9,6 +9,12 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
+// Repository duy nhất cho SinhVien
+builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.ISinhVienRepository,
+                           InternshipManagement.Repositories.Implementations.SinhVienRepository>();
+builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.IKhoaRepository,
+                           InternshipManagement.Repositories.Implementations.KhoaRepository>();
+
 
 var app = builder.Build();
 

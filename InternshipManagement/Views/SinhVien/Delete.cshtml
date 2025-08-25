@@ -1,0 +1,12 @@
+﻿@model InternshipManagement.Models.SinhVien
+@{
+    ViewData["Title"] = "Xoá Sinh viên";
+}
+<h2>Xoá Sinh viên</h2>
+<p>Bạn chắc chắn muốn xoá sinh viên <strong>@Model.HoTenSv</strong> (MSV: @Model.MaSv)?</p>
+<form method="post">
+    <button type="submit" class="btn btn-danger">Xoá</button>
+    <a class="btn btn-secondary" href="@Url.Action("Index")">Huỷ</a>
+</form>
+<div class="text-danger" asp-validation-summary="All"></div>
+

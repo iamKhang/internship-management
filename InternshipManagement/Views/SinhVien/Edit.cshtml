@@ -1,0 +1,29 @@
+﻿@model InternshipManagement.Models.SinhVien
+@{
+    ViewData["Title"] = "Sửa Sinh viên";
+}
+<h2>Sửa Sinh viên</h2>
+<form method="post" class="vstack gap-3">
+    <input type="hidden" asp-for="MaSv" />
+    <div>
+        <label class="form-label">Khoa</label>
+        <select class="form-select" asp-for="MaKhoa" asp-items="ViewBag.KhoaOptions">
+            <option value="" disabled>-- Chọn khoa --</option>
+        </select>
+
+    </div>
+    <div><label>Họ tên</label><input class="form-control" asp-for="HoTenSv" /><span class="text-danger" asp-validation-for="HoTenSv"></span></div>
+    <div>
+        <label>Năm sinh</label><input class="form-control" asp-for="NamSinh" type="number" />
+        <span class="text-danger" asp-validation-for="NamSinh"></span>
+    </div>
+    <div>
+        <label>Quê quán</label><input class="form-control" asp-for="QueQuan" />
+        <span class="text-danger" asp-validation-for="QueQuan"></span>
+    </div>
+    <div class="text-danger" asp-validation-summary="All"></div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary-main" type="submit">Lưu</button>
+        <a class="btn btn-secondary" href="@Url.Action("Index")">Huỷ</a>
+    </div>
+</form>
