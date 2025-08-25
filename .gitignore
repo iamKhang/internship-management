@@ -207,6 +207,7 @@ ClientBin/
 *.backup
 *.BLOB
 *.sql
+!InternshipManagement/Database/StoredProcedures/*.sql
 *.sqlproj
 *.dbproj
 *.pfx
