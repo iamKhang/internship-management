@@ -1,27 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using InternshipManagement.Auth;
+using InternshipManagement.Data;
 using InternshipManagement.Models;
-
-namespace InternshipManagement.Data;
+using Microsoft.EntityFrameworkCore;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
 
-    public DbSet<Khoa> Khoa => Set<Khoa>();
-    public DbSet<GiangVien> GiangVien => Set<GiangVien>();
-    public DbSet<SinhVien> SinhVien => Set<SinhVien>();
-    public DbSet<DeTai> DeTai => Set<DeTai>();
-    public DbSet<HuongDan> HuongDan => Set<HuongDan>();
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
         base.OnModelCreating(mb);
 
-        // Khóa chính ghép cho HuongDan
+        // ===== Giữ nguyên phần cũ của bạn =====
         mb.Entity<HuongDan>()
           .HasKey(h => new { h.MaSv, h.MaDt, h.MaGv });
 
-        // Ràng buộc quan hệ và hành vi xóa
         mb.Entity<GiangVien>()
           .HasOne(g => g.Khoa)
           .WithMany(k => k.GiangViens)
@@ -34,7 +30,15 @@ public class AppDbContext : DbContext
           .HasForeignKey(s => s.MaKhoa)
           .OnDelete(DeleteBehavior.Restrict);
 
-        // Seed dữ liệu mẫu (file bạn đã tạo ở Data/SeedData.cs)
+        // ===== Thêm cấu hình cho AppUser =====
+        mb.Entity<AppUser>(e =>
+        {
+            e.HasKey(u => new { u.Code, u.Role });
+            e.Property(u => u.Code).HasMaxLength(50).IsRequired();
+            e.Property(u => u.Role).HasConversion<string>().IsRequired();
+            e.Property(u => u.PasswordHash).IsRequired();
+        });
+
         SeedData.Seed(mb);
     }
 }

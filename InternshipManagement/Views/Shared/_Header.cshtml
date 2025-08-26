@@ -1,18 +1,50 @@
-﻿@* Navbar màu chủ đạo *@
+﻿@* Views/Shared/_Header.cshtml *@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container-xxl">
         <a class="navbar-brand fw-semibold" href="/">InternshipManagement</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav" aria-controls="topnav" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
+                aria-controls="topnav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
+
         <div class="collapse navbar-collapse" id="topnav">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="/SinhVien">Sinh viên</a></li>
-                <li class="nav-item"><a class="nav-link" href="/GiangVien">Giảng viên</a></li>
-                <li class="nav-item"><a class="nav-link" href="/DeTai">Đề tài</a></li>
-                <li class="nav-item"><a class="nav-link" href="/HuongDan">Hướng dẫn</a></li>
-                <li class="nav-item"><a class="nav-link" href="/Reports">Báo cáo</a></li>
+
+                @* Khu vực tài khoản *@
+                @if (User.Identity?.IsAuthenticated ?? false)
+                {
+                    var fullName = User.FindFirst("full_name")?.Value ?? User.Identity!.Name;
+                    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User";
+
+                    <li class="nav-item d-flex align-items-center">
+                        <span class="nav-link d-flex align-items-center">
+                            <i class="bi bi-person-circle me-2"></i>
+                            Xin chào, @fullName (@role)
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <form asp-controller="Auth" asp-action="Logout" method="post"
+                              class="d-flex align-items-center mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="btn btn-danger text-white d-flex align-items-center px-3 py-2 ms-lg-2">
+                                <i class="bi bi-box-arrow-right me-2"></i>
+                                Đăng xuất
+                            </button>
+                        </form>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center"
+                           asp-controller="Auth" asp-action="Login">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Đăng nhập
+                        </a>
+                    </li>
+                }
+
             </ul>
         </div>
     </div>

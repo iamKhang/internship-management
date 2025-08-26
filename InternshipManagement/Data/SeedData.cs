@@ -1,4 +1,6 @@
-﻿using InternshipManagement.Models;
+﻿using InternshipManagement.Auth;
+using InternshipManagement.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace InternshipManagement.Data
@@ -137,6 +139,8 @@ namespace InternshipManagement.Data
                 new HuongDan { MaSv = 1029, MaDt = "DT23", MaGv = 8, KetQua = 7.80m },
                 new HuongDan { MaSv = 1030, MaDt = "DT25", MaGv = 9, KetQua = 8.60m }
             );
+
+            
         }
     }
 }

@@ -1,0 +1,30 @@
+﻿@model InternshipManagement.Auth.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+<h2>Đăng nhập</h2>
+<form asp-action="Login" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label class="form-label">Mã</label>
+        <input asp-for="Code" class="form-control" />
+        <span class="text-danger" asp-validation-for="Code"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Mật khẩu</label>
+        <input asp-for="Password" class="form-control" type="password" />
+        <span class="text-danger" asp-validation-for="Password"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Vai trò</label>
+        <select asp-for="Role" class="form-select"
+                asp-items="Html.GetEnumSelectList<InternshipManagement.Auth.AppRole>()"></select>
+        <span class="text-danger" asp-validation-for="Role"></span>
+    </div>
+
+    <input type="hidden" asp-for="ReturnUrl" />
+    <button class="btn btn-primary" type="submit">Đăng nhập</button>
+</form>

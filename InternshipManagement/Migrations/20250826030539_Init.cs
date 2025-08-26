@@ -13,6 +13,19 @@ namespace InternshipManagement.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AppUser",
+                columns: table => new
+                {
+                    code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    passwordhash = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AppUser", x => new { x.code, x.Role });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DeTai",
                 columns: table => new
                 {
@@ -278,6 +291,9 @@ namespace InternshipManagement.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AppUser");
+
             migrationBuilder.DropTable(
                 name: "HuongDan");
 
