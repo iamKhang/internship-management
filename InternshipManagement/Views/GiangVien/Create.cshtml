@@ -1,0 +1,35 @@
+﻿@model InternshipManagement.Models.GiangVien
+@{
+    ViewData["Title"] = "Thêm giảng viên";
+}
+
+<h2>Thêm giảng viên</h2>
+
+<form asp-action="Create" method="post" class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label">Họ tên</label>
+        <input class="form-control" asp-for="HoTenGv" />
+        <span class="text-danger" asp-validation-for="HoTenGv"></span>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Khoa</label>
+        <select class="form-select" asp-for="MaKhoa" asp-items="ViewBag.KhoaOptions">
+            <option value="">-- Chọn khoa --</option>
+        </select>
+        <span class="text-danger" asp-validation-for="MaKhoa"></span>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Lương</label>
+        <input class="form-control" asp-for="Luong" type="number" step="0.01" />
+        <span class="text-danger" asp-validation-for="Luong"></span>
+    </div>
+
+    <div class="col-12">
+        <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a>
+        <button type="submit" class="btn btn-primary">Lưu</button>
+    </div>
+</form>
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+}

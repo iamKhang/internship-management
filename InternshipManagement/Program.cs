@@ -3,6 +3,8 @@
 using InternshipManagement.Auth;
 using InternshipManagement.Data; // chứa AppDbContext của bạn
 using InternshipManagement.Models;
+using InternshipManagement.Repositories.Implementations;
+using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +65,7 @@ builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.ISinhVie
                            InternshipManagement.Repositories.Implementations.SinhVienRepository>();
 builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.IKhoaRepository,
                            InternshipManagement.Repositories.Implementations.KhoaRepository>();
+builder.Services.AddScoped<IGiangVienRepository, GiangVienRepository>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

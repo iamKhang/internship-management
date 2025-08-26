@@ -1,0 +1,27 @@
+﻿@model InternshipManagement.Models.ViewModels.GiangVienListItemVm
+@{
+    ViewData["Title"] = "Chi tiết giảng viên";
+}
+
+<h2>Chi tiết giảng viên</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Mã GV</dt>
+    <dd class="col-sm-9">@Model.Magv</dd>
+
+    <dt class="col-sm-3">Họ tên</dt>
+    <dd class="col-sm-9">@Model.Hotengv</dd>
+
+    <dt class="col-sm-3">Khoa</dt>
+    <dd class="col-sm-9">
+        <div>@Model.TenKhoa</div>
+    </dd>
+
+    <dt class="col-sm-3">Lương</dt>
+    <dd class="col-sm-9">@Model.Luong?.ToString("0.00")</dd>
+</dl>
+
+<div class="mt-3">
+    <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Magv">Sửa</a>
+</div>

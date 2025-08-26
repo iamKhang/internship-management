@@ -1,0 +1,229 @@
+﻿@model InternshipManagement.Models.ViewModels.GiangVienIndexVm
+@{
+    ViewData["Title"] = "Danh sách Giảng viên";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var paging = Model?.Paging ?? new InternshipManagement.Models.ViewModels.PagingRequest();
+    var filter = Model?.Filter ?? new InternshipManagement.Models.ViewModels.GiangVienFilterVm();
+
+    int pageSize = paging.PageSize <= 0 ? 20 : paging.PageSize;
+    int pageIndex = paging.PageIndex <= 0 ? 1 : paging.PageIndex;
+
+    // ✅ dùng TotalRows thay vì Total
+    int total = paging.TotalRows;
+    int totalPages = (int)Math.Ceiling((double)Math.Max(total, 0) / Math.Max(pageSize, 1));
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @* Alerts *@
+        @if (TempData["Success"] is string ok && !string.IsNullOrWhiteSpace(ok))
+        {
+            <div class="alert alert-success shadow-sm d-flex align-items-center gap-2" role="alert">
+                <i class="bi bi-check-circle-fill"></i><span>@ok</span>
+            </div>
+        }
+        @if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
+        {
+            <div class="alert alert-danger shadow-sm d-flex align-items-center gap-2" role="alert">
+                <i class="bi bi-x-circle-fill"></i><span>@err</span>
+            </div>
+        }
+
+        <form method="get" class="mb-4 p-3 border rounded-3 bg-white">
+            <div class="row g-2 align-items-end">
+                <!-- Từ khoá -->
+                <div class="col-12 col-lg-3">
+                    <label class="form-label">Từ khoá</label>
+                    <input class="form-control" name="Keyword"
+                           value="@Model?.Filter?.Keyword"
+                           placeholder="Mã GV hoặc họ tên">
+                </div>
+
+                <!-- Khoa/Bộ môn -->
+                <div class="col-12 col-lg-3">
+                    <label class="form-label">Khoa/Bộ môn</label>
+                    <select class="form-select" name="MaKhoa">
+                        <option value="">-- Chọn khoa --</option>
+                        @foreach (var opt in Model.KhoaOptions)
+                        {
+                            <option value="@opt.Value" selected="@(opt.Selected ? "selected" : null)">@opt.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Lương từ -->
+                <div class="col-6 col-lg-1">
+                    <label class="form-label">Lương từ</label>
+                    <input class="form-control" type="number" name="LuongMin"
+                           value="@(Model?.Filter?.LuongMin?.ToString())" min="0" step="1">
+                </div>
+
+                <!-- Lương đến -->
+                <div class="col-6 col-lg-1">
+                    <label class="form-label">Đến</label>
+                    <input class="form-control" type="number" name="LuongMax"
+                           value="@(Model?.Filter?.LuongMax?.ToString())" min="0" step="1">
+                </div>
+
+                <!-- Nút thao tác -->
+                <div class="col-12 col-lg-4 text-nowrap d-flex justify-content-lg-end">
+                    <div class="btn-group flex-nowrap">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel-fill me-1"></i> Lọc
+                        </button>
+                        <a class="btn btn-outline-secondary" href="@Url.Action("Index")">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Xoá lọc
+                        </a>
+                        <a class="btn btn-success" href="@Url.Action("Create")">
+                            <i class="bi bi-person-fill-add me-1"></i> Thêm GV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+
+
+
+        @* BẢNG *@
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 90px;">Mã GV</th>
+                        <th>Họ tên</th>
+                        <th class="d-none d-md-table-cell">Khoa</th>
+                        <th class="d-none d-lg-table-cell" style="width: 140px;">Lương</th>
+                        <th style="width: 220px;" class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items is null || !Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox"></i> Không có dữ liệu
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var gv in Model.Items)
+                        {
+                            <tr>
+                                <td>@gv.Magv</td>
+                                <td class="fw-semibold">@gv.Hotengv</td>
+                                <td class="d-none d-md-table-cell">@gv.TenKhoa</td>
+                                <td class="d-none d-lg-table-cell">
+                                    @if (gv.Luong.HasValue)
+                                    {
+                                        @gv.Luong.Value.ToString("#,##0")
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Details", new { id = gv.Magv })">Xem</a>
+                                    <a class="btn btn-sm btn-outline-warning" href="@Url.Action("Edit", new { id = gv.Magv })">Sửa</a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteGvModal"
+                                            data-id="@gv.Magv"
+                                            data-name="@gv.Hotengv">
+                                        Xoá
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+
+            @* PHÂN TRANG – dựa trên paging.TotalRows *@
+            @if (total > 0 && total > pageSize)
+            {
+                <nav aria-label="pagination">
+                    <ul class="pagination justify-content-end mb-0">
+                        <li class="page-item @(pageIndex <= 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               asp-action="Index"
+                               asp-route-paging.PageIndex="@(pageIndex - 1)"
+                               asp-route-paging.PageSize="@pageSize"
+                               asp-route-filter.Keyword="@filter.Keyword"
+                               asp-route-filter.MaKhoa="@filter.MaKhoa">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+
+                        @for (var i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == pageIndex ? "active" : "")">
+                                <a class="page-link"
+                                   asp-action="Index"
+                                   asp-route-paging.PageIndex="@i"
+                                   asp-route-paging.PageSize="@pageSize"
+                                   asp-route-filter.Keyword="@filter.Keyword"
+                                   asp-route-filter.MaKhoa="@filter.MaKhoa">
+                                    @i
+                                </a>
+                            </li>
+                        }
+
+                        <li class="page-item @(pageIndex >= totalPages ? "disabled" : "")">
+                            <a class="page-link"
+                               asp-action="Index"
+                               asp-route-paging.PageIndex="@(pageIndex + 1)"
+                               asp-route-paging.PageSize="@pageSize"
+                               asp-route-filter.Keyword="@filter.Keyword"
+                               asp-route-filter.MaKhoa="@filter.MaKhoa">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+
+    @* MODAL XOÁ – post đúng action Delete (POST) *@
+    <div class="modal fade" id="deleteGvModal" tabindex="-1" aria-labelledby="deleteGvLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="Delete" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteGvLabel">
+                            <i class="bi bi-exclamation-triangle-fill text-danger"></i> Xác nhận xoá
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="delete-id" name="id" />
+                        <p>
+                            Bạn có chắc muốn xoá giảng viên:
+                            <strong id="delete-name" class="text-danger"></strong>?
+                        </p>
+                        <p class="small text-muted mb-0">Thao tác này không thể hoàn tác.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+                        <button type="submit" class="btn btn-danger">Xoá</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @section Scripts{
+        <script>
+            // Gán dữ liệu cho modal xoá
+            document.getElementById('deleteGvModal')
+                ?.addEventListener('show.bs.modal', function (e) {
+                    const btn = e.relatedTarget;
+                    const id = btn?.getAttribute('data-id');
+                    const name = btn?.getAttribute('data-name');
+                    document.getElementById('delete-id').value = id || '';
+                    document.getElementById('delete-name').textContent = name || '';
+                });
+        </script>
+    }

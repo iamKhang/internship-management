@@ -519,6 +519,69 @@ BEGIN
 END
 GO
 
+
+-- ==========================================
+-- GIẢNG VIÊN: Tìm kiếm + phân trang
+GO
+CREATE OR ALTER PROCEDURE dbo.usp_GiangVien_Search
+    @Keyword   NVARCHAR(200) = NULL,
+    @MaKhoa    CHAR(10)      = NULL,
+    @LuongMin  DECIMAL(5,2)  = NULL,
+    @LuongMax  DECIMAL(5,2)  = NULL,
+    @PageIndex INT,
+    @PageSize  INT,
+    @TotalRows INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Bảo vệ tham số phân trang
+    IF (@PageIndex IS NULL OR @PageIndex < 1) SET @PageIndex = 1;
+    IF (@PageSize  IS NULL OR @PageSize  < 1) SET @PageSize  = 10;
+
+    -- Vật hoá kết quả vào bảng tạm
+    IF OBJECT_ID('tempdb..#q') IS NOT NULL DROP TABLE #q;
+
+    CREATE TABLE #q
+    (
+        magv    INT         NOT NULL,
+        hotengv CHAR(30)    NULL,
+        makhoa  CHAR(10)    NULL,
+        tenkhoa CHAR(30)    NULL,
+        luong   DECIMAL(5,2) NULL
+    );
+
+    INSERT INTO #q (magv, hotengv, makhoa, tenkhoa, luong)
+    SELECT
+        gv.magv,
+        gv.hotengv,
+        gv.makhoa,
+        k.tenkhoa,
+        gv.luong
+    FROM GiangVien gv
+    LEFT JOIN Khoa k ON k.makhoa = gv.makhoa
+    WHERE (@Keyword IS NULL OR
+           gv.hotengv LIKE '%' + @Keyword + '%' OR
+           gv.makhoa  LIKE '%' + @Keyword + '%' OR
+           k.tenkhoa  LIKE '%' + @Keyword + '%')
+      AND (@MaKhoa IS NULL OR gv.makhoa = @MaKhoa)
+      AND (@LuongMin IS NULL OR gv.luong >= @LuongMin)
+      AND (@LuongMax IS NULL OR gv.luong <= @LuongMax);
+
+    -- Tổng dòng
+    SELECT @TotalRows = COUNT(*) FROM #q;
+
+    -- Trả danh sách phân trang
+    SELECT magv, hotengv, makhoa, tenkhoa, luong
+    FROM #q
+    ORDER BY magv
+    OFFSET (@PageIndex - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+
+
 /* ============================================================================
    KẾT THÚC
    ============================================================================ */
