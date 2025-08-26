@@ -122,6 +122,27 @@ namespace InternshipManagement.Repositories.Implementations
             await _db.SaveChangesAsync();
         }
 
+        public async Task<List<GiangVienOptionVm>> GetOptionsAsync(string? maKhoa = null)
+        {
+            var q = _db.Set<GiangVien>().AsNoTracking();  
+
+            if (!string.IsNullOrWhiteSpace(maKhoa))
+            {
+                var mk = maKhoa.Trim();
+                q = q.Where(x => x.MaKhoa == mk);
+            }
+
+            return await q
+                .OrderBy(x => x.HoTenGv)
+                .Select(x => new GiangVienOptionVm
+                {
+                    MaGv = x.MaGv,
+                    TenGv = x.HoTenGv ?? $"GV#{x.MaGv}",
+                    MaKhoa = x.MaKhoa
+                })
+                .ToListAsync();
+        }
+
         private static async Task EnsureOpenAsync(SqlConnection conn)
         {
             if (conn.State != ConnectionState.Open) await conn.OpenAsync();

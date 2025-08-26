@@ -580,6 +580,275 @@ BEGIN
 END
 GO
 
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_DeTai_ByGiangVien
+    @MaGv           INT,
+    @AcceptedStatus INT,
+    @HocKy          TINYINT       = NULL,
+    @NamHoc         SMALLINT      = NULL,
+    @Keyword        NVARCHAR(200) = NULL, -- tìm trong tendt, NoiThucTap
+    @IsFull         BIT           = NULL, -- NULL: bỏ qua; 1: đủ; 0: chưa đủ
+    @PageIndex      INT           = 1,
+    @PageSize       INT           = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ;WITH Stats AS (
+        SELECT
+            dt.madt,
+            COUNT(hd.masv) AS SoDangKy,
+            SUM(CASE WHEN hd.trangthai = @AcceptedStatus THEN 1 ELSE 0 END) AS SoChapNhan
+        FROM DeTai dt
+        LEFT JOIN HuongDan hd ON hd.madt = dt.madt
+        WHERE dt.magv = @MaGv
+        GROUP BY dt.madt
+    ),
+    Base AS (
+        SELECT
+            dt.*,
+            s.SoDangKy,
+            s.SoChapNhan,
+            CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida
+                 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFull
+        FROM DeTai dt
+        LEFT JOIN Stats s ON s.madt = dt.madt
+        WHERE dt.magv = @MaGv
+          AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
+          AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc)
+          AND (
+               @Keyword IS NULL
+               OR dt.tendt LIKE N'%' + @Keyword + N'%'
+               OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
+          )
+          AND (@IsFull IS NULL OR
+               (CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida THEN 1 ELSE 0 END) = @IsFull)
+    )
+    SELECT * INTO #Base FROM Base;
+
+    SELECT *
+    FROM #Base
+    ORDER BY namhoc DESC, hocky DESC, madt
+    OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
+
+    SELECT COUNT(1) AS TotalRows FROM #Base;
+
+    DROP TABLE #Base;
+END
+GO
+
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_DeTai_FilterAdvanced
+    @AcceptedStatusesCsv NVARCHAR(50) = N'1', -- các trạng thái tính là "đã đăng ký" (mặc định: Accepted)
+    @MaKhoa      CHAR(10)      = NULL,
+    @MaGv        INT           = NULL,
+    @HocKy       TINYINT       = NULL,
+    @NamHoc      SMALLINT      = NULL,
+    @IsFull      BIT           = NULL,   -- giữ cho tương thích cũ
+    @OnlyNoStudent BIT         = NULL,   -- 1: SoChapNhan = 0
+    @OnlyFull    BIT           = NULL,   -- 1: SoChapNhan >= SoLuongToiDa
+    @OnlyNotEnough BIT         = NULL,   -- 1: 0 < SoChapNhan < SoLuongToiDa
+    @Keyword     NVARCHAR(200) = NULL,
+    @MinKinhPhi  INT           = NULL,
+    @MaxKinhPhi  INT           = NULL,
+    @PageIndex   INT           = 1,
+    @PageSize    INT           = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ;WITH StatusSet AS (
+        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS INT) AS st
+        FROM STRING_SPLIT(@AcceptedStatusesCsv, ',')
+        WHERE TRY_CAST(LTRIM(RTRIM(value)) AS INT) IS NOT NULL
+    ),
+    Stats AS (
+        SELECT
+            dt.madt,
+            COUNT(hd.masv) AS SoDangKy,
+            -- FIX: join StatusSet rồi đếm ss.st IS NOT NULL
+            SUM(CASE WHEN ss.st IS NOT NULL THEN 1 ELSE 0 END) AS SoChapNhan
+        FROM DeTai dt
+        LEFT JOIN HuongDan hd ON hd.madt = dt.madt
+        LEFT JOIN StatusSet ss ON ss.st = hd.trangthai
+        GROUP BY dt.madt
+    ),
+    Base AS (
+        SELECT
+            dt.madt, dt.tendt, dt.magv, dt.hocky, dt.namhoc,
+            dt.soluongtoida, dt.NoiThucTap, dt.kinhphi,
+            gv.makhoa,
+            s.SoDangKy,
+            ISNULL(s.SoChapNhan,0) AS SoChapNhan,
+            CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida
+                 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFull
+        FROM DeTai dt
+        INNER JOIN GiangVien gv ON gv.magv = dt.magv
+        LEFT JOIN Stats s ON s.madt = dt.madt
+        WHERE (@MaKhoa IS NULL OR gv.makhoa = @MaKhoa)
+          AND (@MaGv   IS NULL OR dt.magv   = @MaGv)
+          AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
+          AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc)
+          AND (@MinKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) >= @MinKinhPhi)
+          AND (@MaxKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) <= @MaxKinhPhi)
+          AND (
+                @Keyword IS NULL
+             OR dt.tendt LIKE N'%' + @Keyword + N'%'
+             OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
+          )
+          -- tương thích cũ: @IsFull
+          AND (
+                @IsFull IS NULL OR
+                (CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida THEN 1 ELSE 0 END) = @IsFull
+          )
+          -- chưa có SV
+          AND (
+                @OnlyNoStudent IS NULL
+             OR (@OnlyNoStudent = 1 AND ISNULL(s.SoChapNhan,0) = 0)
+          )
+          -- đủ/đầy
+          AND (
+                @OnlyFull IS NULL
+             OR (@OnlyFull = 1 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)
+          )
+          -- CHƯA ĐỦ
+          AND (
+                @OnlyNotEnough IS NULL
+             OR (@OnlyNotEnough = 1 AND ISNULL(s.SoChapNhan,0) > 0 AND ISNULL(s.SoChapNhan,0) < dt.soluongtoida)
+          )
+    )
+    SELECT *, COUNT(*) OVER() AS TotalRows
+    FROM Base
+    ORDER BY namhoc DESC, hocky DESC, madt
+    OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_SV_CoDeTai_FilterAdvanced
+    @StatusesCsv NVARCHAR(50) = N'1,2,3', -- mặc định Accepted/InProgress/Completed
+    @MaKhoaSv    CHAR(10)      = NULL,    -- lọc theo khoa SV
+    @MaGv        INT           = NULL,    -- lọc theo giảng viên
+    @MaDt        CHAR(10)      = NULL,    -- lọc theo 1 đề tài
+    @HocKy       TINYINT       = NULL,    -- lọc theo học kỳ đề tài
+    @NamHoc      SMALLINT      = NULL,    -- lọc theo năm học đề tài
+    @Keyword     NVARCHAR(200) = NULL,    -- tìm MaSv/HoTenSv/TenDt/HoTenGv
+    @SortBy      NVARCHAR(30)  = N'Default', -- Default|StudentName|TopicName|TeacherName|Status
+    @PageIndex   INT           = 1,
+    @PageSize    INT           = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Success TABLE (st TINYINT PRIMARY KEY);
+    INSERT INTO @Success(st)
+    SELECT DISTINCT TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT)
+    FROM STRING_SPLIT(@StatusesCsv, ',')
+    WHERE TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT) IS NOT NULL;
+
+    ;WITH F AS (
+        SELECT
+            sv.MaSv,
+            sv.HoTenSv,
+            sv.MaKhoa        AS MaKhoaSv,
+            dt.MaDt,
+            dt.TenDt,
+            dt.HocKy,
+            dt.NamHoc,
+            gv.MaGv,
+            gv.HoTenGv,
+            hd.TrangThai,
+            CASE hd.TrangThai
+                 WHEN 1 THEN N'Accepted'
+                 WHEN 2 THEN N'InProgress'
+                 WHEN 3 THEN N'Completed'
+                 WHEN 0 THEN N'Pending'
+                 WHEN 4 THEN N'Rejected'
+                 WHEN 5 THEN N'Withdrawn'
+            END AS TrangThaiName
+        FROM HuongDan hd
+        INNER JOIN SinhVien  sv ON sv.MaSv = hd.MaSv
+        INNER JOIN DeTai     dt ON dt.MaDt = hd.MaDt
+        INNER JOIN GiangVien gv ON gv.MaGv = dt.MaGv
+        WHERE hd.TrangThai IN (SELECT st FROM @Success)
+          AND (@MaKhoaSv IS NULL OR sv.MaKhoa = @MaKhoaSv)
+          AND (@MaGv     IS NULL OR gv.MaGv   = @MaGv)
+          AND (@MaDt     IS NULL OR dt.MaDt   = @MaDt)
+          AND (@HocKy    IS NULL OR dt.HocKy  = @HocKy)
+          AND (@NamHoc   IS NULL OR dt.NamHoc = @NamHoc)
+          AND (
+               @Keyword IS NULL
+            OR CONVERT(NVARCHAR(20), sv.MaSv) LIKE '%' + @Keyword + '%'
+            OR ISNULL(sv.HoTenSv,N'') LIKE N'%' + @Keyword + N'%'
+            OR ISNULL(dt.TenDt,N'')   LIKE N'%' + @Keyword + N'%'
+            OR ISNULL(gv.HoTenGv,N'') LIKE N'%' + @Keyword + N'%'
+          )
+    )
+    SELECT
+        *,
+        COUNT(*) OVER() AS TotalRows
+    FROM F
+    ORDER BY
+        CASE WHEN @SortBy = N'StudentName' THEN HoTenSv END ASC,
+        CASE WHEN @SortBy = N'TopicName'   THEN TenDt   END ASC,
+        CASE WHEN @SortBy = N'TeacherName' THEN HoTenGv END ASC,
+        CASE WHEN @SortBy = N'Status'      THEN TrangThai END ASC,
+        NamHoc DESC, HocKy DESC, MaDt ASC, MaSv ASC
+    OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_SV_ChuaCoDeTai
+    @MaKhoaSv  CHAR(10)      = NULL,   -- lọc theo khoa sinh viên
+    @MaGv      INT           = NULL,   -- giới hạn phạm vi theo giảng viên của đề tài (tùy chọn)
+    @MaDt      CHAR(10)      = NULL,   -- giới hạn theo 1 đề tài (tùy chọn)
+    @HocKy     TINYINT       = NULL,   -- giới hạn theo học kỳ của đề tài (tùy chọn)
+    @NamHoc    SMALLINT      = NULL,   -- giới hạn theo năm học của đề tài (tùy chọn)
+    @Keyword   NVARCHAR(200) = NULL,   -- tìm theo MaSv/HoTenSv
+    @PageIndex INT           = 1,
+    @PageSize  INT           = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Tập đề tài trong phạm vi lọc (nếu có)
+    ;WITH TopicScope AS (
+        SELECT dt.MaDt
+        FROM DeTai dt
+        INNER JOIN GiangVien gv ON gv.MaGv = dt.MaGv
+        WHERE (@MaGv   IS NULL OR gv.MaGv   = @MaGv)
+          AND (@MaDt   IS NULL OR dt.MaDt   = @MaDt)
+          AND (@HocKy  IS NULL OR dt.HocKy  = @HocKy)
+          AND (@NamHoc IS NULL OR dt.NamHoc = @NamHoc)
+    ),
+    SVScope AS (  -- Tập sinh viên cần xét
+        SELECT sv.MaSv, sv.HoTenSv, sv.MaKhoa AS MaKhoaSv
+        FROM SinhVien sv
+        WHERE (@MaKhoaSv IS NULL OR sv.MaKhoa = @MaKhoaSv)
+          AND (
+               @Keyword IS NULL
+            OR CONVERT(NVARCHAR(20), sv.MaSv) LIKE '%' + @Keyword + '%'
+            OR ISNULL(sv.HoTenSv,N'') LIKE N'%' + @Keyword + N'%'
+          )
+    ),
+    HasSuccess AS ( -- SV có ít nhất 1 HD trạng thái 1/2/3 trong phạm vi TopicScope (nếu có)
+        SELECT DISTINCT hd.MaSv
+        FROM HuongDan hd
+        INNER JOIN DeTai dt ON dt.MaDt = hd.MaDt
+        WHERE hd.TrangThai IN (1,2,3)
+          AND (NOT EXISTS (SELECT 1 FROM TopicScope) OR hd.MaDt IN (SELECT MaDt FROM TopicScope))
+    )
+    SELECT
+        s.MaSv, s.HoTenSv, s.MaKhoaSv,
+        COUNT(*) OVER() AS TotalRows
+    FROM SVScope s
+    WHERE NOT EXISTS (SELECT 1 FROM HasSuccess x WHERE x.MaSv = s.MaSv)
+    ORDER BY s.MaSv
+    OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
 
 
 /* ============================================================================

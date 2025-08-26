@@ -2,6 +2,7 @@
 using InternshipManagement.Data;
 using InternshipManagement.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 public class AppDbContext : DbContext
 {
@@ -14,31 +15,50 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(mb);
 
-        // ===== Giữ nguyên phần cũ của bạn =====
+        // HuongDan: KHÓA GHÉP (MaSv, MaDt)
         mb.Entity<HuongDan>()
-          .HasKey(h => new { h.MaSv, h.MaDt, h.MaGv });
+          .HasKey(x => new { x.MaSv, x.MaDt });
 
-        mb.Entity<GiangVien>()
-          .HasOne(g => g.Khoa)
-          .WithMany(k => k.GiangViens)
-          .HasForeignKey(g => g.MaKhoa)
+        mb.Entity<AppUser>()
+          .HasKey(x => new { x.Code, x.Role });
+
+        // DeTai (n) – (1) GiangVien
+        mb.Entity<DeTai>()
+          .HasOne(d => d.GiangVien)
+          .WithMany(g => g.DeTais)
+          .HasForeignKey(d => d.MaGv)
           .OnDelete(DeleteBehavior.Restrict);
 
-        mb.Entity<SinhVien>()
-          .HasOne(s => s.Khoa)
-          .WithMany(k => k.SinhViens)
-          .HasForeignKey(s => s.MaKhoa)
+        // HuongDan (n) – (1) GiangVien
+        mb.Entity<HuongDan>()
+          .HasOne(h => h.GiangVien)
+          .WithMany(g => g.HuongDans)
+          .HasForeignKey(h => h.MaGv)
           .OnDelete(DeleteBehavior.Restrict);
 
-        // ===== Thêm cấu hình cho AppUser =====
-        mb.Entity<AppUser>(e =>
-        {
-            e.HasKey(u => new { u.Code, u.Role });
-            e.Property(u => u.Code).HasMaxLength(50).IsRequired();
-            e.Property(u => u.Role).HasConversion<string>().IsRequired();
-            e.Property(u => u.PasswordHash).IsRequired();
-        });
+        // HuongDan (n) – (1) SinhVien
+        mb.Entity<HuongDan>()
+          .HasOne(h => h.SinhVien)
+          .WithMany(s => s.HuongDans)
+          .HasForeignKey(h => h.MaSv)
+          .OnDelete(DeleteBehavior.Restrict);
 
+        mb.Entity<HuongDan>()
+          .HasOne(h => h.DeTai)
+          .WithMany(d => d.HuongDans)
+          .HasForeignKey(h => h.MaDt)
+          .OnDelete(DeleteBehavior.Cascade);
+
+
+        // Index hỗ trợ nghiệp vụ
+        mb.Entity<DeTai>()
+          .HasIndex(d => new { d.MaGv, d.NamHoc, d.HocKy });
+
+        mb.Entity<HuongDan>()
+          .HasIndex(x => new { x.MaDt, x.TrangThai });
+
+        // Seed data
         SeedData.Seed(mb);
     }
+
 }

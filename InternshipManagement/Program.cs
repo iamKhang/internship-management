@@ -66,6 +66,7 @@ builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.ISinhVie
 builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.IKhoaRepository,
                            InternshipManagement.Repositories.Implementations.KhoaRepository>();
 builder.Services.AddScoped<IGiangVienRepository, GiangVienRepository>();
+builder.Services.AddScoped<IDeTaiRepository, DeTaiRepository>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

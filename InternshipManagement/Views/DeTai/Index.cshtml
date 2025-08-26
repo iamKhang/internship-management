@@ -1,0 +1,210 @@
+﻿@model InternshipManagement.Models.ViewModels.DeTaiIndexVm
+@using Microsoft.AspNetCore.Routing
+@{
+    ViewData["Title"] = "Danh sách Đề tài";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Danh sách Đề tài</h5>
+        <div class="small text-muted">Tổng: <strong>@Model.Paging.TotalRows</strong> bản ghi</div>
+    </div>
+
+    <div class="card-body">
+        <form method="get" class="row g-3">
+
+            <!-- Hàng 1: Nút Lọc + Hủy lọc -->
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel"></i> Lọc
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Hủy lọc
+                </a>
+            </div>
+
+            <!-- Hàng 2: các ô filter -->
+            <div class="col-md-3">
+                <label class="form-label">Khoa</label>
+                <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
+                    <option value="">-- Tất cả --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Giảng viên</label>
+                <select class="form-select" asp-for="Filter.MaGv" asp-items="Model.GiangVienOptions">
+                    <option value="">-- Tất cả --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Học kỳ</label>
+                <select class="form-select" asp-for="Filter.HocKy" asp-items="Model.HocKyOptions">
+                    <option value="">-- Tất cả --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Năm học</label>
+                <select class="form-select" asp-for="Filter.NamHoc" asp-items="Model.NamHocOptions">
+                    <option value="">-- Tất cả --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Kinh phí từ</label>
+                <input class="form-control" asp-for="Filter.MinKinhPhi" type="number" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">đến</label>
+                <input class="form-control" asp-for="Filter.MaxKinhPhi" type="number" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Từ khóa</label>
+                <input class="form-control" asp-for="Filter.Keyword" placeholder="Tên đề tài..." />
+            </div>
+
+            <!-- Hàng 3: nhóm checkbox -->
+            <div class="col-12 d-flex gap-4 mt-2">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Filter.IsFull" />
+                    <label class="form-check-label" for="Filter_IsFull">Chỉ đầy chỗ</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Filter.OnlyNoStudent" />
+                    <label class="form-check-label" for="Filter_OnlyNoStudent">Chưa có SV</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Filter.OnlyFull" />
+                    <label class="form-check-label" for="Filter_OnlyFull">Đã đủ</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Filter.OnlyNotEnough" />
+                    <label class="form-check-label" for="Filter_OnlyNotEnough">Chưa đủ</label>
+                </div>
+            </div>
+        </form>
+
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã</th>
+                    <th>Tên đề tài</th>
+                    <th>Khoa</th>
+                    <th>GV</th>
+                    <th>HK</th>
+                    <th>Năm</th>
+                    <th class="text-end">Kinh phí</th>
+                    <th class="text-center">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Any())
+                {
+                    foreach (var d in Model.Items)
+                    {
+                        var kinhPhiTrieu = (d.KinhPhi ?? 0) / 1_000_000.0;
+                        <tr>
+                            <td><code>@d.MaDt</code></td>
+                            <td>@d.TenDt</td>
+                            <td>@d.MaKhoa</td>
+                            <td>@d.MaGv</td>
+                            <td>@d.HocKy</td>
+                            <td>@d.NamHoc</td>
+                            <td class="text-end">@kinhPhiTrieu.ToString("#,0.##") triệu</td>
+                            <td class="text-center">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-action="Details"
+                                   asp-route-id="@d.MaDt"
+                                   title="Xem chi tiết">
+                                    <i class="bi bi-eye"></i> Xem
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Không có dữ liệu.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card-footer bg-white">
+        @{
+            var total = Model.Paging.TotalRows;
+            var pageIndex = Model.Paging.PageIndex <= 0 ? 1 : Model.Paging.PageIndex;
+            var pageSize = Model.Paging.PageSize <= 0 ? 20 : Model.Paging.PageSize;
+            var totalPages = (int)Math.Ceiling((double)total / pageSize);
+        }
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                Trang <strong>@pageIndex</strong>/<strong>@(totalPages == 0 ? 1 : totalPages)</strong>
+            </div>
+            <nav>
+                <ul class="pagination mb-0">
+                    <li class="page-item @(pageIndex <= 1 ? "disabled" : "")">
+                        <a class="page-link"
+                           asp-action="Index"
+                           asp-route-PageIndex="@(pageIndex - 1)"
+                           asp-route-PageSize="@pageSize"
+                           asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
+                           asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
+                           asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
+                           asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
+                           asp-route-Filter.IsFull="@(Model.Filter.IsFull?.ToString())"
+                           asp-route-Filter.OnlyNoStudent="@(Model.Filter.OnlyNoStudent?.ToString())"
+                           asp-route-Filter.OnlyFull="@(Model.Filter.OnlyFull?.ToString())"
+                           asp-route-Filter.OnlyNotEnough="@(Model.Filter.OnlyNotEnough?.ToString())"
+                           asp-route-Filter.Keyword="@Model.Filter.Keyword"
+                           asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
+                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">«</a>
+                    </li>
+
+                    @for (int i = Math.Max(1, pageIndex - 2); i <= Math.Min(totalPages == 0 ? 1 : totalPages, pageIndex + 2); i++)
+                    {
+                        <li class="page-item @(i == pageIndex ? "active" : "")">
+                            <a class="page-link"
+                               asp-action="Index"
+                               asp-route-PageIndex="@i"
+                               asp-route-PageSize="@pageSize"
+                               asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
+                               asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
+                               asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
+                               asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
+                               asp-route-Filter.IsFull="@(Model.Filter.IsFull?.ToString())"
+                               asp-route-Filter.OnlyNoStudent="@(Model.Filter.OnlyNoStudent?.ToString())"
+                               asp-route-Filter.OnlyFull="@(Model.Filter.OnlyFull?.ToString())"
+                               asp-route-Filter.OnlyNotEnough="@(Model.Filter.OnlyNotEnough?.ToString())"
+                               asp-route-Filter.Keyword="@Model.Filter.Keyword"
+                               asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
+                               asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">@i</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(pageIndex >= (totalPages == 0 ? 1 : totalPages) ? "disabled" : "")">
+                        <a class="page-link"
+                           asp-action="Index"
+                           asp-route-PageIndex="@(pageIndex + 1)"
+                           asp-route-PageSize="@pageSize"
+                           asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
+                           asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
+                           asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
+                           asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
+                           asp-route-Filter.IsFull="@(Model.Filter.IsFull?.ToString())"
+                           asp-route-Filter.OnlyNoStudent="@(Model.Filter.OnlyNoStudent?.ToString())"
+                           asp-route-Filter.OnlyFull="@(Model.Filter.OnlyFull?.ToString())"
+                           asp-route-Filter.OnlyNotEnough="@(Model.Filter.OnlyNotEnough?.ToString())"
+                           asp-route-Filter.Keyword="@Model.Filter.Keyword"
+                           asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
+                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">»</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
