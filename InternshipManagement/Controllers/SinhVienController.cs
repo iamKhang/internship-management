@@ -96,20 +96,18 @@ namespace InternshipManagement.Controllers
             var sv = await _repo.GetEntityAsync(id);
             if (sv == null) return NotFound();
 
-            var selected = sv.MaKhoa?.Trim() ?? string.Empty;
+            // Chuẩn hóa mã khoa của sinh viên
+            sv.MaKhoa = sv.MaKhoa?.Trim();
 
+            // Lấy list option và chuẩn hóa Value
             var items = (await _khoaRepo.GetOptionsAsync())
-                .Select(k => new SelectListItem
-                {
-                    Value = k.MaKhoa?.Trim(),
-                    Text = k.TenKhoa,
-                    Selected = string.Equals(k.MaKhoa?.Trim(), selected, StringComparison.Ordinal)
-                })
+                .Select(k => new { Value = k.MaKhoa?.Trim(), Text = k.TenKhoa })
                 .ToList();
 
-            ViewBag.KhoaOptions = items;
+            // DÙNG SelectList với selectedValue = sv.MaKhoa
+            ViewBag.KhoaOptions = new SelectList(items, "Value", "Text", sv.MaKhoa);
 
-            // Xoá mọi giá trị cùng tên nếu vô tình có (ModelState, query ?MaKhoa=, v.v.)
+            // Bắt buộc xóa ModelState để không bị override
             ViewData.ModelState.Clear();
 
             return View(sv);
