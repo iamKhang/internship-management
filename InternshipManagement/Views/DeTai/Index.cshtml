@@ -47,9 +47,16 @@
                     </button>
                 </div>
                 <div class="col-auto d-flex align-items-end">
-                    <a asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center px-3  py-2"">
+                    <a asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center px-3  py-2" ">
                         <i class="bi-arrow-clockwise me-1"></i> Hủy
                     </a>
+                </div>
+                <div class="col-auto d-flex align-items-end">
+                    <button type="button"
+                            id="btnExport"
+                            class="btn btn-success d-flex align-items-center px-3">
+                        <i class="bi bi-table me-1"></i> Export
+                    </button>
                 </div>
 
 
@@ -195,3 +202,71 @@
     </div>
 </div>
 
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Xuất dữ liệu</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có muốn <strong>kèm thông tin sinh viên</strong> (trạng thái 1/2/3, ngày đăng ký, ngày chấp nhận, kết quả, ghi chú) trong file export không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnExportBasic" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Chỉ đề tài
+                </button>
+                <button type="button" id="btnExportDetail" class="btn btn-success">
+                    Kèm sinh viên
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+(function () {
+  const form = document.getElementById('filterForm');
+  const btnExport = document.getElementById('btnExport');
+  const tinhTrang = document.getElementById('Filter_TinhTrang');
+
+  const urlExport       = '@Url.Action("Export","DeTai")';
+  const urlExportDetail = '@Url.Action("ExportChiTiet","DeTai")';
+
+  // Tạo URL với query string từ form mà KHÔNG đổi action của form
+  function exportWith(url) {
+    const fd = new FormData(form);
+    const qs = new URLSearchParams(fd).toString();
+    // mở thẳng URL export (GET) với đầy đủ filter
+    window.location.href = url + (qs ? ('?' + qs) : '');
+  }
+
+  // Modal Bootstrap 5
+  const exportModalEl = document.getElementById('exportModal');
+  const modal = new bootstrap.Modal(exportModalEl);
+
+  // Click Export
+  btnExport.addEventListener('click', function () {
+    // Nếu chọn "Chưa có sinh viên đăng ký" -> export thường, khỏi hỏi
+    if (tinhTrang && tinhTrang.value === 'OnlyNoStudent') {
+      exportWith(urlExport);
+      return;
+    }
+    // Ngược lại: hỏi người dùng
+    modal.show();
+  });
+
+  // Nút trong modal
+  document.getElementById('btnExportBasic').addEventListener('click', function () {
+    modal.hide();
+    exportWith(urlExport);
+  });
+
+  document.getElementById('btnExportDetail').addEventListener('click', function () {
+    modal.hide();
+    exportWith(urlExportDetail);
+  });
+})();
+    </script>
+}
