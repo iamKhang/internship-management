@@ -10,79 +10,78 @@
         <div class="small text-muted">Tổng: <strong>@Model.Paging.TotalRows</strong> bản ghi</div>
     </div>
 
-    <div class="card-body">
-        <form method="get" class="row g-3">
+    <div class="card shadow-sm mb-3">
 
-            <!-- Hàng 1: Nút Lọc + Hủy lọc -->
-            <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-funnel"></i> Lọc
-                </button>
-                <a asp-action="Index" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle"></i> Hủy lọc
-                </a>
-            </div>
+        <div class="card-body">
+            <form method="get" id="filterForm" class="row g-3">
 
-            <!-- Hàng 2: các ô filter -->
-            <div class="col-md-3">
-                <label class="form-label">Khoa</label>
-                <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
-                    <option value="">-- Tất cả --</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Giảng viên</label>
-                <select class="form-select" asp-for="Filter.MaGv" asp-items="Model.GiangVienOptions">
-                    <option value="">-- Tất cả --</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Học kỳ</label>
-                <select class="form-select" asp-for="Filter.HocKy" asp-items="Model.HocKyOptions">
-                    <option value="">-- Tất cả --</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Năm học</label>
-                <select class="form-select" asp-for="Filter.NamHoc" asp-items="Model.NamHocOptions">
-                    <option value="">-- Tất cả --</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Kinh phí từ</label>
-                <input class="form-control" asp-for="Filter.MinKinhPhi" type="number" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">đến</label>
-                <input class="form-control" asp-for="Filter.MaxKinhPhi" type="number" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Từ khóa</label>
-                <input class="form-control" asp-for="Filter.Keyword" placeholder="Tên đề tài..." />
-            </div>
+                <!-- Hàng 1 -->
+                <div class="col-md-2">
+                    <label class="form-label">Khoa</label>
+                    <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
+                        <option value="">-- Tất cả --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Giảng viên</label>
+                    <select class="form-select" asp-for="Filter.MaGv" asp-items="Model.GiangVienOptions">
+                        <option value="">-- Tất cả --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Học kỳ</label>
+                    <select class="form-select" asp-for="Filter.HocKy" asp-items="Model.HocKyOptions">
+                        <option value="">-- Tất cả --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Năm học</label>
+                    <select class="form-select" asp-for="Filter.NamHoc" asp-items="Model.NamHocOptions">
+                        <option value="">-- Tất cả --</option>
+                    </select>
+                </div>
 
-            <!-- Hàng 3: nhóm checkbox -->
-            <div class="col-12 d-flex gap-4 mt-2">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="Filter.IsFull" />
-                    <label class="form-check-label" for="Filter_IsFull">Chỉ đầy chỗ</label>
+                <div class="col-auto d-flex align-items-end">
+                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="Filter.OnlyNoStudent" />
-                    <label class="form-check-label" for="Filter_OnlyNoStudent">Chưa có SV</label>
+                <div class="col-auto d-flex align-items-end">
+                    <a asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center px-3  py-2"">
+                        <i class="bi-arrow-clockwise me-1"></i> Hủy
+                    </a>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="Filter.OnlyFull" />
-                    <label class="form-check-label" for="Filter_OnlyFull">Đã đủ</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="Filter.OnlyNotEnough" />
-                    <label class="form-check-label" for="Filter_OnlyNotEnough">Chưa đủ</label>
-                </div>
-            </div>
-        </form>
 
+
+
+
+                <!-- Hàng 2 -->
+                <div class="col-md-2">
+                    <label class="form-label">Kinh phí từ</label>
+                    <input class="form-control" asp-for="Filter.MinKinhPhi" type="number" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">đến</label>
+                    <input class="form-control" asp-for="Filter.MaxKinhPhi" type="number" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Từ khóa</label>
+                    <input class="form-control" asp-for="Filter.Keyword" placeholder="Tên đề tài..." />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Filter.TinhTrang" class="form-label">Tình trạng</label>
+                    <select asp-for="Filter.TinhTrang" class="form-select">
+                        <option value="All">-- Tất cả --</option>
+                        <option value="OnlyNoStudent">Chưa có sinh viên đăng ký</option>
+                        <option value="OnlyFull">Đã đủ số lượng</option>
+                        <option value="OnlyNotEnough">Còn trống</option>
+                    </select>
+                </div>
+
+            </form>
+        </div>
     </div>
+
 
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -91,9 +90,8 @@
                     <th>Mã</th>
                     <th>Tên đề tài</th>
                     <th>Khoa</th>
-                    <th>GV</th>
-                    <th>HK</th>
-                    <th>Năm</th>
+                    <th>Số lượng</th>
+                    <th>Học kỳ</th>
                     <th class="text-end">Kinh phí</th>
                     <th class="text-center">Hành động</th>
                 </tr>
@@ -103,15 +101,13 @@
                 {
                     foreach (var d in Model.Items)
                     {
-                        var kinhPhiTrieu = (d.KinhPhi ?? 0) / 1_000_000.0;
                         <tr>
                             <td><code>@d.MaDt</code></td>
                             <td>@d.TenDt</td>
-                            <td>@d.MaKhoa</td>
-                            <td>@d.MaGv</td>
-                            <td>@d.HocKy</td>
-                            <td>@d.NamHoc</td>
-                            <td class="text-end">@kinhPhiTrieu.ToString("#,0.##") triệu</td>
+                            <td>@d.KhoaOptionVm.TenKhoa</td>
+                            <td class="text-center">@d.SoChapNhan/@d.SoLuongToiDa</td>
+                            <td>@d.HocKy/@d.NamHoc</td>
+                            <td class="text-end">@d.KinhPhi triệu</td>
                             <td class="text-center">
                                 <a class="btn btn-sm btn-outline-primary"
                                    asp-action="Details"
@@ -155,10 +151,7 @@
                            asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
                            asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
                            asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                           asp-route-Filter.IsFull="@(Model.Filter.IsFull?.ToString())"
-                           asp-route-Filter.OnlyNoStudent="@(Model.Filter.OnlyNoStudent?.ToString())"
-                           asp-route-Filter.OnlyFull="@(Model.Filter.OnlyFull?.ToString())"
-                           asp-route-Filter.OnlyNotEnough="@(Model.Filter.OnlyNotEnough?.ToString())"
+                           asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
                            asp-route-Filter.Keyword="@Model.Filter.Keyword"
                            asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
                            asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">«</a>
@@ -175,10 +168,7 @@
                                asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
                                asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
                                asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                               asp-route-Filter.IsFull="@(Model.Filter.IsFull?.ToString())"
-                               asp-route-Filter.OnlyNoStudent="@(Model.Filter.OnlyNoStudent?.ToString())"
-                               asp-route-Filter.OnlyFull="@(Model.Filter.OnlyFull?.ToString())"
-                               asp-route-Filter.OnlyNotEnough="@(Model.Filter.OnlyNotEnough?.ToString())"
+                               asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
                                asp-route-Filter.Keyword="@Model.Filter.Keyword"
                                asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
                                asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">@i</a>
@@ -194,10 +184,7 @@
                            asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
                            asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
                            asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                           asp-route-Filter.IsFull="@(Model.Filter.IsFull?.ToString())"
-                           asp-route-Filter.OnlyNoStudent="@(Model.Filter.OnlyNoStudent?.ToString())"
-                           asp-route-Filter.OnlyFull="@(Model.Filter.OnlyFull?.ToString())"
-                           asp-route-Filter.OnlyNotEnough="@(Model.Filter.OnlyNotEnough?.ToString())"
+                           asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
                            asp-route-Filter.Keyword="@Model.Filter.Keyword"
                            asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
                            asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">»</a>

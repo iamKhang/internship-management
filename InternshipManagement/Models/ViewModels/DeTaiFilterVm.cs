@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using InternshipManagement.Models.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace InternshipManagement.Models.ViewModels
 {
@@ -19,11 +20,7 @@ namespace InternshipManagement.Models.ViewModels
 
         public short? NamHoc { get; set; }
 
-        public bool? IsFull { get; set; }         // tương thích cũ
-
-        public bool? OnlyNoStudent { get; set; }  // SoChapNhan = 0
-        public bool? OnlyFull { get; set; }       // SoChapNhan >= SoLuongToiDa
-        public bool? OnlyNotEnough { get; set; }  // 0 < SoChapNhan < SoLuongToiDa
+        public TinhTrangFilter TinhTrang { get; set; } = TinhTrangFilter.All;
 
         [StringLength(200)]
         public string? Keyword { get; set; }

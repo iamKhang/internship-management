@@ -11,7 +11,7 @@
         public string? NoiThucTap { get; set; }
         public int? KinhPhi { get; set; }
 
-        public string? MaKhoa { get; set; }   // từ join GiangVien
+        public KhoaOptionVm KhoaOptionVm { get; set; }
         public int SoDangKy { get; set; }
         public int SoChapNhan { get; set; }
         public bool IsFull { get; set; }

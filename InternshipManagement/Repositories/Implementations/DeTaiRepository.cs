@@ -4,6 +4,7 @@ using InternshipManagement.Repositories.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace InternshipManagement.Repositories.Implementations
 {
@@ -29,10 +30,7 @@ namespace InternshipManagement.Repositories.Implementations
             cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@NamHoc", (object?)filter.NamHoc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@IsFull", (object?)filter.IsFull ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OnlyNoStudent", (object?)BoolToBit(filter.OnlyNoStudent) ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OnlyFull", (object?)BoolToBit(filter.OnlyFull) ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OnlyNotEnough", (object?)BoolToBit(filter.OnlyNotEnough) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@TinhTrang", (byte)filter.TinhTrang);
             cmd.Parameters.AddWithValue("@Keyword", (object?)filter.Keyword ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MinKinhPhi", (object?)filter.MinKinhPhi ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaxKinhPhi", (object?)filter.MaxKinhPhi ?? DBNull.Value);
@@ -42,9 +40,14 @@ namespace InternshipManagement.Repositories.Implementations
             var list = new List<DeTaiListItemVm>();
             int totalRows = 0;
 
+
             await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
+                var val = reader.IsDBNull(reader.GetOrdinal("kinhphi"))
+                ? "NULL"
+                : reader.GetInt32(reader.GetOrdinal("kinhphi")).ToString();
+                Console.WriteLine($"[{reader.GetString(reader.GetOrdinal("madt"))}] KinhPhi={val}");
                 var item = new DeTaiListItemVm
                 {
                     MaDt = reader.GetString(reader.GetOrdinal("madt")),
@@ -55,7 +58,11 @@ namespace InternshipManagement.Repositories.Implementations
                     SoLuongToiDa = reader.GetInt32(reader.GetOrdinal("soluongtoida")),
                     NoiThucTap = reader.IsDBNull(reader.GetOrdinal("NoiThucTap")) ? null : reader.GetString(reader.GetOrdinal("NoiThucTap")),
                     KinhPhi = reader.IsDBNull(reader.GetOrdinal("kinhphi")) ? null : reader.GetInt32(reader.GetOrdinal("kinhphi")),
-                    MaKhoa = reader.IsDBNull(reader.GetOrdinal("makhoa")) ? null : reader.GetString(reader.GetOrdinal("makhoa")),
+                    KhoaOptionVm = new KhoaOptionVm
+                    {
+                        MaKhoa = reader.IsDBNull(reader.GetOrdinal("MaKhoa")) ? "" : reader.GetString(reader.GetOrdinal("MaKhoa")).TrimEnd(), // Trim nếu cột là CHAR
+                        TenKhoa = reader.IsDBNull(reader.GetOrdinal("TenKhoa")) ? "" : reader.GetString(reader.GetOrdinal("TenKhoa"))
+                    },
                     SoDangKy = reader.IsDBNull(reader.GetOrdinal("SoDangKy")) ? 0 : reader.GetInt32(reader.GetOrdinal("SoDangKy")),
                     SoChapNhan = reader.IsDBNull(reader.GetOrdinal("SoChapNhan")) ? 0 : reader.GetInt32(reader.GetOrdinal("SoChapNhan")),
                     IsFull = reader.GetBoolean(reader.GetOrdinal("IsFull"))
