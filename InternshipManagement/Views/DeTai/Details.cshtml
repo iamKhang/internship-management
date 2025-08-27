@@ -1,0 +1,167 @@
+﻿@model InternshipManagement.Models.ViewModels.DeTaiDetailVm
+@{
+    ViewData["Title"] = "Chi tiết Đề tài";
+}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Chi tiết Đề tài: <strong>@Model.TenDt</strong> <small class="text-muted">(@Model.MaDt)</small></h5>
+        <a asp-controller="DeTai" asp-action="Index" class="btn btn-sm btn-outline-secondary">← Quay lại</a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div><strong>Giảng viên:</strong> @Model.Gv_HoTenGv (@Model.Gv_MaGv)</div>
+                <div><strong>Khoa:</strong> @Model.Khoa_TenKhoa (@Model.Khoa_MaKhoa) — ĐT: @Model.Khoa_DienThoai</div>
+                <div><strong>Nơi thực tập:</strong> @Model.NoiThucTap</div>
+                <div><strong>Kinh phí:</strong> @(Model.KinhPhi.HasValue ? String.Format("{0:#,##0} triệu", Model.KinhPhi) : "—")</div>
+            </div>
+            <div class="col-md-6">
+                <div><strong>Học kỳ:</strong> @Model.HocKy/@Model.NamHoc</div>
+                <div><strong>Số lượng tối đa:</strong> @Model.SoLuongToiDa</div>
+                <div>
+                    <span class="badge rounded-pill bg-primary me-2">Đã tham gia: @Model.SoThamGia</span>
+                    <span class="badge rounded-pill @(Model.SoChoConLai > 0 ? "bg-success" : "bg-danger")">Còn lại: @Model.SoChoConLai</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h6 class="mb-0">Sinh viên đã tham gia</h6>
+        <div class="small text-muted">Tổng: <strong>@Model.SoThamGia</strong></div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:90px">Mã SV</th>
+                        <th>Họ tên</th>
+                        <th style="width:110px">Năm sinh</th>
+                        <th>Quê quán</th>
+                        <th style="width:140px">Trạng thái</th>
+                        <th style="width:130px">Ngày đăng ký</th>
+                        <th style="width:140px">Ngày chấp nhận</th>
+                        <th style="width:90px">Kết quả</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Students.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">Chưa có sinh viên tham gia</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var s in Model.Students)
+                        {
+                            <tr>
+                                <td>@s.MaSv</td>
+                                <td>@s.HoTenSv</td>
+                                <td>@(s.NamSinh?.ToString() ?? "—")</td>
+                                <td>@(string.IsNullOrWhiteSpace(s.QueQuan) ? "—" : s.QueQuan)</td>
+                                <td>
+                                    @{
+                                        string status = s.TrangThai switch
+                                        {
+                                            1 => "Đã chấp nhận",
+                                            2 => "Đang thực hiện",
+                                            3 => "Đã hoàn thành",
+                                            _ => "—"
+                                        };
+                                    }
+                                    @status
+                                </td>
+                                <td>@(s.NgayDangKy?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td>@(s.NgayChapNhan?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td>@(s.KetQua?.ToString("0.##") ?? "—")</td>
+                                <td>@(string.IsNullOrWhiteSpace(s.GhiChu) ? "—" : s.GhiChu)</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex align-items-center gap-2">
+    <button id="btnRegister" class="btn btn-sm btn-primary d-none mt-3">Đăng ký đề tài</button>
+    <button id="btnWaiting" class="btn btn-sm btn-warning d-none mt-3" disabled>Đang chờ duyệt</button>
+    <button id="btnRejected" class="btn btn-sm btn-danger d-none mt-3" disabled>Bạn đã bị từ chối</button>
+    <button id="btnRegistered" class="btn btn-sm btn-success d-none mt-3" disabled>Đã đăng ký</button>
+    <button id="btnOther" class="btn btn-sm btn-secondary d-none mt-3" disabled>Đã đăng ký đề tài khác</button>
+    <a id="btnLogin" class="btn btn-sm btn-primary d-none mt-3"
+       asp-controller="Account" asp-action="Login"
+       asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">
+        Đăng nhập để đăng ký
+    </a>
+    <span id="regNote" class="small text-muted"></span>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+(function () {
+  const maDt = '@(Model.MaDt?.Trim())';
+  const apiCheck = '@Url.Action("CheckRegistration","DeTai")';
+
+  const el = id => document.getElementById(id);
+  const show = id => el(id).classList.remove('d-none');
+  const hideAll = () => {
+    ['btnRegister','btnWaiting','btnRejected','btnRegistered','btnOther','btnLogin']
+      .forEach(id => el(id).classList.add('d-none'));
+    const note = el('regNote'); if (note) note.textContent = '';
+  };
+
+  axios.get(apiCheck, { params: { id: maDt } })
+    .then(({ data }) => {
+      hideAll();
+
+      if (!data || data.isAuthenticated === false) { show('btnLogin'); return; }
+      if (data.isStudent === false) { return; } // GV/Admin: không hiện nút
+
+      const st = data.status;
+
+      // ✅ FALLBACK QUAN TRỌNG: status null => cho phép đăng ký
+      if (!st || typeof st.thisTrangThai === 'undefined' || st.thisTrangThai === null) {
+        show('btnRegister');
+        return;
+      }
+
+      if (st.hasOtherTopic123) {
+        show('btnOther');
+        if (st.otherMaDt && el('regNote'))
+          el('regNote').textContent = `(${st.otherMaDt} - ${st.otherTenDt || ''})`;
+        return;
+      }
+
+      switch (st.thisTrangThai) {
+        case 0:  show('btnWaiting');   break;
+        case 4:  show('btnRejected');  break;
+        case 1:
+        case 2:
+        case 3:  show('btnRegistered'); break;
+        default: show('btnRegister');  break;
+      }
+    })
+    // ✅ Nếu lỗi/401/redirect -> hiện nút đăng nhập thay vì im lặng
+    .catch(() => { show('btnLogin'); });
+
+  // Đăng ký bằng axios (backend tự lấy MaSv từ claims)
+  const btn = document.getElementById('btnRegister');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      axios.post('/HuongDan/Register', { maDt: maDt })
+        .then(() => location.reload())
+        .catch(() => alert('Đăng ký thất bại'));
+    });
+  }
+})();
+</script>

@@ -38,9 +38,43 @@ namespace InternshipManagement.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
+            // Hồ sơ SV
             var sv = await _repo.GetByIdAsync(id);
             if (sv == null) return NotFound();
-            return View(sv);
+
+            // Đề tài SV đang đăng ký/đang theo (nếu có)
+            var currentTopic = await _repo.GetCurrentTopicByStudentAsync(id);
+
+            // Combobox Khoa (nếu cần hiển thị/đổi khoa tại đây)
+            var khoaList = await _khoaRepo.GetOptionsAsync();
+            var khoaOptions = khoaList.Select(k => new SelectListItem
+            {
+                Value = k.MaKhoa,
+                Text = k.TenKhoa,
+                Selected = (sv.MaKhoa == k.MaKhoa)
+            });
+
+            // Combobox Học kỳ/Năm học để hiển thị/loc tuỳ ý
+            var hocKyOptions = new List<SelectListItem>
+            {
+                new("Học kỳ 1", "1"),
+                new("Học kỳ 2", "2"),
+                new("Học kỳ 3", "3"),
+            };
+            var yearNow = DateTime.Now.Year;
+            var namHocOptions = Enumerable.Range(yearNow - 5, 8)  // ví dụ: từ (now-5) đến (now+2)
+                .Select(y => new SelectListItem(y.ToString(), y.ToString()));
+
+            var vm = new SinhVienDetailVm
+            {
+                Profile = sv,
+                CurrentTopic = currentTopic,
+                KhoaOptions = khoaOptions,
+                HocKyOptions = hocKyOptions,
+                NamHocOptions = namHocOptions
+            };
+
+            return View(vm); // Views/SinhVien/Details.cshtml
         }
         public async Task<IActionResult> Create()
         {

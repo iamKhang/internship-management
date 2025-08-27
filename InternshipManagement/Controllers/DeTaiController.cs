@@ -1,8 +1,10 @@
 ﻿using ClosedXML.Excel;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Security.Claims;
 
 namespace InternshipManagement.Controllers
 {
@@ -86,7 +88,7 @@ namespace InternshipManagement.Controllers
                 ws.Cell(r, 3).Value = x.TenGv;
                 ws.Cell(r, 4).Value = x.TenKhoa;
                 ws.Cell(r, 5).Value = x.HocKy + "/" + x.NamHoc;
-                ws.Cell(r, 6).Value = x.SoChapNhan+ "/"+ x.SoLuongToiDa; ws.Column(7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                ws.Cell(r, 6).Value = x.SoChapNhan + "/" + x.SoLuongToiDa; ws.Column(7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 ws.Cell(r, 6).Value = x.IsFull ? "✓" : "";
                 ws.Column(7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 ws.Cell(r, 8).Value = x.KinhPhi.HasValue ? (double)(x.KinhPhi.Value * 1_000_000) : (double?)null;
@@ -204,5 +206,103 @@ namespace InternshipManagement.Controllers
             const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             return File(bytes, contentType, fileName);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Details(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return BadRequest();
+
+            var vm = await _repo.GetDetailAsync(id);
+            if (vm == null) return NotFound();
+
+            return View(vm);
+        }
+        [HttpGet]
+        public async Task<IActionResult> CheckRegistration(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return BadRequest();
+
+            // Mặc định
+            if (!(User?.Identity?.IsAuthenticated ?? false))
+                return Json(new { isAuthenticated = false });
+
+            // Role: ưu tiên role-name; fallback role-number (0=Admin, 1=Student, 2=GiangVien)
+            bool isStudent = User.IsInRole("Student") || User.IsInRole("SinhVien");
+            if (!isStudent)
+            {
+                var roleClaim = User.FindFirst(ClaimTypes.Role) ?? User.FindFirst("Role");
+                if (roleClaim != null && int.TryParse(roleClaim.Value, out var roleNo) && roleNo == 1)
+                    isStudent = true;
+            }
+            if (!isStudent) return Json(new { isAuthenticated = true, isStudent = false });
+
+            // Lấy MaSv từ claims
+            int maSv;
+            var svClaim = User.FindFirst("MaSv") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (svClaim == null || !int.TryParse(svClaim.Value, out maSv))
+                return Json(new { isAuthenticated = true, isStudent = true, error = "NO_STUDENT_ID" });
+
+            // Gọi repo/proc mở rộng (đã nêu ở bước trước)
+            var status = await _repo.CheckRegistrationAsync(maSv, id);
+            return Json(new
+            {
+                isAuthenticated = true,
+                isStudent = true,
+                status
+                // status.thisTrangThai: null/0/1/2/3/4
+                // status.hasOtherTopic123, status.otherMaDt, status.otherTenDt
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Manage(byte? hocKy, short? namHoc, string? maDt, byte? trangThai)
+        {
+            // Bắt buộc đăng nhập & đúng vai trò giảng viên
+            if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
+            if (!User.IsInRole("GiangVien")) return Forbid();
+
+            // Lấy mã GV từ claim "MaGv" (ưu tiên), fallback sang "code" hoặc NameIdentifier nếu là số
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            // Dữ liệu
+            var topics = await _repo.GetLecturerTopicsAsync(maGv, hocKy, namHoc);
+            var students = await _repo.GetLecturerStudentsAsync(maGv, hocKy, namHoc, maDt, trangThai);
+            var topicOptions = await _repo.GetLecturerTopicOptionsAsync(maGv, hocKy, namHoc);
+
+            // Combobox
+            var hocKyOptions = new List<SelectListItem> {
+        new("Tất cả học kỳ",""), new("HK1","1"), new("HK2","2"), new("HK3","3")
+    };
+
+            short nowY = (short)DateTime.Now.Year;
+            var namHocOptions = Enumerable.Range(nowY - 5, 8)
+                .Select(y => new SelectListItem(y.ToString(), y.ToString()));
+
+            var trangThaiOptions = new List<SelectListItem> {
+        new("Tất cả",""),
+        new("Chờ duyệt (0)","0"), new("Chấp nhận (1)","1"),
+        new("Đang thực hiện (2)","2"), new("Hoàn thành (3)","3"),
+        new("Từ chối (4)","4"), new("Rút (5)","5"),
+    };
+
+            var vm = new GvManageVm
+            {
+                Filter = new GvManageFilterVm { MaGv = maGv, HocKy = hocKy, NamHoc = namHoc, MaDt = maDt, TrangThai = trangThai },
+                Topics = topics,
+                Students = students,
+                HocKyOptions = hocKyOptions,
+                NamHocOptions = namHocOptions,
+                DeTaiOptions = topicOptions,
+                TrangThaiOptions = trangThaiOptions
+            };
+
+            return View(vm);
+        }
+
     }
 }

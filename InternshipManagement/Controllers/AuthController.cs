@@ -1,11 +1,13 @@
-﻿using System.Security.Claims;
-using InternshipManagement.Auth;
+﻿using InternshipManagement.Auth;
+using InternshipManagement.Data;
 using InternshipManagement.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 public class AuthController : Controller
 {
@@ -15,39 +17,45 @@ public class AuthController : Controller
     public AuthController(AppDbContext db) => _db = db;
 
     [HttpGet("/auth/login")]
+    [AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
         => View(new LoginViewModel { ReturnUrl = returnUrl });
-
-    [ValidateAntiForgeryToken]
     [HttpPost("/auth/login")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);
 
-        // Tìm đúng user theo (Code, Role)
+        // 1) Xác thực
         var user = await _db.AppUsers
             .FirstOrDefaultAsync(u => u.Code == vm.Code && u.Role == vm.Role);
 
         if (user == null ||
             _hasher.VerifyHashedPassword(user, user.PasswordHash, vm.Password) == PasswordVerificationResult.Failed)
         {
-            ModelState.AddModelError("", "Sai mã, mật khẩu hoặc vai trò.");
+            ModelState.AddModelError(string.Empty, "Sai mã, mật khẩu hoặc vai trò.");
             return View(vm);
         }
 
-        // === LẤY HỌ TÊN HIỂN THỊ ===
-        string displayName = user.Code; // fallback
-        if (user.Role == AppRole.SinhVien && int.TryParse(user.Code, out var maSv))
+        // 2) Lấy tên hiển thị + giữ lại id số nếu có
+        string displayName = user.Code;
+        int? maSvId = null;
+        int? maGvId = null;
+
+        if (user.Role == AppRole.SinhVien && int.TryParse(user.Code, out var tmpSv))
         {
-            displayName = await _db.Set<SinhVien>()               // <── thay vì _db.SinhVien
-                .Where(s => s.MaSv == maSv)
+            maSvId = tmpSv;
+            displayName = await _db.Set<SinhVien>()
+                .Where(s => s.MaSv == tmpSv)
                 .Select(s => s.HoTenSv)
                 .FirstOrDefaultAsync() ?? user.Code;
         }
-        else if (user.Role == AppRole.GiangVien && int.TryParse(user.Code, out var maGv))
+        else if (user.Role == AppRole.GiangVien && int.TryParse(user.Code, out var tmpGv))
         {
-            displayName = await _db.Set<GiangVien>()              // <── thay vì _db.GiangVien
-                .Where(g => g.MaGv == maGv)
+            maGvId = tmpGv;
+            displayName = await _db.Set<GiangVien>()
+                .Where(g => g.MaGv == tmpGv)
                 .Select(g => g.HoTenGv)
                 .FirstOrDefaultAsync() ?? user.Code;
         }
@@ -56,19 +64,35 @@ public class AuthController : Controller
             displayName = "Quản trị hệ thống";
         }
 
+        // 3) Map role về chữ
+        string roleName = user.Role switch
+        {
+            AppRole.Admin => "Admin",
+            AppRole.GiangVien => "GiangVien",
+            AppRole.SinhVien => "SinhVien",
+            _ => user.Role.ToString()
+        };
+
+        // 4) Claims
         var claims = new List<Claim>
     {
-        new Claim(ClaimTypes.Name, user.Code),              // mã đăng nhập
-        new Claim(ClaimTypes.Role, user.Role.ToString()),   // vai trò
-        new Claim("code", user.Code),
-        new Claim("full_name", displayName)                 // họ tên để hiển thị
+        new(ClaimTypes.NameIdentifier, user.Code),
+        new(ClaimTypes.Name, displayName),
+        new(ClaimTypes.Role, roleName),
+        new("code", user.Code),
+        new("full_name", displayName)
     };
 
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(identity));
+        if (maGvId.HasValue) claims.Add(new Claim("MaGv", maGvId.Value.ToString()));
+        if (maSvId.HasValue) claims.Add(new Claim("MaSv", maSvId.Value.ToString()));
 
+        // 5) Sign-in
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+        // 6) Điều hướng
         if (!string.IsNullOrEmpty(vm.ReturnUrl) && Url.IsLocalUrl(vm.ReturnUrl))
             return Redirect(vm.ReturnUrl);
 
@@ -84,5 +108,6 @@ public class AuthController : Controller
     }
 
     [HttpGet("/auth/denied")]
+    [AllowAnonymous]
     public IActionResult Denied() => View();
 }

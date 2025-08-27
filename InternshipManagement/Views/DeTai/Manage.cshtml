@@ -1,0 +1,134 @@
+﻿@model InternshipManagement.Models.ViewModels.GvManageVm
+@{
+    ViewData["Title"] = "Quản lý đề tài";
+}
+
+<form method="get" class="card mb-3">
+    <div class="card-header bg-white">Bộ lọc</div>
+    <div class="card-body row g-2">
+        <div class="col-12 col-sm-3">
+            <label class="form-label">Học kỳ</label>
+            <select class="form-select" asp-items="Model.HocKyOptions" name="hocKy">
+                <option value=""></option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-3">
+            <label class="form-label">Năm học</label>
+            <select class="form-select" asp-items="Model.NamHocOptions" name="namHoc">
+                <option value=""></option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-3">
+            <label class="form-label">Đề tài</label>
+            <select class="form-select" asp-items="Model.DeTaiOptions" name="maDt">
+            </select>
+        </div>
+        <div class="col-12 col-sm-3">
+            <label class="form-label">Trạng thái</label>
+            <select class="form-select" asp-items="Model.TrangThaiOptions" name="trangThai">
+            </select>
+        </div>
+    </div>
+    <div class="card-footer bg-white text-end">
+        <button class="btn btn-primary btn-sm" type="submit">Lọc</button>
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Manage","DeTai")">Xoá lọc</a>
+    </div>
+</form>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white">Đề tài của tôi</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã</th>
+                                <th>Tên</th>
+                                <th>HK/NH</th>
+                                <th>Tối đa</th>
+                                <th>Tham gia</th>
+                                <th>Còn</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.Topics)
+                            {
+                                <tr>
+                                    <td>@t.MaDt</td>
+                                    <td>@t.TenDt</td>
+                                    <td>@t.HocKy / @t.NamHoc</td>
+                                    <td>@t.SoLuongToiDa</td>
+                                    <td>@t.ThamGia</td>
+                                    <td class="@(t.ConLai > 0 ? "text-success" : "text-danger")">@t.ConLai</td>
+                                </tr>
+                            }
+                            @if (!Model.Topics.Any())
+                            {
+                                <tr><td colspan="6" class="text-muted text-center py-3">Không có đề tài</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white">Sinh viên đang hướng dẫn</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã SV</th>
+                                <th>Họ tên</th>
+                                <th>Khoa</th>
+                                <th>Đề tài</th>
+                                <th>HK/NH</th>
+                                <th>Trạng thái</th>
+                                <th>ĐK</th>
+                                <th>CN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Students)
+                            {
+                                <tr>
+                                    <td>@s.Masv</td>
+                                    <td>@s.HotenSv</td>
+                                    <td>@s.Sv_TenKhoa</td>
+                                    <td>@s.MaDt</td>
+                                    <td>@s.HocKy / @s.NamHoc</td>
+                                    <td>
+                                        @{
+                                            var label = s.TrangThai switch
+                                            {
+                                                0 => "Chờ duyệt",
+                                                1 => "Chấp nhận",
+                                                2 => "Đang thực hiện",
+                                                3 => "Hoàn thành",
+                                                4 => "Từ chối",
+                                                5 => "Rút",
+                                                _ => "?"
+                                            };
+                                        }
+                                        @label
+                                    </td>
+                                    <td>@(s.NgayDangKy?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                    <td>@(s.NgayChapNhan?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                </tr>
+                            }
+                            @if (!Model.Students.Any())
+                            {
+                                <tr><td colspan="8" class="text-muted text-center py-3">Không có sinh viên</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

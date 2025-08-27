@@ -1127,6 +1127,129 @@ BEGIN
 END
 GO
 
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_KiemTraDangKyDeTai
+    @MaSv INT,
+    @MaDt CHAR(10)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        hd.masv,
+        hd.madt,
+        hd.trangthai
+    FROM HuongDan hd
+    WHERE hd.masv = @MaSv
+      AND hd.madt = @MaDt;
+END
+GO
+
+-- Chạy trong đúng database của bạn
+-- USE ThucTap;  -- sửa tên DB nếu cần
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_SV_DeTaiDangKy
+    @MaSv INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ;WITH pick AS (
+        SELECT TOP 1
+            hd.masv,
+            hd.madt,
+            hd.trangthai,
+            hd.ngaydangky,
+            hd.ngaychapnhan,
+            hd.ketqua,
+            hd.ghichu,
+
+            dt.tendt,
+            dt.magv,
+            dt.hocky,
+            dt.namhoc,
+            dt.soluongtoida,
+
+            gv.hotengv AS gv_hotengv,
+            gv.makhoa  AS gv_makhoa,
+
+            k.tenkhoa  AS khoa_tenkhoa
+        FROM HuongDan       AS hd
+        INNER JOIN DeTai    AS dt ON dt.madt = hd.madt
+        LEFT  JOIN GiangVien AS gv ON gv.magv = dt.magv
+        LEFT  JOIN Khoa       AS k  ON k.makhoa = gv.makhoa
+        WHERE hd.masv = @MaSv
+          AND hd.trangthai IN (1,2,3,0)      -- ưu tiên 1/2/3, fallback 0 (đang chờ)
+        ORDER BY
+          CASE WHEN hd.trangthai IN (1,2,3) THEN 0 ELSE 1 END,  -- ưu tiên 1/2/3
+          hd.ngaydangky DESC                                     -- mới nhất
+    )
+    SELECT
+        masv,
+        madt,
+        trangthai,
+        ngaydangky,
+        ngaychapnhan,
+        ketqua,
+        ghichu,
+        tendt,
+        magv,
+        hocky,
+        namhoc,
+        soluongtoida,
+        gv_hotengv,
+        gv_makhoa,
+        khoa_tenkhoa
+    FROM pick;  -- 0 hoặc 1 dòng
+END
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_GV_SinhVienHuongDan_List
+    @MaGv      INT,
+    @HocKy     TINYINT  = NULL,   -- NULL = tất cả
+    @NamHoc    SMALLINT = NULL,   -- NULL = tất cả
+    @MaDt      CHAR(10) = NULL,   -- NULL = tất cả; lọc theo 1 đề tài
+    @TrangThai TINYINT  = NULL    -- NULL = tất cả; 0..5 = một trạng thái
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        sv.masv,
+        sv.hotensv,
+        sv.namsinh,
+        sv.quequan,
+        sv.makhoa      AS sv_makhoa,
+        k.tenkhoa      AS sv_tenkhoa,
+
+        dt.madt,
+        dt.tendt,
+        dt.hocky,
+        dt.namhoc,
+
+        hd.trangthai,
+        hd.ngaydangky,
+        hd.ngaychapnhan,
+        hd.ketqua,
+        hd.ghichu
+    FROM HuongDan hd
+    JOIN DeTai    dt ON dt.madt = hd.madt AND dt.magv = @MaGv
+    JOIN SinhVien sv ON sv.masv = hd.masv
+    LEFT JOIN Khoa k ON k.makhoa = sv.makhoa
+    WHERE (@HocKy     IS NULL OR dt.hocky     = @HocKy)
+      AND (@NamHoc    IS NULL OR dt.namhoc    = @NamHoc)
+      AND (@MaDt      IS NULL OR dt.madt      = @MaDt)
+      AND (@TrangThai IS NULL OR hd.trangthai = @TrangThai)
+    ORDER BY
+        dt.namhoc DESC, dt.hocky,
+        CASE WHEN hd.trangthai IN (1,2,3) THEN 0 ELSE 1 END,
+        sv.hotensv;
+END
+GO
+
+
+
+
 
 
 /* ============================================================================

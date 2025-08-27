@@ -1,18 +1,44 @@
-﻿@model InternshipManagement.Models.ViewModels.SinhVienListItemVm
-@{
-    ViewData["Title"] = "Chi tiết Sinh viên";
-}
-<h2>Chi tiết Sinh viên</h2>
-<dl class="row">
-    <dt class="col-sm-2">Mã SV</dt>
-    <dd class="col-sm-10">@Model.Masv</dd>
-    <dt class="col-sm-2">Họ tên</dt>
-    <dd class="col-sm-10">@Model.Hotensv</dd>
-    <dt class="col-sm-2">Khoa</dt>
-    <dd class="col-sm-10">@Model.TenKhoa</dd>
-    <dt class="col-sm-2">Năm sinh</dt>
-    <dd class="col-sm-10">@Model.NamSinh</dd>
-    <dt class="col-sm-2">Quê quán</dt>
-    <dd class="col-sm-10">@Model.QueQuan</dd>
-</dl>
-<a class="btn btn-secondary" href="@Url.Action("Index")">Quay lại</a>
+﻿@model InternshipManagement.Models.ViewModels.SinhVienDetailVm
+
+
+<div class="card mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Thông tin sinh viên: @Model.Profile.Hotensv (@Model.Profile.Masv)</h5>
+    </div>
+    <div class="card-body row g-3">
+        <div class="col-md-6">
+            <div><b>Khoa:</b> @Model.Profile.TenKhoa (@Model.Profile.MaKhoa)</div>
+            <div><b>Năm sinh:</b> @(Model.Profile.NamSinh?.ToString() ?? "—")</div>
+            <div><b>Quê quán:</b> @(Model.Profile.QueQuan ?? "—")</div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Khoa (Options)</label>
+            <select class="form-select" asp-items="Model.KhoaOptions" disabled></select>
+            <label class="form-label mt-2">Học kỳ</label>
+            <select class="form-select" asp-items="Model.HocKyOptions" disabled></select>
+            <label class="form-label mt-2">Năm học</label>
+            <select class="form-select" asp-items="Model.NamHocOptions" disabled></select>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h6 class="mb-0">Đề tài hiện tại</h6>
+    </div>
+    <div class="card-body">
+        @if (Model.CurrentTopic == null)
+        {
+            <div class="text-muted">Sinh viên chưa đăng ký đề tài nào.</div>
+        }
+        else
+        {
+            <div><b>Mã đề tài:</b> @Model.CurrentTopic.MaDt</div>
+            <div><b>Tên đề tài:</b> @Model.CurrentTopic.TenDt</div>
+            <div><b>Trạng thái:</b> @Model.CurrentTopic.TrangThai</div>
+            <div><b>GV hướng dẫn:</b> @Model.CurrentTopic.Gv_HoTen (@Model.CurrentTopic.Gv_MaKhoa)</div>
+            <div><b>Khoa:</b> @Model.CurrentTopic.Khoa_Ten</div>
+            <div><b>Học kỳ/Năm học:</b> @Model.CurrentTopic.HocKy / @Model.CurrentTopic.NamHoc</div>
+        }
+    </div>
+</div>

@@ -118,9 +118,56 @@ namespace InternshipManagement.Repositories.Implementations
             await _db.SaveChangesAsync();
         }
 
-        private static async Task EnsureOpenAsync(SqlConnection conn)
+        // Trong SinhVienRepository:
+        private const string SP_SV_DETAI_DANGKY = "dbo.sp_SV_DeTaiDangKy";
+
+        public async Task<StudentCurrentTopicVm?> GetCurrentTopicByStudentAsync(int maSv)
         {
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
+            await EnsureOpenAsync(conn); // 👈 dùng đúng helper như các hàm còn lại
+
+            await using var cmd = new SqlCommand(SP_SV_DETAI_DANGKY, conn)
+            { CommandType = CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("@MaSv", maSv);
+
+            await using var rd = await cmd.ExecuteReaderAsync();
+            if (!await rd.ReadAsync()) return null;
+
+            return new StudentCurrentTopicVm
+            {
+                MaSv = rd.GetInt32(rd.GetOrdinal("masv")),
+                MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
+                TrangThai = rd.GetByte(rd.GetOrdinal("trangthai")),
+                NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
+                NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
+                KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
+                GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
+                TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
+                MaGv = rd.GetInt32(rd.GetOrdinal("magv")),
+                HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
+                NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
+                SoLuongToiDa = rd.GetInt32(rd.GetOrdinal("soluongtoida")),
+                Gv_HoTen = rd.IsDBNull(rd.GetOrdinal("gv_hotengv")) ? null : rd.GetString(rd.GetOrdinal("gv_hotengv")),
+                Gv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("gv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("gv_makhoa")).TrimEnd(),
+                Khoa_Ten = rd.IsDBNull(rd.GetOrdinal("khoa_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("khoa_tenkhoa")),
+            };
         }
+
+
+        private async Task EnsureOpenAsync(SqlConnection conn)
+        {
+            if (string.IsNullOrWhiteSpace(conn.ConnectionString))
+            {
+                var cs = _db.Database.GetConnectionString();
+                if (string.IsNullOrWhiteSpace(cs))
+                    throw new InvalidOperationException("Connection string is empty. Check Program.cs/appsettings.");
+                conn.ConnectionString = cs;
+            }
+
+            if (conn.State != ConnectionState.Open)
+                await conn.OpenAsync();
+        }
+
+
     }
 }

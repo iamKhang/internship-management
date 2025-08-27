@@ -11,7 +11,8 @@ namespace InternshipManagement.Repositories.Interfaces
 
         Task<SinhVien?> GetEntityAsync(int id);  
         Task CreateAsync(SinhVien entity);     
-        Task UpdateAsync(SinhVien entity);    
+        Task UpdateAsync(SinhVien entity);
+        Task<StudentCurrentTopicVm?> GetCurrentTopicByStudentAsync(int maSv);
         Task DeleteAsync(int id);           
     }
 }
