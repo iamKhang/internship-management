@@ -1204,12 +1204,13 @@ BEGIN
     FROM pick;  -- 0 hoặc 1 dòng
 END
 GO
+GO
 CREATE OR ALTER PROCEDURE dbo.sp_GV_SinhVienHuongDan_List
     @MaGv      INT,
-    @HocKy     TINYINT  = NULL,   -- NULL = tất cả
-    @NamHoc    SMALLINT = NULL,   -- NULL = tất cả
-    @MaDt      CHAR(10) = NULL,   -- NULL = tất cả; lọc theo 1 đề tài
-    @TrangThai TINYINT  = NULL    -- NULL = tất cả; 0..5 = một trạng thái
+    @HocKy     TINYINT   = NULL,
+    @NamHoc    SMALLINT  = NULL,
+    @MaDt      CHAR(10)  = NULL,   -- chỉnh độ dài cho khớp DB nếu khác
+    @TrangThai TINYINT   = NULL     -- 0..5 (NULL = mặc định 1,2,3)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1219,8 +1220,8 @@ BEGIN
         sv.hotensv,
         sv.namsinh,
         sv.quequan,
-        sv.makhoa      AS sv_makhoa,
-        k.tenkhoa      AS sv_tenkhoa,
+        sv.makhoa                   AS sv_makhoa,
+        k.tenkhoa                   AS sv_tenkhoa,
 
         dt.madt,
         dt.tendt,
@@ -1232,21 +1233,183 @@ BEGIN
         hd.ngaychapnhan,
         hd.ketqua,
         hd.ghichu
-    FROM HuongDan hd
-    JOIN DeTai    dt ON dt.madt = hd.madt AND dt.magv = @MaGv
-    JOIN SinhVien sv ON sv.masv = hd.masv
-    LEFT JOIN Khoa k ON k.makhoa = sv.makhoa
-    WHERE (@HocKy     IS NULL OR dt.hocky     = @HocKy)
-      AND (@NamHoc    IS NULL OR dt.namhoc    = @NamHoc)
-      AND (@MaDt      IS NULL OR dt.madt      = @MaDt)
-      AND (@TrangThai IS NULL OR hd.trangthai = @TrangThai)
+    FROM HuongDan AS hd
+    INNER JOIN DeTai    AS dt ON dt.madt = hd.madt
+    INNER JOIN SinhVien AS sv ON sv.masv = hd.masv
+    LEFT  JOIN Khoa     AS k  ON k.makhoa = sv.makhoa
+    WHERE
+        hd.magv = @MaGv
+        AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
+        AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc)
+        AND (@MaDt   IS NULL OR RTRIM(dt.madt) = RTRIM(@MaDt))  -- tránh lệch CHAR padding
+        AND (
+              ( @TrangThai IN (1,2,3) AND hd.trangthai = @TrangThai )  -- nếu truyền 1/2/3 thì lọc đúng
+           OR ( (@TrangThai IS NULL OR @TrangThai NOT IN (1,2,3))       -- NULL/khác 1,2,3 => mặc định
+                AND hd.trangthai IN (1,2,3) )
+        )
     ORDER BY
-        dt.namhoc DESC, dt.hocky,
-        CASE WHEN hd.trangthai IN (1,2,3) THEN 0 ELSE 1 END,
+        CASE hd.trangthai
+            WHEN 2 THEN 0  -- InProgress
+            WHEN 1 THEN 1  -- Accepted
+            WHEN 3 THEN 2  -- Completed
+            WHEN 0 THEN 3
+            WHEN 4 THEN 4
+            WHEN 5 THEN 5
+            ELSE 6
+        END,
+        dt.namhoc DESC,
+        dt.hocky  DESC,
         sv.hotensv;
 END
 GO
 
+
+GO
+CREATE OR ALTER PROCEDURE [dbo].[sp_GiangVien_SinhVienHuongDan]
+    @MaGv       INT,            -- bắt buộc
+    @TrangThai  TINYINT   = NULL,   -- NULL = tất cả; 0..5 = lọc theo 1 trạng thái
+    @MaDt       CHAR(10)  = NULL,   -- NULL = tất cả; nhập mã đề tài để lọc 1 đề tài
+    @HocKy      TINYINT   = NULL,   -- (mới) NULL = tất cả; lọc theo học kỳ của Đề tài
+    @NamHoc     SMALLINT  = NULL    -- (mới) NULL = tất cả; lọc theo năm học của Đề tài
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        -- Giảng viên (lặp lại để bind UI)
+        gv.magv           AS gv_magv,
+        gv.hotengv        AS gv_hotengv,
+        gv.makhoa         AS gv_makhoa,
+
+        -- Sinh viên
+        sv.masv,
+        sv.hotensv,
+        sv.namsinh,
+        sv.quequan,
+        sv.makhoa         AS sv_makhoa,
+        k.tenkhoa         AS sv_tenkhoa,
+
+        -- Đề tài & hướng dẫn
+        hd.madt,
+        dt.tendt,
+        dt.hocky,
+        dt.namhoc,
+        hd.trangthai,
+        hd.ngaydangky,
+        hd.ngaychapnhan,
+        hd.ketqua,
+        hd.ghichu
+    FROM HuongDan AS hd
+    INNER JOIN GiangVien AS gv ON gv.magv = hd.magv
+    INNER JOIN SinhVien AS sv   ON sv.masv = hd.masv
+    LEFT  JOIN DeTai    AS dt   ON dt.madt = hd.madt
+    LEFT  JOIN Khoa     AS k    ON k.makhoa = sv.makhoa
+    WHERE hd.magv = @MaGv
+      AND (@MaDt     IS NULL OR hd.madt = @MaDt)         -- @MaDt là CHAR(10) → so khớp padding
+      AND (@HocKy    IS NULL OR dt.hocky = @HocKy)
+      AND (@NamHoc   IS NULL OR dt.namhoc = @NamHoc)
+      AND (
+            ( @TrangThai IN (1,2,3) AND hd.trangthai = @TrangThai )   -- nếu truyền 1/2/3 thì lọc đúng
+         OR ( @TrangThai NOT IN (1,2,3) AND hd.trangthai IN (1,2,3) ) -- còn lại mặc định chỉ 1,2,3
+          )
+    ORDER BY
+        -- Ưu tiên: InProgress(2) → Accepted(1) → Completed(3) → Pending(0) → Rejected/Withdrawn(4,5)
+        CASE hd.trangthai
+            WHEN 2 THEN 0
+            WHEN 1 THEN 1
+            WHEN 3 THEN 2
+            WHEN 0 THEN 3
+            WHEN 4 THEN 4
+            WHEN 5 THEN 5
+            ELSE 6
+        END,
+        dt.namhoc DESC,
+        dt.hocky  DESC,
+        sv.hotensv;
+END
+GO
+
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_GV_SinhVienDangKy_List
+    @MaGv      INT,
+    @HocKy     TINYINT   = NULL,
+    @NamHoc    SMALLINT  = NULL,
+    @TrangThai TINYINT   = NULL,     -- 0..5; NULL = tất cả
+    @MaDt      CHAR(10)  = NULL      -- NULL = tất cả; nhớ chỉnh độ dài cho khớp DB nếu khác
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        -- Sinh viên
+        sv.masv,
+        sv.hotensv,
+        sv.namsinh,
+        sv.quequan,
+        sv.makhoa                   AS sv_makhoa,
+        k.tenkhoa                   AS sv_tenkhoa,
+
+        -- Đề tài
+        dt.madt,
+        dt.tendt,
+        dt.hocky,
+        dt.namhoc,
+
+        -- Hướng dẫn (đăng ký)
+        hd.trangthai,
+        hd.ngaydangky,
+        hd.ngaychapnhan,
+        hd.ketqua,
+        hd.ghichu
+    FROM HuongDan AS hd
+    INNER JOIN DeTai    AS dt ON dt.madt = hd.madt
+    INNER JOIN SinhVien AS sv ON sv.masv = hd.masv
+    LEFT  JOIN Khoa     AS k  ON k.makhoa = sv.makhoa
+    WHERE
+        hd.magv = @MaGv
+        AND (@HocKy     IS NULL OR dt.hocky  = @HocKy)
+        AND (@NamHoc    IS NULL OR dt.namhoc = @NamHoc)
+        AND (@TrangThai IS NULL OR hd.trangthai = @TrangThai)
+        AND (@MaDt      IS NULL OR RTRIM(dt.madt) = RTRIM(@MaDt))
+    ORDER BY
+        CASE WHEN hd.ngaydangky IS NULL THEN 1 ELSE 0 END,
+        hd.ngaydangky DESC;
+END
+GO
+
+
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_GV_HuongDan_UpdateStatus
+    @MaGv       INT,
+    @MaSv       INT,
+    @MaDt       CHAR(10),      -- chỉnh độ dài cho khớp DB nếu khác
+    @NewStatus  TINYINT,       -- 1=Accepted, 4=Rejected (theo enum của bạn)
+    @GhiChu     NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF (@NewStatus NOT IN (1,4))
+    BEGIN
+        RAISERROR (N'NewStatus chỉ hỗ trợ 1 (Accepted) hoặc 4 (Rejected).', 16, 1);
+        RETURN;
+    END;
+
+    UPDATE hd
+    SET
+        hd.trangthai    = @NewStatus,
+        hd.ghichu       = COALESCE(@GhiChu, hd.ghichu),
+        hd.ngaychapnhan = CASE WHEN @NewStatus = 1 THEN COALESCE(hd.ngaychapnhan, SYSUTCDATETIME())
+                               ELSE hd.ngaychapnhan END
+    FROM HuongDan AS hd
+    WHERE hd.magv = @MaGv
+      AND hd.masv = @MaSv
+      AND RTRIM(hd.madt) = RTRIM(@MaDt);
+
+    DECLARE @RowsAffected INT = @@ROWCOUNT;
+    SELECT @RowsAffected AS RowsAffected; -- để controller đọc
+END
+GO
 
 
 

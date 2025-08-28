@@ -235,22 +235,17 @@ namespace InternshipManagement.Controllers
                     isStudent = true;
             }
             if (!isStudent) return Json(new { isAuthenticated = true, isStudent = false });
-
-            // Lấy MaSv từ claims
             int maSv;
             var svClaim = User.FindFirst("MaSv") ?? User.FindFirst(ClaimTypes.NameIdentifier);
             if (svClaim == null || !int.TryParse(svClaim.Value, out maSv))
                 return Json(new { isAuthenticated = true, isStudent = true, error = "NO_STUDENT_ID" });
 
-            // Gọi repo/proc mở rộng (đã nêu ở bước trước)
             var status = await _repo.CheckRegistrationAsync(maSv, id);
             return Json(new
             {
                 isAuthenticated = true,
                 isStudent = true,
                 status
-                // status.thisTrangThai: null/0/1/2/3/4
-                // status.hasOtherTopic123, status.otherMaDt, status.otherTenDt
             });
         }
 
@@ -276,19 +271,18 @@ namespace InternshipManagement.Controllers
 
             // Combobox
             var hocKyOptions = new List<SelectListItem> {
-        new("Tất cả học kỳ",""), new("HK1","1"), new("HK2","2"), new("HK3","3")
-    };
+                new("Tất cả học kỳ",""), new("HK1","1"), new("HK2","2"), new("HK3","3")
+            };
 
             short nowY = (short)DateTime.Now.Year;
             var namHocOptions = Enumerable.Range(nowY - 5, 8)
                 .Select(y => new SelectListItem(y.ToString(), y.ToString()));
 
             var trangThaiOptions = new List<SelectListItem> {
-        new("Tất cả",""),
-        new("Chờ duyệt (0)","0"), new("Chấp nhận (1)","1"),
-        new("Đang thực hiện (2)","2"), new("Hoàn thành (3)","3"),
-        new("Từ chối (4)","4"), new("Rút (5)","5"),
-    };
+                new("Tất cả",""),
+                new("Chấp nhận","1"),
+                new("Đang thực hiện ","2"), new("Hoàn thành","3"),
+            };
 
             var vm = new GvManageVm
             {
@@ -304,5 +298,157 @@ namespace InternshipManagement.Controllers
             return View(vm);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Registrations(byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
+        {
+            // Auth + role GiangVien (như Manage của bạn)
+            if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
+            if (!User.IsInRole("GiangVien")) return Forbid();
+
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            var items = await _repo.GetRegistrationsAsync(maGv, hocKy, namHoc, trangThai, maDt);
+            var deTaiOptions = await _repo.GetLecturerTopicOptionsAsync(maGv, hocKy, namHoc);
+
+            short nowY = (short)DateTime.Now.Year;
+            var vm = new GvRegistrationsPageVm
+            {
+                Filter = new GvRegistrationFilterVm
+                {
+                    MaGv = maGv,
+                    HocKy = hocKy,
+                    NamHoc = namHoc,
+                    TrangThai = trangThai,
+                    MaDt = maDt
+                },
+                Items = items,
+                HocKyOptions = new List<SelectListItem> {
+            new("Tất cả học kỳ",""), new("HK1","1"), new("HK2","2"), new("HK3","3")
+        },
+                NamHocOptions = Enumerable.Range(nowY - 5, 8)
+                    .Select(y => new SelectListItem(y.ToString(), y.ToString())),
+                TrangThaiOptions = new List<SelectListItem> {
+            new("Tất cả",""),
+            new("Chờ duyệt","0"), new("Chấp nhận)","1"),
+            new("Đang thực hiện","2"), new("Hoàn thành","3"),
+            new("Từ chối","4"), new("Rút","5"),
+        },
+                DeTaiOptions = deTaiOptions
+            };
+
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, short? namHoc, byte? trangThai, string? filterMaDt)
+        {
+            // Lấy MaGv như trên
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            var ok = await _repo.UpdateHuongDanStatusAsync(maGv, maSv, maDt, 1, ghiChu); // 1=Accepted
+            TempData["Toast"] = ok ? "Đã duyệt đăng ký." : "Duyệt thất bại.";
+            return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, short? namHoc, byte? trangThai, string? filterMaDt)
+        {
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            var ok = await _repo.UpdateHuongDanStatusAsync(maGv, maSv, maDt, 4, ghiChu);
+            TempData["Toast"] = ok ? "Đã từ chối đăng ký." : "Từ chối thất bại.";
+            return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportRegistrationsExcel(byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
+        {
+            // Auth + lấy mã GV như action Registrations
+            if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
+            if (!User.IsInRole("GiangVien")) return Forbid();
+
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            var rows = await _repo.GetRegistrationsAsync(maGv, hocKy, namHoc, trangThai, maDt);
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("DangKy");
+
+            // Header
+            var r = 1;
+            ws.Cell(r, 1).Value = "Ngày đăng ký";
+            ws.Cell(r, 2).Value = "Mã SV";
+            ws.Cell(r, 3).Value = "Họ tên SV";
+            ws.Cell(r, 4).Value = "Khoa";
+            ws.Cell(r, 5).Value = "Mã đề tài";
+            ws.Cell(r, 6).Value = "Tên đề tài";
+            ws.Cell(r, 7).Value = "Học kỳ";
+            ws.Cell(r, 8).Value = "Năm học";
+            ws.Cell(r, 9).Value = "Trạng thái";
+            ws.Range(r, 1, r, 9).Style.Font.Bold = true;
+            ws.Range(r, 1, r, 9).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
+            r++;
+
+            // Data
+            foreach (var x in rows)
+            {
+                ws.Cell(r, 1).Value = x.NgayDangKy;
+                ws.Cell(r, 1).Style.DateFormat.Format = "dd/MM/yyyy";
+
+                ws.Cell(r, 2).Value = x.Masv;
+                ws.Cell(r, 3).Value = x.HotenSv;
+                ws.Cell(r, 4).Value = $"{x.Sv_TenKhoa} ({x.Sv_MaKhoa?.Trim()})";
+                ws.Cell(r, 5).Value = x.MaDt;
+                ws.Cell(r, 6).Value = x.TenDt;
+                ws.Cell(r, 7).Value = x.HocKy;
+                ws.Cell(r, 8).Value = x.NamHoc;
+
+                var statusText = x.TrangThai switch
+                {
+                    0 => "Chờ duyệt",
+                    1 => "Chấp nhận",
+                    2 => "Đang thực hiện",
+                    3 => "Hoàn thành",
+                    4 => "Từ chối",
+                    5 => "Rút",
+                    _ => "Khác"
+                };
+                ws.Cell(r, 9).Value = statusText;
+
+                r++;
+            }
+
+            ws.Columns().AdjustToContents();
+            // đảm bảo cột ngày đủ rộng & format chuẩn
+            ws.Column(1).Width = Math.Max(ws.Column(1).Width, 12);
+
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            ms.Position = 0;
+
+            var fn = $"DangKy_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fn);
+        }
     }
 }

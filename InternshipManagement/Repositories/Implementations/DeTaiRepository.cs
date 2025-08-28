@@ -6,6 +6,50 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
+public class GvRegistrationVm
+{
+    // Sinh viên
+    public int Masv { get; set; }
+    public string? HotenSv { get; set; }
+    public int? NamSinh { get; set; }
+    public string? QueQuan { get; set; }
+    public string? Sv_MaKhoa { get; set; }
+    public string? Sv_TenKhoa { get; set; }
+
+    // Đề tài
+    public string MaDt { get; set; } = "";
+    public string? TenDt { get; set; }
+    public byte HocKy { get; set; }
+    public short NamHoc { get; set; }
+
+    // Hướng dẫn
+    public byte TrangThai { get; set; }
+    public DateTime? NgayDangKy { get; set; }
+    public DateTime? NgayChapNhan { get; set; }
+    public decimal? KetQua { get; set; }
+    public string? GhiChu { get; set; }
+}
+
+public class GvRegistrationFilterVm
+{
+    public int MaGv { get; set; }
+    public byte? HocKy { get; set; }
+    public short? NamHoc { get; set; }
+    public byte? TrangThai { get; set; }
+    public string? MaDt { get; set; }
+}
+
+public class GvRegistrationsPageVm
+{
+    public GvRegistrationFilterVm Filter { get; set; } = new();
+    public List<GvRegistrationVm> Items { get; set; } = new();
+    public IEnumerable<SelectListItem> HocKyOptions { get; set; } = Array.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> NamHocOptions { get; set; } = Array.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> TrangThaiOptions { get; set; } = Array.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> DeTaiOptions { get; set; } = Array.Empty<SelectListItem>();
+}
+
+
 namespace InternshipManagement.Repositories.Implementations
 {
     public class DeTaiRepository : IDeTaiRepository
@@ -360,6 +404,72 @@ namespace InternshipManagement.Repositories.Implementations
                 items.Add(new SelectListItem($"{madt} - {tendt}", madt));
             }
             return items;
+        }
+
+
+        public async Task<List<GvRegistrationVm>> GetRegistrationsAsync(int maGv, byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
+        {
+            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
+            await EnsureOpenAsync(conn);
+
+            await using var cmd = new SqlCommand("dbo.sp_GV_SinhVienDangKy_List", conn)
+            { CommandType = CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("@MaGv", maGv);
+            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@TrangThai", (object?)trangThai ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@MaDt", string.IsNullOrWhiteSpace(maDt) ? DBNull.Value : maDt);
+
+            var list = new List<GvRegistrationVm>();
+            await using var rd = await cmd.ExecuteReaderAsync();
+            while (await rd.ReadAsync())
+            {
+                list.Add(new GvRegistrationVm
+                {
+                    Masv = rd.GetInt32(rd.GetOrdinal("masv")),
+                    HotenSv = rd.IsDBNull(rd.GetOrdinal("hotensv")) ? null : rd.GetString(rd.GetOrdinal("hotensv")),
+                    NamSinh = rd.IsDBNull(rd.GetOrdinal("namsinh")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("namsinh")),
+                    QueQuan = rd.IsDBNull(rd.GetOrdinal("quequan")) ? null : rd.GetString(rd.GetOrdinal("quequan")),
+                    Sv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("sv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("sv_makhoa")),
+                    Sv_TenKhoa = rd.IsDBNull(rd.GetOrdinal("sv_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("sv_tenkhoa")),
+
+                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
+                    TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
+                    HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
+                    NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
+
+                    TrangThai = rd.GetByte(rd.GetOrdinal("trangthai")),
+                    NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
+                    NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
+                    KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
+                    GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
+                });
+            }
+            return list;
+        }
+
+        public async Task<bool> UpdateHuongDanStatusAsync(int maGv, int maSv, string maDt, byte newStatus, string? ghiChu = null)
+        {
+            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
+            await EnsureOpenAsync(conn);
+
+            await using var cmd = new SqlCommand("dbo.sp_GV_HuongDan_UpdateStatus", conn)
+            { CommandType = CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("@MaGv", maGv);
+            cmd.Parameters.AddWithValue("@MaSv", maSv);
+            cmd.Parameters.AddWithValue("@MaDt", maDt);
+            cmd.Parameters.AddWithValue("@NewStatus", newStatus);  // 1 or 4
+            cmd.Parameters.AddWithValue("@GhiChu", (object?)ghiChu ?? DBNull.Value);
+
+            var rows = 0;
+            await using (var rd = await cmd.ExecuteReaderAsync())
+            {
+                if (await rd.ReadAsync())
+                {
+                    rows = rd.GetInt32(rd.GetOrdinal("RowsAffected"));
+                }
+            }
+            return rows > 0;
         }
 
         private async Task EnsureOpenAsync(SqlConnection conn)

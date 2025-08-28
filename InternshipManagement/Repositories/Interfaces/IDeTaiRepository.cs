@@ -15,6 +15,8 @@ namespace InternshipManagement.Repositories.Interfaces
         Task<List<GvTopicVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy, short? namHoc);
         Task<List<GvStudentVm>> GetLecturerStudentsAsync(int maGv, byte? hocKy, short? namHoc, string? maDt, byte? trangThai);
         Task<IEnumerable<SelectListItem>> GetLecturerTopicOptionsAsync(int maGv, byte? hocKy, short? namHoc);
+        Task<List<GvRegistrationVm>> GetRegistrationsAsync(int maGv, byte? hocKy, short? namHoc, byte? trangThai, string? maDt);
+        Task<bool> UpdateHuongDanStatusAsync(int maGv, int maSv, string maDt, byte newStatus, string? ghiChu = null);
 
 
     }

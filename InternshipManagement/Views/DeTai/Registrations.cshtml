@@ -1,0 +1,221 @@
+﻿@model GvRegistrationsPageVm
+@{
+    ViewData["Title"] = "Sinh viên đăng ký đề tài";
+    byte? selectedHk = Model.Filter.HocKy;
+    short? selectedYear = Model.Filter.NamHoc;
+}
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Sinh viên đăng ký đề tài</h5>
+        <div class="small text-muted">Tổng: <strong>@Model.Items.Count</strong></div>
+    </div>
+
+    <div class="card-body">
+
+        <form method="get" class="row g-2 align-items-end mb-3" id="filterForm">
+            <div class="col-md-3">
+                <label class="form-label">Học kỳ - Năm học</label>
+                <select class="form-select py-2" id="hkNamSelect">
+                    <option value="">-- Tất cả --</option>
+                    @{
+                        short nowY = (short)DateTime.Now.Year;
+                        var pairs = Enumerable.Range(nowY - 5, 8)
+                                    .Select(y => (short)y)
+                                    .SelectMany(y => new[] { (hk: (byte)1, y), (hk: (byte)2, y), (hk: (byte)3, y) });
+                        var selectedValue = selectedHk.HasValue && selectedYear.HasValue
+                                            ? $"{selectedHk}-{selectedYear}"
+                                            : "";
+                        foreach (var p in pairs)
+                        {
+                            var val = $"{p.hk}-{p.y}";
+                            var text = $"HK{p.hk} - {p.y}";
+                            <option value="@val" selected="@(val == selectedValue ? "selected" : null)">@text</option>
+                        }
+                    }
+                </select>
+                <input type="hidden" name="hocKy" id="hocKyHidden" value="@(selectedHk?.ToString() ?? "")" />
+                <input type="hidden" name="namHoc" id="namHocHidden" value="@(selectedYear?.ToString() ?? "")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Đề tài</label>
+                <select class="form-select py-2" name="maDt">
+                    <option value="">-- Tất cả đề tài --</option>
+                    @foreach (var opt in Model.DeTaiOptions)
+                    {
+                        <option value="@opt.Value" selected="@(opt.Value == Model.Filter.MaDt ? "selected" : null)">
+                            @opt.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select py-2" name="trangThai">
+                    <option value="" selected="@(Model.Filter.TrangThai == null ? "selected" : null)">-- Tất cả --</option>
+                    <option value="0" selected="@(Model.Filter.TrangThai == 0 ? "selected" : null)">Đang chờ duyệt</option>
+                    <option value="1" selected="@(Model.Filter.TrangThai == 1 ? "selected" : null)">Chấp nhận</option>
+                    <option value="2" selected="@(Model.Filter.TrangThai == 2 ? "selected" : null)">Đang thực hiện</option>
+                    <option value="3" selected="@(Model.Filter.TrangThai == 3 ? "selected" : null)">Hoàn thành</option>
+                    <option value="4" selected="@(Model.Filter.TrangThai == 4 ? "selected" : null)">Đã từ chối</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2 align-items-end">
+                <button class="btn btn-primary btn-sm py-2 flex-fill" type="submit" id="btnFilter">
+                    <i class="bi bi-funnel me-1"></i>Lọc
+                </button>
+                <a class="btn btn-outline-secondary btn-sm py-2 flex-fill" asp-action="Registrations">
+                    <i class="bi bi-trash me-1"></i>Xóa lọc
+                </a>
+                <a class="btn btn-success btn-sm py-2 flex-fill"
+                   asp-action="ExportRegistrationsExcel"
+                   asp-route-hocKy="@(Model.Filter.HocKy)"
+                   asp-route-namHoc="@(Model.Filter.NamHoc)"
+                   asp-route-trangThai="@(Model.Filter.TrangThai)"
+                   asp-route-maDt="@(Model.Filter.MaDt)">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                </a>
+
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ngày đăng ký</th>
+                        <th>Sinh viên</th>
+                        <th>Đề tài</th>
+                        <th>Học kỳ</th>
+                        <th>Trạng thái</th>
+                        <th style="width: 1%; white-space: nowrap;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr><td colspan="6" class="text-center text-muted p-3">Không có đăng ký nào.</td></tr>
+                    }
+                    else
+                    {
+                        foreach (var x in Model.Items)
+                        {
+                            <tr>
+                                <td>@(x.NgayDangKy?.ToString("dd/MM/yyyy") ?? "")</td>
+                                <td>
+                                    <div class="fw-semibold">@x.HotenSv (#@x.Masv)</div>
+                                    <div class="text-muted small">@x.Sv_TenKhoa (@x.Sv_MaKhoa)</div>
+                                    @if (!string.IsNullOrWhiteSpace(x.QueQuan))
+                                    {
+                                        <div class="text-muted small">QQ: @x.QueQuan</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@x.TenDt</div>
+                                    <div class="text-muted small">Mã: @x.MaDt</div>
+                                </td>
+                                <td>@($"{x.HocKy} - {x.NamHoc}")</td>
+                                <td>
+                                    @{
+                                        string statusText = x.TrangThai switch
+                                        {
+                                            0 => "Đang chờ duyệt",
+                                            1 => "Chấp nhận",
+                                            2 => "Đang thực hiện",
+                                            3 => "Hoàn thành",
+                                            4 => "Đã từ chối",
+                                            _ => "Khác"
+                                        };
+                                        string badgeClass = x.TrangThai switch
+                                        {
+                                            0 => "bg-warning",
+                                            1 => "bg-primary",
+                                            2 => "bg-info",
+                                            3 => "bg-success",
+                                            4 => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @badgeClass">@statusText</span>
+                                </td>
+                                <td class="align-middle text-nowrap" style="width: 1%; white-space: nowrap;">
+                                    @if (x.TrangThai == 1)
+                                    {
+                                        <button class="btn btn-success btn-sm w-100" disabled>
+                                            <i class="bi bi-check-circle-fill me-1"></i>Đã chấp nhận
+                                        </button>
+                                    }
+                                    else if (x.TrangThai == 0)
+                                    {
+                                        <div class="d-grid gap-2">
+                                            <form method="post" asp-action="ApproveRegistration">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="maSv" value="@x.Masv" />
+                                                <input type="hidden" name="maDt" value="@x.MaDt" />
+                                                <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
+                                                <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
+                                                <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
+                                                <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
+                                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                                    <i class="bi bi-check-circle me-1"></i>Duyệt
+                                                </button>
+                                            </form>
+
+                                            <form method="post" asp-action="RejectRegistration">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="maSv" value="@x.Masv" />
+                                                <input type="hidden" name="maDt" value="@x.MaDt" />
+                                                <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
+                                                <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
+                                                <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
+                                                <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                    <i class="bi bi-x-circle me-1"></i>Từ chối
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted d-block text-center">—</span>
+                                    }
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Toast"] is string toast && !string.IsNullOrWhiteSpace(toast))
+{
+    <div class="alert alert-info mt-3">@toast</div>
+}
+
+@section Scripts {
+    <script>
+        // Tự động đồng bộ dropdown HK-Năm -> hidden inputs hocKy/namHoc
+        (function () {
+            const sel = document.getElementById('hkNamSelect');
+            const hkH = document.getElementById('hocKyHidden');
+            const nhH = document.getElementById('namHocHidden');
+
+            function syncHkNam() {
+                const v = sel.value; // "1-2025" hoặc ""
+                if (!v) {
+                    hkH.value = ""; nhH.value = "";
+                    return;
+                }
+                const parts = v.split("-");
+                hkH.value = parts[0] || "";
+                nhH.value = parts[1] || "";
+            }
+
+            sel.addEventListener('change', syncHkNam);
+            // Đồng bộ ngay khi load nếu có sẵn giá trị
+            syncHkNam();
+        })();
+    </script>
+}
