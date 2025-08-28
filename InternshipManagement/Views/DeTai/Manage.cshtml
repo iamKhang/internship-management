@@ -3,6 +3,16 @@
     ViewData["Title"] = "Quản lý đề tài";
 }
 
+@if (TempData["Toast"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow"
+         role="alert" style="z-index: 2000;">
+        @TempData["Toast"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+
 <form method="get" class="card mb-3">
     <div class="card-header bg-white">Bộ lọc</div>
     <div class="card-body">
@@ -41,10 +51,16 @@
 
 <div class="col-12">
     <div class="card mb-3">
-        <div class="card-header bg-white">Đề tài của tôi</div>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span>Đề tài của tôi</span>
+            <a class="btn btn-sm btn-primary" asp-action="CreateDeTai">
+                <i class="bi bi-plus-circle me-1"></i> Thêm đề tài
+            </a>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-sm mb-0">
+                <table class="table table-sm mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>Mã</th>
@@ -53,23 +69,39 @@
                             <th>Tối đa</th>
                             <th>Tham gia</th>
                             <th>Còn</th>
+                            <th class="text-center" style="width:1%; white-space:nowrap;">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var t in Model.Topics)
                         {
                             <tr>
-                                <td>@t.MaDt</td>
-                                <td>@t.TenDt</td>
-                                <td>@t.HocKy / @t.NamHoc</td>
+                                <td class="text-nowrap">@t.MaDt</td>
+                                <td class="text-truncate" style="max-width: 360px;">@t.TenDt</td>
+                                <td>@($"HK{t.HocKy} / {t.NamHoc}")</td>
                                 <td>@t.SoLuongToiDa</td>
                                 <td>@t.ThamGia</td>
                                 <td class="@(t.ConLai > 0 ? "text-success" : "text-danger")">@t.ConLai</td>
+                                <td class="text-center text-nowrap">
+                                    <!-- Sửa -->
+                                    <a class="btn btn-sm btn-outline-primary me-1"
+                                       asp-action="EditDeTai" asp-route-id="@t.MaDt" title="Sửa">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+
+                                    <!-- Xóa (mở modal) -->
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" data-bs-target="#deleteTopicModal"
+                                            data-madt="@t.MaDt" data-tendt="@t.TenDt">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                         }
+
                         @if (!Model.Topics.Any())
                         {
-                            <tr><td colspan="6" class="text-muted text-center py-3">Không có đề tài</td></tr>
+                            <tr><td colspan="7" class="text-muted text-center py-3">Không có đề tài</td></tr>
                         }
                     </tbody>
                 </table>
@@ -107,12 +139,9 @@
                                     @{
                                         var label = s.TrangThai switch
                                         {
-                                            0 => "Chờ duyệt",
                                             1 => "Chấp nhận",
                                             2 => "Đang thực hiện",
                                             3 => "Hoàn thành",
-                                            4 => "Từ chối",
-                                            5 => "Rút",
                                             _ => "?"
                                         };
                                     }
@@ -131,4 +160,62 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Modal xác nhận xóa: dùng chung -->
+    <div class="modal fade" id="deleteTopicModal" tabindex="-1" aria-labelledby="deleteTopicLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form asp-action="DeleteDeTai" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteTopicLabel">
+                            <i class="bi bi-exclamation-triangle me-2 text-danger"></i> Xác nhận xóa đề tài
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p>Bạn chắc chắn muốn xóa đề tài:</p>
+                        <ul class="mb-0">
+                            <li><strong>Mã:</strong> <span id="delMaDt"></span></li>
+                            <li><strong>Tên:</strong> <span id="delTenDt"></span></li>
+                        </ul>
+                        <small class="text-muted d-block mt-2">
+                            Lưu ý: Nếu đề tài có sinh viên ở trạng thái 1/2/3, hệ thống sẽ không cho xóa.
+                        </small>
+                        <!-- Truyền id (MaDt) về controller -->
+                        <input type="hidden" name="id" id="delMaDtInput" />
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-1"></i> Hủy
+                        </button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i> Xóa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Khi mở modal, lấy data-* từ nút bấm và set vào nội dung/hidden input
+        const delModal = document.getElementById('deleteTopicModal');
+        if (delModal) {
+            delModal.addEventListener('show.bs.modal', function (event) {
+                const btn = event.relatedTarget;
+                const ma = btn?.getAttribute('data-madt') || '';
+                const ten = btn?.getAttribute('data-tendt') || '';
+
+                delModal.querySelector('#delMaDt').textContent = ma;
+                delModal.querySelector('#delTenDt').textContent = ten;
+                delModal.querySelector('#delMaDtInput').value = ma;
+            });
+        }
+    </script>
+}

@@ -90,78 +90,87 @@
     </div>
 </div>
 
-<div class="d-flex align-items-center gap-2">
-    <button id="btnRegister" class="btn btn-sm btn-primary d-none mt-3">Đăng ký đề tài</button>
-    <button id="btnWaiting" class="btn btn-sm btn-warning d-none mt-3" disabled>Đang chờ duyệt</button>
-    <button id="btnRejected" class="btn btn-sm btn-danger d-none mt-3" disabled>Bạn đã bị từ chối</button>
-    <button id="btnRegistered" class="btn btn-sm btn-success d-none mt-3" disabled>Đã đăng ký</button>
-    <button id="btnOther" class="btn btn-sm btn-secondary d-none mt-3" disabled>Đã đăng ký đề tài khác</button>
-    <a id="btnLogin" class="btn btn-sm btn-primary d-none mt-3"
-       asp-controller="Account" asp-action="Login"
-       asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">
-        Đăng nhập để đăng ký
-    </a>
-    <span id="regNote" class="small text-muted"></span>
 
+@{
+    var reg = (DeTaiRegistrationStatusVm?)ViewBag.Reg; // có thể null nếu chưa đăng nhập
+    bool isAuth = (bool)(ViewBag.IsAuthenticated ?? false);
+    bool isStudent = (bool)(ViewBag.IsStudent ?? false);
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var maDt = Model.MaDt;
+}
+
+<div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+    @if (!isAuth)
+    {
+        <a class="btn btn-sm btn-primary mt-1"
+           asp-controller="Account" asp-action="Login"
+           asp-route-returnUrl="@returnUrl">
+            Đăng nhập để đăng ký
+        </a>
+    }
+    else if (!isStudent)
+    {
+        <!-- GV/Admin: không hiển thị gì thêm -->
+    }
+    else if (Model.SoChoConLai <= 0 && (reg is null || reg.ThisTrangThai is null))
+    {
+        <!-- Hết chỗ, chưa đăng ký => không cho đăng ký -->
+        <button class="btn btn-sm btn-secondary mt-1" disabled>
+            Hết chỗ đăng ký
+        </button>
+    }
+    else
+    {
+        // Quy ước: thisTrangThai == -1 => đã có đề tài khác 1/2/3 trong kỳ
+        if (reg is null || reg.ThisTrangThai is null)
+        {
+            // Chưa từng đăng ký đề tài này => cho phép đăng ký
+            <form asp-controller="DeTai" asp-action="DangKy" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="maDt" value="@maDt" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" class="btn btn-sm btn-primary mt-1">Đăng ký đề tài</button>
+            </form>
+        }
+        else if (reg.ThisTrangThai == -1)
+        {
+            <button class="btn btn-sm btn-secondary mt-1" disabled>
+                Đã đăng ký đề tài khác trong kỳ này
+            </button>
+            @if (!string.IsNullOrWhiteSpace(reg.OtherMaDt))
+            {
+                <span class="small text-muted mt-1">
+                    (@reg.OtherMaDt - @reg.OtherTenDt)
+                </span>
+            }
+        }
+        else if (reg.ThisTrangThai == 0)  // Pending
+        {
+            <button class="btn btn-sm btn-warning mt-1" disabled>Đang chờ duyệt</button>
+            <form asp-controller="DeTai" asp-action="ThuHoi" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="maDt" value="@maDt" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" class="btn btn-sm btn-outline-danger mt-1">
+                    Hủy đăng ký
+                </button>
+            </form>
+        }
+        else if (reg.ThisTrangThai is 1 or 2 or 3)
+        {
+            <button class="btn btn-sm btn-success mt-1" disabled>Đã đăng ký</button>
+        }
+        else if (reg.ThisTrangThai == 4) // Rejected
+        {
+            <button class="btn btn-sm btn-danger mt-1" disabled>Bạn đã bị từ chối</button>
+            <form asp-controller="DeTai" asp-action="DangKy" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="maDt" value="@maDt" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" class="btn btn-sm btn-outline-primary mt-1">
+                    Đăng ký lại
+                </button>
+            </form>
+        }
+    }
 </div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-(function () {
-  const maDt = '@(Model.MaDt?.Trim())';
-  const apiCheck = '@Url.Action("CheckRegistration","DeTai")';
-
-  const el = id => document.getElementById(id);
-  const show = id => el(id).classList.remove('d-none');
-  const hideAll = () => {
-    ['btnRegister','btnWaiting','btnRejected','btnRegistered','btnOther','btnLogin']
-      .forEach(id => el(id).classList.add('d-none'));
-    const note = el('regNote'); if (note) note.textContent = '';
-  };
-
-  axios.get(apiCheck, { params: { id: maDt } })
-    .then(({ data }) => {
-      hideAll();
-
-      if (!data || data.isAuthenticated === false) { show('btnLogin'); return; }
-      if (data.isStudent === false) { return; } // GV/Admin: không hiện nút
-
-      const st = data.status;
-
-      // ✅ FALLBACK QUAN TRỌNG: status null => cho phép đăng ký
-      if (!st || typeof st.thisTrangThai === 'undefined' || st.thisTrangThai === null) {
-        show('btnRegister');
-        return;
-      }
-
-      if (st.hasOtherTopic123) {
-        show('btnOther');
-        if (st.otherMaDt && el('regNote'))
-          el('regNote').textContent = `(${st.otherMaDt} - ${st.otherTenDt || ''})`;
-        return;
-      }
-
-      switch (st.thisTrangThai) {
-        case 0:  show('btnWaiting');   break;
-        case 4:  show('btnRejected');  break;
-        case 1:
-        case 2:
-        case 3:  show('btnRegistered'); break;
-        default: show('btnRegister');  break;
-      }
-    })
-    // ✅ Nếu lỗi/401/redirect -> hiện nút đăng nhập thay vì im lặng
-    .catch(() => { show('btnLogin'); });
-
-  // Đăng ký bằng axios (backend tự lấy MaSv từ claims)
-  const btn = document.getElementById('btnRegister');
-  if (btn) {
-    btn.addEventListener('click', function () {
-      axios.post('/HuongDan/Register', { maDt: maDt })
-        .then(() => location.reload())
-        .catch(() => alert('Đăng ký thất bại'));
-    });
-  }
-})();
-</script>

@@ -1,4 +1,7 @@
 ﻿using InternshipManagement.Data;
+using InternshipManagement.Models;
+using InternshipManagement.Models.DTOs;
+using InternshipManagement.Models.Enums;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -60,6 +63,7 @@ namespace InternshipManagement.Repositories.Implementations
         private const string SP_EXPORT_CHITIET = "dbo.sp_DeTai_ExportChiTiet";
         private const string SP_DETAIL = "dbo.sp_DeTai_ChiTiet";
 
+        private static string NormCode(string? s) => (s ?? "").Trim().ToUpperInvariant();
         public DeTaiRepository(AppDbContext db) => _db = db;
 
         public async Task<(List<DeTaiListItemVm> items, int totalRows)> FilterAsync(DeTaiFilterVm filter, PagingRequest page)
@@ -222,8 +226,9 @@ namespace InternshipManagement.Repositories.Implementations
 
         public async Task<DeTaiDetailVm?> GetDetailAsync(string maDt)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+            var conn = (SqlConnection)_db.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+                await _db.Database.OpenConnectionAsync();
 
             await using var cmd = new SqlCommand(SP_DETAIL, conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@MaDt", maDt);
@@ -288,7 +293,7 @@ namespace InternshipManagement.Repositories.Implementations
             await using var conn = (SqlConnection)_db.Database.GetDbConnection();
             if (conn.State != ConnectionState.Open) await conn.OpenAsync();
 
-            await using var cmd = new SqlCommand("dbo.sp_KiemTraDangKyDeTai_Ext", conn)
+            await using var cmd = new SqlCommand("dbo.sp_KiemTraDangKyDeTai", conn)
             { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@MaSv", maSv);
             cmd.Parameters.AddWithValue("@MaDt", maDt);
@@ -300,17 +305,33 @@ namespace InternshipManagement.Repositories.Implementations
                 {
                     MaSv = rd.GetInt32(rd.GetOrdinal("masv")),
                     MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-                    ThisTrangThai = rd.IsDBNull(rd.GetOrdinal("this_trangthai")) ? (byte?)null : rd.GetByte(rd.GetOrdinal("this_trangthai")),
-                    HasOtherTopic123 = !rd.IsDBNull(rd.GetOrdinal("has_other_topic_123")) && rd.GetInt32(rd.GetOrdinal("has_other_topic_123")) == 1,
-                    OtherMaDt = rd.IsDBNull(rd.GetOrdinal("other_madt")) ? null : rd.GetString(rd.GetOrdinal("other_madt")).TrimEnd(),
-                    OtherTenDt = rd.IsDBNull(rd.GetOrdinal("other_tendt")) ? null : rd.GetString(rd.GetOrdinal("other_tendt")),
-                    OtherTrangThai = rd.IsDBNull(rd.GetOrdinal("other_trangthai")) ? (byte?)null : rd.GetByte(rd.GetOrdinal("other_trangthai"))
+
+                    // đọc int? vì có thể là -1
+                    ThisTrangThai = rd.IsDBNull(rd.GetOrdinal("this_trangthai"))
+                        ? (int?)null
+                        : rd.GetInt32(rd.GetOrdinal("this_trangthai")),
+
+                    HasOtherTopic123 = !rd.IsDBNull(rd.GetOrdinal("has_other_topic_123")) &&
+                                       (rd.GetInt32(rd.GetOrdinal("has_other_topic_123")) == 1),
+
+                    OtherMaDt = rd.IsDBNull(rd.GetOrdinal("other_madt"))
+                        ? null
+                        : rd.GetString(rd.GetOrdinal("other_madt")).TrimEnd(),
+
+                    OtherTenDt = rd.IsDBNull(rd.GetOrdinal("other_tendt"))
+                        ? null
+                        : rd.GetString(rd.GetOrdinal("other_tendt")),
+
+                    OtherTrangThai = rd.IsDBNull(rd.GetOrdinal("other_trangthai"))
+                        ? (int?)null
+                        : rd.GetInt32(rd.GetOrdinal("other_trangthai"))
                 };
             }
-            // Không có hàng gần như không xảy ra vì proc luôn trả về 1 hàng,
-            // nhưng đề phòng:
+
+            // fallback (gần như không xảy ra vì proc luôn SELECT 1 hàng)
             return new DeTaiRegistrationStatusVm { MaSv = maSv, MaDt = maDt };
         }
+
 
         public async Task<List<GvTopicVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy, short? namHoc)
         {
@@ -479,7 +500,7 @@ namespace InternshipManagement.Repositories.Implementations
                 var cs = _db.Database.GetConnectionString();
                 if (string.IsNullOrWhiteSpace(cs))
                     throw new InvalidOperationException("Connection string is empty. Check Program.cs/appsettings.");
-                conn.ConnectionString = cs; // 👈 bơm chuỗi kết nối vào connection EF trả về
+                conn.ConnectionString = cs;
             }
 
             if (conn.State != ConnectionState.Open)
@@ -487,7 +508,220 @@ namespace InternshipManagement.Repositories.Implementations
         }
 
 
+        public async Task<DeTai?> GetAsync(string maDt)
+        {
+            var code = NormCode(maDt);
+            return await _db.Set<DeTai>().AsNoTracking()
+                .FirstOrDefaultAsync(x => x.MaDt == code);
+        }
 
+        public async Task<bool> ExistsAsync(string maDt)
+        {
+            var code = NormCode(maDt);
+            return await _db.Set<DeTai>().AnyAsync(x => x.MaDt == code);
+        }
+
+
+        public async Task<(bool ok, string? error, string? maDt)> CreateAutoAsync(DeTaiCreateDto dto)
+        {
+            if (dto.HocKy is < 1 or > 3) return (false, "Học kỳ chỉ nhận 1..3.", null);
+            if (dto.NamHoc < 2000 || dto.NamHoc > 3000) return (false, "Năm học không hợp lệ.", null);
+            if (dto.SoLuongToiDa < 0) return (false, "Số lượng tối đa không hợp lệ.", null);
+
+            // Giảng viên tồn tại?
+            var gvExists = await _db.Set<GiangVien>().AnyAsync(g => g.MaGv == dto.Magv);
+            if (!gvExists) return (false, $"Mã GV {dto.Magv} không tồn tại.", null);
+
+            // Giới hạn 15 đề tài / (GV,HK,Năm)
+            var countThisTerm = await _db.Set<DeTai>()
+                .CountAsync(d => d.MaGv == dto.Magv && d.HocKy == dto.HocKy && d.NamHoc == dto.NamHoc);
+            if (countThisTerm >= 15)
+                return (false, "Bạn đã đạt số lượng đề tài tối đa của kỳ này.", null);
+
+            using var tx = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                // Lấy tất cả mã bắt đầu 'DT'
+                var allCodes = await _db.Set<DeTai>()
+                    .Select(d => d.MaDt)
+                    .Where(code => code != null && code.StartsWith("DT"))
+                    .ToListAsync();
+
+                int maxNum = 0;
+                int width = 3;
+                foreach (var c in allCodes)
+                {
+                    var s = (c ?? "").Trim().ToUpperInvariant();
+                    if (s.Length >= 3 && s.StartsWith("DT"))
+                    {
+                        var digits = s[2..].Trim();          // Substring(2)
+                        if (int.TryParse(digits, out var n))
+                        {
+                            if (n > maxNum) { maxNum = n; width = Math.Max(width, digits.Length); }
+                        }
+                    }
+                }
+                var nextNum = maxNum + 1;
+                if (nextNum >= Math.Pow(10, width)) width++;
+
+                var newCode = "DT" + nextNum.ToString(new string('0', width));
+
+                var entity = new DeTai
+                {
+                    MaDt = newCode,
+                    TenDt = dto.TenDt,
+                    NoiThucTap = dto.NoiThucTap,
+                    MaGv = dto.Magv,
+                    KinhPhi = dto.KinhPhi ?? 0,
+                    HocKy = dto.HocKy,
+                    NamHoc = dto.NamHoc,
+                    SoLuongToiDa = dto.SoLuongToiDa
+                };
+
+                _db.Add(entity);
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+                return (true, null, newCode);
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return (false, $"Không thể tạo đề tài: {ex.GetBaseException().Message}", null);
+            }
+        }
+
+
+        public async Task<(bool ok, string? error)> DeleteWithRulesAsync(string maDt)
+        {
+            var code = NormCode(maDt);
+            using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                bool hasActive = await _db.Set<HuongDan>()
+                    .AnyAsync(h => h.MaDt == code &&
+                        (h.TrangThai == HuongDanStatus.Accepted
+                      || h.TrangThai == HuongDanStatus.InProgress
+                      || h.TrangThai == HuongDanStatus.Completed));
+                                if (hasActive)
+                                    return (false, "Đề tài đã có sinh viên đăng ký thành công hoặc đang thực hiện, không thể xóa.");
+
+                                var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
+                                if (e == null) return (false, "Không tìm thấy đề tài.");
+
+                                var toRemove = await _db.Set<HuongDan>()
+                    .Where(h => h.MaDt == code &&
+                        (h.TrangThai == HuongDanStatus.Pending
+                      || h.TrangThai == HuongDanStatus.Rejected
+                      || h.TrangThai == HuongDanStatus.Withdrawn))
+                    .ToListAsync();
+                                if (toRemove.Count > 0) _db.RemoveRange(toRemove);
+
+                _db.Remove(e);
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return (false, $"Không thể xóa: {ex.GetBaseException().Message}");
+            }
+        }
+
+        public async Task<(bool ok, string? error)> UpdateAsync(string maDt, Action<DeTai> mutate)
+        {
+            var code = (maDt ?? "").Trim().ToUpperInvariant();
+            var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
+            if (e == null) return (false, "Không tìm thấy đề tài.");
+
+            mutate(e);
+
+            if (e.HocKy is < 1 or > 3) return (false, "Học kỳ chỉ nhận 1..3.");
+            if (e.NamHoc < 2000 || e.NamHoc > 3000) return (false, "Năm học không hợp lệ.");
+            if (e.SoLuongToiDa < 0) return (false, "Số lượng tối đa không hợp lệ.");
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Không thể cập nhật: {ex.GetBaseException().Message}");
+            }
+        }
+
+        private static string Code(string? s) => (s ?? "").Trim().ToUpperInvariant();
+
+        public async Task<(bool ok, string? error)> RegisterAsync(int maSv, string maDt)
+        {
+            var code = Code(maDt);
+
+            // Ưu tiên SP nếu có: sp_KiemTraDangKyDeTai_Ext(@MaSv,@MaDt)
+            try
+            {
+                var outCode = new SqlParameter("@OutCode", System.Data.SqlDbType.Int) { Direction = System.Data.ParameterDirection.Output };
+                var outMsg = new SqlParameter("@OutMessage", System.Data.SqlDbType.NVarChar, 250) { Direction = System.Data.ParameterDirection.Output };
+
+                await _db.Database.ExecuteSqlRawAsync(
+                    "EXEC dbo.sp_KiemTraDangKyDeTai_Ext @MaSv={0}, @MaDt={1}, @OutCode=@OutCode OUTPUT, @OutMessage=@OutMessage OUTPUT",
+                    maSv, code, outCode, outMsg);
+
+                if ((int)(outCode.Value ?? -1) != 0)
+                    return (false, (string?)outMsg.Value ?? "Không đủ điều kiện đăng ký.");
+            }
+            catch (SqlException)
+            {
+                // Fallback LINQ tối giản
+                var topic = await _db.Set<DeTai>().AsNoTracking().FirstOrDefaultAsync(d => d.MaDt == code);
+                if (topic == null) return (false, "Không tìm thấy đề tài.");
+
+                // Trùng đăng ký (0/1/2)
+                bool dup = await _db.Set<HuongDan>().AnyAsync(h =>
+                    h.MaSv == maSv && h.MaDt == code &&
+                   (h.TrangThai == HuongDanStatus.Pending
+                 || h.TrangThai == HuongDanStatus.Accepted
+                 || h.TrangThai == HuongDanStatus.InProgress));
+                if (dup) return (false, "Bạn đã đăng ký/đang tham gia đề tài này.");
+
+                // Chỉ tiêu: Accepted + InProgress
+                int active = await _db.Set<HuongDan>().CountAsync(h =>
+                    h.MaDt == code && (h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress));
+                if (active >= topic.SoLuongToiDa) return (false, "Đề tài đã đủ số lượng sinh viên.");
+            }
+
+            // Tạo Pending
+            var dt = await _db.Set<DeTai>().AsNoTracking().FirstOrDefaultAsync(d => d.MaDt == code);
+            if (dt == null) return (false, "Không tìm thấy đề tài."); // phòng hờ
+
+            var hd = new HuongDan
+            {
+                MaSv = maSv,
+                MaDt = code,
+                MaGv = dt.MaGv,
+                TrangThai = HuongDanStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Add(hd);
+            try { await _db.SaveChangesAsync(); return (true, null); }
+            catch (DbUpdateException ex) { return (false, $"Lỗi lưu đăng ký: {ex.GetBaseException().Message}"); }
+        }
+
+        public async Task<(bool ok, string? error)> WithdrawAsync(int maSv, string maDt)
+        {
+            var code = Code(maDt);
+
+            // Chỉ cho rút khi đang Pending của chính SV
+            var hd = await _db.Set<HuongDan>()
+                .FirstOrDefaultAsync(h => h.MaSv == maSv && h.MaDt == code && h.TrangThai == HuongDanStatus.Pending);
+            if (hd == null) return (false, "Không tìm thấy đăng ký ở trạng thái chờ duyệt để rút.");
+
+            hd.TrangThai = HuongDanStatus.Withdrawn;
+
+            try { await _db.SaveChangesAsync(); return (true, null); }
+            catch (DbUpdateException ex) { return (false, $"Lỗi thu hồi: {ex.GetBaseException().Message}"); }
+        }
 
     }
 

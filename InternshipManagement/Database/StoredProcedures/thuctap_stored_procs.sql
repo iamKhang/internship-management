@@ -1135,15 +1135,57 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT
-        hd.masv,
-        hd.madt,
-        hd.trangthai
-    FROM HuongDan hd
+    DECLARE @MaDtN CHAR(10) = RTRIM(@MaDt);
+    DECLARE @HK TINYINT, @NH SMALLINT;
+
+    -- lấy học kỳ/năm của đề tài hiện tại (nếu có)
+    SELECT @HK = d.hocky, @NH = d.namhoc
+    FROM DeTai AS d
+    WHERE RTRIM(d.madt) = @MaDtN;
+
+    -- trạng thái của chính đề tài này (nếu có đăng ký)
+    DECLARE @ThisTrangThai INT = NULL;
+    SELECT TOP(1) @ThisTrangThai = hd.trangthai
+    FROM HuongDan AS hd
     WHERE hd.masv = @MaSv
-      AND hd.madt = @MaDt;
+      AND RTRIM(hd.madt) = @MaDtN
+    ORDER BY hd.ngaydangky DESC;
+
+    -- đề tài KHÁC trong cùng kỳ/năm ở trạng thái 1/2/3?
+    DECLARE @OtherMaDt CHAR(10) = NULL,
+            @OtherTenDt NVARCHAR(255) = NULL,
+            @OtherTrangThai INT = NULL;
+
+    IF (@HK IS NOT NULL AND @NH IS NOT NULL)
+    BEGIN
+        SELECT TOP(1)
+            @OtherMaDt = d2.madt,
+            @OtherTenDt = d2.tendt,
+            @OtherTrangThai = hd2.trangthai
+        FROM HuongDan AS hd2
+        JOIN DeTai    AS d2 ON d2.madt = hd2.madt
+        WHERE hd2.masv = @MaSv
+          AND RTRIM(d2.madt) <> @MaDtN
+          AND d2.hocky = @HK
+          AND d2.namhoc = @NH
+          AND hd2.trangthai IN (1,2,3)
+        ORDER BY
+            CASE hd2.trangthai WHEN 2 THEN 0 WHEN 1 THEN 1 WHEN 3 THEN 2 ELSE 3 END,
+            hd2.ngaydangky DESC;
+    END
+
+    -- nếu có đề tài KHÁC 1/2/3 cùng kỳ -> this_trangthai = -1
+    SELECT
+        @MaSv                    AS masv,
+        @MaDtN                   AS madt,
+        CASE WHEN @OtherMaDt IS NOT NULL THEN -1 ELSE @ThisTrangThai END AS this_trangthai,
+        CASE WHEN @OtherMaDt IS NOT NULL THEN 1 ELSE 0 END              AS has_other_topic_123,
+        @OtherMaDt               AS other_madt,
+        @OtherTenDt              AS other_tendt,
+        @OtherTrangThai          AS other_trangthai;
 END
 GO
+
 
 -- Chạy trong đúng database của bạn
 -- USE ThucTap;  -- sửa tên DB nếu cần

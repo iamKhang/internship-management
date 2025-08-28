@@ -1,4 +1,6 @@
 ﻿using ClosedXML.Excel;
+using InternshipManagement.Models;
+using InternshipManagement.Models.DTOs;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -212,11 +214,34 @@ namespace InternshipManagement.Controllers
         {
             if (string.IsNullOrWhiteSpace(id)) return BadRequest();
 
+            // 1) Lấy thông tin đề tài (đang dùng SP_DETAIL như bạn có)
             var vm = await _repo.GetDetailAsync(id);
             if (vm == null) return NotFound();
 
+            // 2) Lấy MaSv từ claims (nếu có)
+            int? maSv = null;
+            var raw = User.FindFirst("MaSv")?.Value
+                       ?? User.FindFirst("code")?.Value
+                       ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(raw, out var sv)) maSv = sv;
+
+            // 3) Lấy trạng thái đăng ký (SP sp_KiemTraDangKyDeTai đã sửa: this_trangthai có thể = -1)
+            DeTaiRegistrationStatusVm? reg = null;
+            if (maSv.HasValue)
+            {
+                // Hàm này là cái bạn đã có trong repo đăng ký:
+                //   Task<DeTaiRegistrationStatusVm> CheckRegistrationAsync(int maSv, string maDt)
+                reg = await _repo.CheckRegistrationAsync(maSv.Value, id);
+            }
+
+            // 4) Truyền xuống View để Razor quyết định hiển thị nút
+            ViewBag.Reg = reg;
+            ViewBag.IsAuthenticated = User?.Identity?.IsAuthenticated ?? false;
+            ViewBag.IsStudent = User.IsInRole("Student") || User.IsInRole("SinhVien");
+
             return View(vm);
         }
+
         [HttpGet]
         public async Task<IActionResult> CheckRegistration(string id)
         {
@@ -360,6 +385,8 @@ namespace InternshipManagement.Controllers
             return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RejectRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, short? namHoc, byte? trangThai, string? filterMaDt)
@@ -450,5 +477,179 @@ namespace InternshipManagement.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 fn);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> EditDeTai(string id)
+        {
+            var e = await _repo.GetAsync(id);
+            if (e == null) return NotFound();
+
+            var vm = new DeTaiCreateDto
+            {
+                TenDt = e.TenDt ?? "",
+                NoiThucTap = e.NoiThucTap,
+                Magv = e.MaGv,
+                KinhPhi = e.KinhPhi,
+                HocKy = e.HocKy,
+                NamHoc = e.NamHoc,
+                SoLuongToiDa = e.SoLuongToiDa
+            };
+
+            ViewBag.MaDt = e.MaDt; // hiển thị read-only trên form
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditDeTai(string id, DeTaiCreateDto vm)
+        {
+            if (!ModelState.IsValid) { ViewBag.MaDt = id; return View(vm); }
+
+            // KHÔNG dùng deconstruction để tránh lỗi suy kiểu
+            var result = await _repo.UpdateAsync(id, e =>
+            {
+                e.TenDt = vm.TenDt;
+                e.NoiThucTap = vm.NoiThucTap;
+                e.MaGv = vm.Magv;
+                e.KinhPhi = vm.KinhPhi ?? 0;
+                e.HocKy = vm.HocKy;
+                e.NamHoc = vm.NamHoc;
+                e.SoLuongToiDa = vm.SoLuongToiDa;
+            });
+
+            if (!result.ok)
+            {
+                ViewBag.MaDt = id;
+                ModelState.AddModelError(string.Empty, result.error ?? "Cập nhật thất bại.");
+                return View(vm);
+            }
+
+            TempData["Toast"] = $"Đã cập nhật đề tài {id}.";
+            return RedirectToAction(nameof(Manage));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "GiangVien")]
+        public async Task<IActionResult> DeleteDeTai(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                TempData["Toast"] = "Mã đề tài không hợp lệ.";
+                return RedirectToAction(nameof(Manage));
+            }
+
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            var topic = await _repo.GetAsync(id);
+            if (topic == null)
+            {
+                TempData["Toast"] = "Không tìm thấy đề tài.";
+                return RedirectToAction(nameof(Manage));
+            }
+            if (topic.MaGv != maGv)
+            {
+                TempData["Toast"] = "Bạn không có quyền xóa đề tài này.";
+                return RedirectToAction(nameof(Manage));
+            }
+
+            var result = await _repo.DeleteWithRulesAsync(id);
+            TempData["Toast"] = result.ok
+                ? $"Đã xóa đề tài {id}."
+                : (result.error ?? "Xóa đề tài thất bại.");
+
+            return RedirectToAction(nameof(Manage));
+        }
+
+        [Authorize(Roles = "GiangVien")]
+        [HttpGet]
+        public IActionResult CreateDeTai(byte? hk, short? nh)
+        {
+            //// Lấy mã GV đang đăng nhập
+            //string? rawMaGv = User.FindFirst("MaGv")?.Value
+            //               ?? User.FindFirst("code")?.Value
+            //               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            //if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+            //    return Forbid();
+
+            var vm = new DeTaiCreateDto
+            {
+                Magv = 0,                       // không cho user nhập
+                HocKy = (byte)(hk ?? 1),
+                NamHoc = nh ?? (short)DateTime.Now.Year,
+                SoLuongToiDa = 1
+            };
+            return View(vm); // Views/DeTai/CreateDeTai.cshtml
+        }
+
+        [Authorize(Roles = "GiangVien")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateDeTai(DeTaiCreateDto vm)
+        {
+            // Gắn lại MaGv từ claims để tránh giả mạo
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            vm.Magv = maGv;
+
+            if (!ModelState.IsValid)
+                return View(vm);
+
+            var (ok, err, newCode) = await _repo.CreateAutoAsync(vm);
+            if (!ok)
+            {
+                // ví dụ: "Bạn đã đạt số lượng đề tài tối đa của kỳ này."
+                ModelState.AddModelError(string.Empty, err ?? "Tạo đề tài thất bại.");
+                return View(vm);
+            }
+
+            TempData["Toast"] = $"Đã tạo đề tài {newCode}.";
+            return RedirectToAction(nameof(Manage), new { hocKy = vm.HocKy, namHoc = vm.NamHoc });
+        }
+
+        private bool TryGetMaSv(out int maSv)
+        {
+            string? raw = User.FindFirst("MaSv")?.Value
+                       ?? User.FindFirst("code")?.Value
+                       ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(raw, out maSv);
+        }
+
+        [HttpPost("DangKy")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DangKy(string maDt)
+        {
+            if (!TryGetMaSv(out var maSv)) return Forbid();
+
+            var result = await _repo.RegisterAsync(maSv, maDt);
+            TempData["Toast"] = result.ok ? "Đã gửi yêu cầu đăng ký đề tài." : (result.error ?? "Đăng ký thất bại.");
+
+            return RedirectToAction("Index", "DeTai");
+        }
+
+        // POST /DeTai/ThuHoi  (chỉ cần maSv (claims) + maDt)
+        [HttpPost("ThuHoi")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ThuHoi(string maDt)
+        {
+            if (!TryGetMaSv(out var maSv)) return Forbid();
+
+            var result = await _repo.WithdrawAsync(maSv, maDt);
+            TempData["Toast"] = result.ok ? "Đã rút đăng ký đề tài." : (result.error ?? "Thu hồi thất bại.");
+
+            return RedirectToAction("List", "DeTai");
+        }
+
     }
 }
