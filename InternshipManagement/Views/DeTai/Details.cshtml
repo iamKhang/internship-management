@@ -92,12 +92,41 @@
 
 
 @{
-    var reg = (DeTaiRegistrationStatusVm?)ViewBag.Reg; // có thể null nếu chưa đăng nhập
+    var reg = (DeTaiRegistrationStatusVm?)ViewBag.Reg;
     bool isAuth = (bool)(ViewBag.IsAuthenticated ?? false);
     bool isStudent = (bool)(ViewBag.IsStudent ?? false);
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
     var maDt = Model.MaDt;
+
+    DateTime today = DateTime.Today;
+    DateTime regStart, regEnd;
+
+    // Tính theo quy ước năm học
+    switch (Model.HocKy)
+    {
+        case 1:
+            // HK1: 5/9 -> 31/12, nằm trong năm NamHoc
+            regStart = new DateTime(Model.NamHoc, 9, 5);
+            regEnd = new DateTime(Model.NamHoc, 12, 31);
+            break;
+        case 2:
+            // HK2: 1/1 -> 25/5, nhưng của NĂM SAU
+            regStart = new DateTime(Model.NamHoc + 1, 1, 1);
+            regEnd = new DateTime(Model.NamHoc + 1, 5, 25);
+            break;
+        case 3:
+            // HK3: 26/5 -> 4/9, nhưng của NĂM SAU
+            regStart = new DateTime(Model.NamHoc + 1, 5, 26);
+            regEnd = new DateTime(Model.NamHoc + 1, 9, 4);
+            break;
+        default:
+            regStart = regEnd = today.AddDays(-1); // đóng luôn nếu dữ liệu kỳ lạ
+            break;
+    }
+
+    bool registrationClosed = today < regStart || today > regEnd;
 }
+
 
 <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
     @if (!isAuth)
@@ -107,6 +136,12 @@
            asp-route-returnUrl="@returnUrl">
             Đăng nhập để đăng ký
         </a>
+    }
+    @if (registrationClosed && (reg is null || reg.ThisTrangThai is null || reg.ThisTrangThai == 4 || reg.ThisTrangThai == 5))
+    {
+        <button class="btn btn-sm btn-secondary mt-1" disabled>
+            Đã qua lượt đăng ký
+        </button>
     }
     else if (!isStudent)
     {

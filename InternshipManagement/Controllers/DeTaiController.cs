@@ -648,7 +648,58 @@ namespace InternshipManagement.Controllers
             var result = await _repo.WithdrawAsync(maSv, maDt);
             TempData["Toast"] = result.ok ? "Đã rút đăng ký đề tài." : (result.error ?? "Thu hồi thất bại.");
 
-            return RedirectToAction("List", "DeTai");
+            return RedirectToAction("");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> MyTopics(byte? hocKy, short? namHoc, byte? trangThai)
+        {
+            // Bắt buộc đăng nhập
+            if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
+
+            // Lấy MaSv từ claims (ưu tiên MaSv, fallback NameIdentifier)
+            int maSv;
+            var svClaim = User.FindFirst("MaSv") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (svClaim == null || !int.TryParse(svClaim.Value, out maSv))
+                return Forbid();
+
+            // Gọi repo
+            var items = await _repo.GetStudentMyTopicsAsync(maSv, hocKy, namHoc, trangThai);
+
+            // Combobox HK
+            var hocKyOptions = new List<SelectListItem> {
+                new("Tất cả",""),
+                new("HK1","1"), new("HK2","2"), new("HK3","3")
+            };
+            foreach (var it in hocKyOptions)
+                it.Selected = (!hocKy.HasValue && it.Value == "") || (hocKy.HasValue && it.Value == hocKy.Value.ToString());
+
+            // Combobox Năm học (±5 năm)
+            short nowY = (short)DateTime.Now.Year;
+            var namHocOptions = Enumerable.Range(nowY - 5, 8)
+                .Select(y => new SelectListItem(y.ToString(), y.ToString()) { Selected = (namHoc == y) })
+                .ToList();
+
+            // Combobox Trạng thái (0..5)
+            var trangThaiOptions = new List<SelectListItem> {
+                new("Tất cả",""),
+                new("Chờ duyệt","0"), new("Chấp nhận","1"),
+                new("Đang thực hiện","2"), new("Hoàn thành","3"),
+                new("Từ chối","4"), new("Rút","5")
+            };
+            foreach (var it in trangThaiOptions)
+                it.Selected = (!trangThai.HasValue && it.Value == "") || (trangThai.HasValue && it.Value == trangThai.Value.ToString());
+
+            var vm = new StudentMyTopicsPageVm
+            {
+                Filter = new StudentMyTopicFilterVm { HocKy = hocKy, NamHoc = namHoc, TrangThai = trangThai },
+                Items = items,
+                HocKyOptions = hocKyOptions,
+                NamHocOptions = namHocOptions,
+                TrangThaiOptions = trangThaiOptions
+            };
+
+            return View(vm); // Views/DeTai/MyTopics.cshtml
         }
 
     }

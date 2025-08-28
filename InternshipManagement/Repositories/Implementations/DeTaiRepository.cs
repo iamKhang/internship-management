@@ -62,6 +62,7 @@ namespace InternshipManagement.Repositories.Implementations
         private const string SP_EXPORT = "dbo.sp_DeTai_Export";
         private const string SP_EXPORT_CHITIET = "dbo.sp_DeTai_ExportChiTiet";
         private const string SP_DETAIL = "dbo.sp_DeTai_ChiTiet";
+        private const string SP_STUDENT_MYTOPICS = "dbo.sp_SV_DeTaiDaDangKy";
 
         private static string NormCode(string? s) => (s ?? "").Trim().ToUpperInvariant();
         public DeTaiRepository(AppDbContext db) => _db = db;
@@ -722,8 +723,58 @@ namespace InternshipManagement.Repositories.Implementations
             try { await _db.SaveChangesAsync(); return (true, null); }
             catch (DbUpdateException ex) { return (false, $"Lỗi thu hồi: {ex.GetBaseException().Message}"); }
         }
+        public async Task<List<StudentMyTopicItemVm>> GetStudentMyTopicsAsync(
+            int maSv, byte? hocKy, short? namHoc, byte? trangThai /*hoặc string? trangThaiCsv*/)
+        {
+            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
+            await EnsureOpenAsync(conn); // Bạn đã có hàm này trong repo:contentReference[oaicite:1]{index=1}
+
+            await using var cmd = new SqlCommand(SP_STUDENT_MYTOPICS, conn) { CommandType = CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("@MaSv", maSv);
+            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
+
+            // Nếu dùng CSV: cmd.Parameters.AddWithValue("@TrangThaiCsv", (object?)trangThaiCsv ?? DBNull.Value);
+            // Ở đây ta giả định proc cho phép lọc 1 trạng thái đơn lẻ bằng CSV "x"
+            cmd.Parameters.AddWithValue("@TrangThaiCsv", trangThai.HasValue ? trangThai.Value.ToString() : (object)DBNull.Value);
+
+            var list = new List<StudentMyTopicItemVm>();
+            await using var rd = await cmd.ExecuteReaderAsync();
+            while (await rd.ReadAsync())
+            {
+                var item = new StudentMyTopicItemVm
+                {
+                    MaSv = rd.GetInt32(rd.GetOrdinal("masv")),
+                    HoTenSv = rd.IsDBNull(rd.GetOrdinal("hotensv")) ? null : rd.GetString(rd.GetOrdinal("hotensv")),
+
+                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
+                    TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
+                    HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
+                    NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
+                    KinhPhi = rd.IsDBNull(rd.GetOrdinal("kinhphi")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("kinhphi")),
+                    NoiThucTap = rd.IsDBNull(rd.GetOrdinal("NoiThucTap")) ? null : rd.GetString(rd.GetOrdinal("NoiThucTap")),
+                    SoLuongToiDa = rd.GetInt32(rd.GetOrdinal("soluongtoida")),
+
+                    Gv_MaGv = rd.IsDBNull(rd.GetOrdinal("gv_magv")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("gv_magv")),
+                    Gv_HoTenGv = rd.IsDBNull(rd.GetOrdinal("gv_hotengv")) ? null : rd.GetString(rd.GetOrdinal("gv_hotengv")),
+                    Gv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("gv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("gv_makhoa")).TrimEnd(),
+                    Gv_TenKhoa = rd.IsDBNull(rd.GetOrdinal("gv_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("gv_tenkhoa")),
+
+                    TrangThai = rd.GetByte(rd.GetOrdinal("trangthai")),
+                    NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
+                    NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
+                    KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
+                    GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
+                };
+                list.Add(item);
+            }
+
+            return list;
+        }
 
     }
+
+
 
     /// <summary> DTO dùng riêng cho Export (đủ cột) </summary>
     public class DeTaiExportRowVm

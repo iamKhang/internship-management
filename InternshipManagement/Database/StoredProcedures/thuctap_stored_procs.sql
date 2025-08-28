@@ -1453,6 +1453,72 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_SV_DeTaiDaDangKy
+    @MaSv         INT,                  -- BẮT BUỘC
+    @HocKy        TINYINT      = NULL,  -- tùy chọn
+    @NamHoc       SMALLINT     = NULL,  -- tùy chọn
+    @TrangThaiCsv NVARCHAR(50) = NULL   -- tùy chọn: '0,1,2'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @MaSv IS NULL
+    BEGIN
+        ;THROW 51001, N'@MaSv (mã sinh viên) là bắt buộc.', 1;
+    END
+
+    -- Chuẩn hóa danh sách trạng thái (nếu có)
+    ;WITH StatusFilter AS (
+        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT) AS st
+        FROM STRING_SPLIT(COALESCE(@TrangThaiCsv, ''), ',')
+        WHERE LTRIM(RTRIM(COALESCE(value, ''))) <> ''
+    )
+    SELECT
+        -- Sinh viên
+        sv.masv,
+        sv.hotensv,
+
+        -- Đề tài
+        dt.madt,
+        dt.tendt,
+        dt.hocky,
+        dt.namhoc,
+        dt.kinhphi,
+        dt.NoiThucTap,
+        dt.soluongtoida,
+
+        -- Giảng viên/Khoa
+        gv.magv      AS gv_magv,
+        gv.hotengv   AS gv_hotengv,
+        k.makhoa     AS gv_makhoa,
+        k.tenkhoa    AS gv_tenkhoa,
+
+        -- Hướng dẫn (đăng ký)
+        hd.trangthai,
+        hd.ngaydangky,
+        hd.ngaychapnhan,
+        hd.ketqua,
+        hd.ghichu
+    FROM HuongDan AS hd
+    INNER JOIN DeTai     AS dt ON dt.madt = hd.madt
+    LEFT  JOIN SinhVien  AS sv ON sv.masv = hd.masv
+    LEFT  JOIN GiangVien AS gv ON gv.magv = ISNULL(hd.magv, dt.magv)
+    LEFT  JOIN Khoa      AS k  ON k.makhoa = gv.makhoa
+    WHERE
+        hd.masv = @MaSv
+        AND (@HocKy  IS NULL OR dt.hocky = @HocKy)
+        AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc)
+        AND (
+              @TrangThaiCsv IS NULL
+              OR hd.trangthai IN (SELECT st FROM StatusFilter)
+            )
+    ORDER BY
+        dt.namhoc DESC,
+        dt.hocky DESC,
+        hd.ngaydangky DESC;
+END
+GO
+
 
 
 

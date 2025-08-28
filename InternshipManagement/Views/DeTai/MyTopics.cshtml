@@ -1,0 +1,91 @@
+﻿@model InternshipManagement.Models.ViewModels.StudentMyTopicsPageVm
+@{
+    ViewData["Title"] = "Đề tài của tôi";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Đề tài của tôi</h5>
+        <small class="text-muted">Tổng: <strong>@Model.Items.Count</strong></small>
+    </div>
+
+    <div class="card-body">
+        <form method="get" class="row g-3 mb-3">
+            <div class="col-md-2">
+                <label class="form-label">Học kỳ</label>
+                <select class="form-select" name="hocKy" asp-items="Model.HocKyOptions"></select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Năm học</label>
+                <select class="form-select" name="namHoc" asp-items="Model.NamHocOptions"></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select" name="trangThai" asp-items="Model.TrangThaiOptions"></select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button class="btn btn-primary py-2" type="submit">
+                    <i class="bi bi-funnel"></i> Lọc
+                </button>
+                <a class="btn btn-outline-secondary py-2" href="@Url.Action("MyTopics","DeTai")">Xóa lọc</a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã ĐT</th>
+                        <th>Tên đề tài</th>
+                        <th>GV phụ trách</th>
+                        <th>Khoa</th>
+                        <th>Học kỳ/Năm</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đăng ký</th>
+                        <th>Ngày chấp nhận</th>
+                        <th>Kết quả</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <tr><td colspan="10" class="text-center text-muted py-4">Chưa có dữ liệu.</td></tr>
+                    }
+                    else
+                    {
+                        foreach (var x in Model.Items)
+                        {
+                            string statusText = x.TrangThai switch
+                            {
+                                0 => "Chờ duyệt",
+                                1 => "Chấp nhận",
+                                2 => "Đang thực hiện",
+                                3 => "Hoàn thành",
+                                4 => "Từ chối",
+                                5 => "Rút",
+                                _ => "Khác"
+                            };
+                            <tr>
+                                <td class="fw-semibold">@x.MaDt</td>
+                                <td>@(x.TenDt ?? "")</td>
+                                <td>@(x.Gv_HoTenGv ?? "") (@x.Gv_MaGv)</td>
+                                <td>@(x.Gv_TenKhoa ?? "") (@x.Gv_MaKhoa)</td>
+                                <td>@x.HocKy/@x.NamHoc</td>
+                                <td>@statusText</td>
+                                <td>@(x.NgayDangKy?.ToString("dd/MM/yyyy") ?? "")</td>
+                                <td>@(x.NgayChapNhan?.ToString("dd/MM/yyyy") ?? "")</td>
+                                <td>@(x.KetQua?.ToString("0.##") ?? "")</td>
+                                <td>
+                                    <a class="btn btn-sm btn-outline-primary" href='@Url.Action("Details", "DeTai", new { id = x.MaDt })'>
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
