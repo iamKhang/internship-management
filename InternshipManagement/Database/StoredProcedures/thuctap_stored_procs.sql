@@ -1519,9 +1519,223 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_GV_ThongKeTongHop
+    @MaGv     INT,                -- bắt buộc
+    @FromDate DATE       = NULL,  -- lọc theo HuongDan.NgayDangKy
+    @ToDate   DATE       = NULL,
+    @HocKy    TINYINT    = NULL,  -- DeTai.HocKy
+    @NamHoc   INT        = NULL   -- DeTai.NamHoc
+AS
+BEGIN
+    SET NOCOUNT ON;
 
+    IF OBJECT_ID('tempdb..#DT') IS NOT NULL DROP TABLE #DT;
+    IF OBJECT_ID('tempdb..#HD') IS NOT NULL DROP TABLE #HD;
 
+    /* #DT: các đề tài của giảng viên (theo filter) */
+    SELECT dt.madt, dt.tendt, dt.magv, dt.hocky, dt.namhoc, dt.soluongtoida
+    INTO #DT
+    FROM DeTai dt
+    WHERE dt.magv = @MaGv
+      AND (@HocKy IS NULL OR dt.hocky = @HocKy)
+      AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc);
 
+    /* #HD: các hướng dẫn thuộc #DT (theo filter ngày) */
+    SELECT hd.madt, hd.masv, hd.trangthai, hd.ngaydangky, hd.ngaychapnhan, hd.ketqua, hd.ghichu
+    INTO #HD
+    FROM HuongDan hd
+    INNER JOIN #DT dt ON dt.madt = hd.madt
+    WHERE (@FromDate IS NULL OR hd.ngaydangky >= @FromDate)
+      AND (@ToDate   IS NULL OR hd.ngaydangky < DATEADD(DAY, 1, @ToDate));
+
+    /* ===== Result set #1: KPI tổng ===== */
+    SELECT
+        (SELECT COUNT(*) FROM #DT)                                                                     AS TongDeTai,
+        (SELECT COUNT(DISTINCT h.masv) FROM #HD h)                                                     AS TongSV_DaDangKy,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END)                                               AS Pending,
+        SUM(CASE WHEN h.trangthai = 1 THEN 1 ELSE 0 END)                                               AS Accepted,
+        SUM(CASE WHEN h.trangthai = 2 THEN 1 ELSE 0 END)                                               AS InProgress,
+        SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END)                                               AS Completed,
+        SUM(CASE WHEN h.trangthai = 4 THEN 1 ELSE 0 END)                                               AS Rejected,
+        SUM(CASE WHEN h.trangthai = 5 THEN 1 ELSE 0 END)                                               AS Withdrawn,
+        CAST(100.0 * NULLIF(SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 END),0) / NULLIF(COUNT(*),0) AS DECIMAL(5,2)) AS AcceptanceRatePct,
+        CAST(100.0 * NULLIF(SUM(CASE WHEN h.trangthai = 3 THEN 1 END),0)        / NULLIF(COUNT(*),0) AS DECIMAL(5,2)) AS CompletionRatePct,
+        AVG(CASE WHEN h.trangthai IN (1,2,3) AND h.ngaychapnhan IS NOT NULL
+                 THEN DATEDIFF(DAY, h.ngaydangky, h.ngaychapnhan) END)                                 AS AvgDaysToAccept
+    FROM #HD h;
+
+    /* ===== Result set #2: Xu hướng đăng ký theo tháng ===== */
+    SELECT
+        YEAR(h.ngaydangky)  AS Nam,
+        MONTH(h.ngaydangky) AS Thang,
+        COUNT(*)            AS SoDangKy
+    FROM #HD h
+    GROUP BY YEAR(h.ngaydangky), MONTH(h.ngaydangky)
+    ORDER BY Nam, Thang;
+
+    /* ===== Result set #3: Phân bố trạng thái ===== */
+    SELECT
+        h.trangthai,
+        COUNT(*) AS SoLuong
+    FROM #HD h
+    GROUP BY h.trangthai
+    ORDER BY h.trangthai;
+
+    /* ===== Result set #4: Mức độ lấp đầy theo đề tài ===== */
+    SELECT
+        dt.madt,
+        dt.tendt,
+        dt.soluongtoida                                                       AS SlotToiDa,
+        SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END)               AS SlotDaDung,
+        dt.soluongtoida - SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END) AS SlotConLai,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END)                       AS DangChoDuyet
+    FROM #DT dt
+    LEFT JOIN #HD h ON h.madt = dt.madt
+    GROUP BY dt.madt, dt.tendt, dt.soluongtoida
+    ORDER BY SlotDaDung DESC, dt.tendt;
+
+    /* ===== Result set #5: Top sinh viên theo tiến độ ===== */
+    SELECT TOP 20
+        h.masv,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END) AS Pending,
+        SUM(CASE WHEN h.trangthai = 1 THEN 1 ELSE 0 END) AS Accepted,
+        SUM(CASE WHEN h.trangthai = 2 THEN 1 ELSE 0 END) AS InProgress,
+        SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END) AS Completed,
+        SUM(CASE WHEN h.trangthai = 4 THEN 1 ELSE 0 END) AS Rejected,
+        SUM(CASE WHEN h.trangthai = 5 THEN 1 ELSE 0 END) AS Withdrawn
+    FROM #HD h
+    GROUP BY h.masv
+    ORDER BY Completed DESC, Accepted DESC, InProgress DESC, Pending DESC;
+END
+GO
+
+GO
+CREATE OR ALTER PROCEDURE dbo.sp_Admin_ThongKeTongHop
+    @MaKhoa   NVARCHAR(20) = NULL,  -- lọc theo khoa của GiangVien
+    @MaGv     INT          = NULL,  -- lọc một GV cụ thể (tùy chọn)
+    @FromDate DATE         = NULL,  -- lọc theo HuongDan.NgayDangKy
+    @ToDate   DATE         = NULL,
+    @HocKy    TINYINT      = NULL,  -- DeTai.HocKy
+    @NamHoc   INT          = NULL   -- DeTai.NamHoc
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF OBJECT_ID('tempdb..#GV') IS NOT NULL DROP TABLE #GV;
+    IF OBJECT_ID('tempdb..#DT') IS NOT NULL DROP TABLE #DT;
+    IF OBJECT_ID('tempdb..#HD') IS NOT NULL DROP TABLE #HD;
+
+    -- #GV: giảng viên theo filter
+    SELECT gv.magv, gv.hotengv, gv.makhoa
+    INTO #GV
+    FROM GiangVien AS gv
+    WHERE (@MaKhoa IS NULL OR gv.makhoa = @MaKhoa)
+      AND (@MaGv   IS NULL OR gv.magv   = @MaGv);
+
+    -- #DT: đề tài thuộc #GV theo học kỳ/năm học
+    SELECT dt.madt, dt.tendt, dt.magv, dt.hocky, dt.namhoc, dt.soluongtoida
+    INTO #DT
+    FROM DeTai AS dt
+    INNER JOIN #GV AS g ON g.magv = dt.magv
+    WHERE (@HocKy IS NULL OR dt.hocky = @HocKy)
+      AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc);
+
+    -- #HD: hướng dẫn thuộc #DT theo ngày
+    SELECT hd.madt, hd.masv, hd.trangthai, hd.ngaydangky, hd.ngaychapnhan, hd.ketqua, hd.ghichu
+    INTO #HD
+    FROM HuongDan AS hd
+    INNER JOIN #DT AS d ON d.madt = hd.madt
+    WHERE (@FromDate IS NULL OR hd.ngaydangky >= @FromDate)
+      AND (@ToDate   IS NULL OR hd.ngaydangky < DATEADD(DAY, 1, @ToDate));
+
+    /* ===== Result set #1: KPI tổng ===== */
+    SELECT
+        (SELECT COUNT(*) FROM #DT)                                            AS TongDeTai,
+        (SELECT COUNT(*) FROM #GV)                                            AS TongGiangVien,
+        (SELECT COUNT(*) FROM SinhVien)                                       AS TongSinhVien,
+        (SELECT COUNT(DISTINCT h.masv) FROM #HD AS h)                         AS TongSV_DaDangKy,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END)                      AS Pending,
+        SUM(CASE WHEN h.trangthai = 1 THEN 1 ELSE 0 END)                      AS Accepted,
+        SUM(CASE WHEN h.trangthai = 2 THEN 1 ELSE 0 END)                      AS InProgress,
+        SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END)                      AS Completed,
+        SUM(CASE WHEN h.trangthai = 4 THEN 1 ELSE 0 END)                      AS Rejected,
+        SUM(CASE WHEN h.trangthai = 5 THEN 1 ELSE 0 END)                      AS Withdrawn,
+        CAST(100.0 * NULLIF(SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END),0) / NULLIF(COUNT(*),0) AS DECIMAL(5,2)) AS AcceptanceRatePct,
+        CAST(100.0 * NULLIF(SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END),0)        / NULLIF(COUNT(*),0) AS DECIMAL(5,2)) AS CompletionRatePct
+    FROM #HD AS h;
+
+    /* ===== Result set #2: Xu hướng đăng ký theo tháng ===== */
+    SELECT
+        YEAR(h.ngaydangky)  AS Nam,
+        MONTH(h.ngaydangky) AS Thang,
+        COUNT(*)            AS SoDangKy
+    FROM #HD AS h
+    GROUP BY YEAR(h.ngaydangky), MONTH(h.ngaydangky)
+    ORDER BY Nam, Thang;
+
+    /* ===== Result set #3: Phân bố trạng thái ===== */
+    SELECT
+        h.trangthai,
+        COUNT(*) AS SoLuong
+    FROM #HD AS h
+    GROUP BY h.trangthai
+    ORDER BY h.trangthai;
+
+    /* ===== Result set #4: Lấp đầy theo đề tài ===== */
+    SELECT
+        d.madt,
+        d.tendt,
+        d.soluongtoida                                                      AS SlotToiDa,
+        SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END)            AS SlotDaDung,
+        d.soluongtoida - SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END) AS SlotConLai,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END)                    AS DangChoDuyet,
+        d.magv
+    FROM #DT AS d
+    LEFT JOIN #HD AS h ON h.madt = d.madt
+    GROUP BY d.madt, d.tendt, d.soluongtoida, d.magv
+    ORDER BY SlotDaDung DESC, d.tendt;
+
+    /* ===== Result set #5: Phân bố theo Khoa ===== */
+    SELECT
+        g.makhoa,
+        COUNT(DISTINCT d.madt)                                             AS SoDeTai,
+        SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END)            AS TongSlotDaDung,
+        SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END)                   AS DaHoanThanh,
+        COUNT(DISTINCT g.magv)                                             AS SoGiangVien
+    FROM #GV AS g
+    LEFT JOIN #DT AS d ON d.magv = g.magv
+    LEFT JOIN #HD AS h ON h.madt = d.madt
+    GROUP BY g.makhoa
+    ORDER BY TongSlotDaDung DESC;
+
+    /* ===== Result set #6: Top Giảng viên theo Completed / Đang thực hiện ===== */
+    SELECT TOP 20
+        g.magv,
+        g.hotengv,
+        SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END)                   AS Completed,
+        SUM(CASE WHEN h.trangthai IN (1,2) THEN 1 ELSE 0 END)              AS DangThucHien,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END)                   AS Pending
+    FROM #GV AS g
+    LEFT JOIN #DT AS d ON d.magv = g.magv
+    LEFT JOIN #HD AS h ON h.madt = d.madt
+    GROUP BY g.magv, g.hotengv
+    ORDER BY Completed DESC, DangThucHien DESC, Pending DESC;
+
+    /* ===== Result set #7: Theo Học kỳ / Năm học ===== */
+    SELECT
+        d.namhoc,
+        d.hocky,
+        SUM(CASE WHEN h.trangthai IN (1,2,3) THEN 1 ELSE 0 END)            AS SlotDaDung,
+        SUM(CASE WHEN h.trangthai = 3 THEN 1 ELSE 0 END)                   AS HoanThanh,
+        SUM(CASE WHEN h.trangthai = 0 THEN 1 ELSE 0 END)                   AS ChoDuyet
+    FROM #DT AS d
+    LEFT JOIN #HD AS h ON h.madt = d.madt
+    GROUP BY d.namhoc, d.hocky
+    ORDER BY d.namhoc DESC, d.hocky DESC;
+END
+GO
+
+GO
 
 /* ============================================================================
    KẾT THÚC

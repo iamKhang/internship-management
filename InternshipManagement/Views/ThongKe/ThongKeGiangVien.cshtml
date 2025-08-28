@@ -1,0 +1,127 @@
+﻿@model InternshipManagement.Models.ViewModels.ThongKeGiangVienVm
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Thống kê Giảng viên";
+
+    // Serialize an toàn bằng System.Text.Json
+    var trendJson = JsonSerializer.Serialize(Model.Trend);
+    var statusJson = JsonSerializer.Serialize(Model.StatusDist);
+    var fillJson = JsonSerializer.Serialize(Model.DeTaiFill);
+}
+
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">Thống kê của Giảng viên</h4>
+
+        <!-- Form lọc đơn giản (không set value mặc định để tránh lỗi Request) -->
+        <form method="get" class="d-flex gap-2">
+            <input type="date" name="from" class="form-control form-control-sm" />
+            <input type="date" name="to" class="form-control form-control-sm" />
+            <input type="number" name="namHoc" class="form-control form-control-sm" placeholder="Năm học" />
+            <input type="number" name="hocKy" class="form-control form-control-sm" placeholder="Học kỳ" />
+            <button class="btn btn-sm btn-primary" type="submit">Lọc</button>
+        </form>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-2"><div class="card p-3">Tổng đề tài: <b>@Model.Kpi.TongDeTai</b></div></div>
+        <div class="col-md-2"><div class="card p-3">SV đã ĐK: <b>@Model.Kpi.TongSinhVien</b></div></div>
+        <div class="col-md-2"><div class="card p-3">Pending: <b>@Model.Kpi.Pending</b></div></div>
+        <div class="col-md-2"><div class="card p-3">Accepted: <b>@Model.Kpi.Accepted</b></div></div>
+        <div class="col-md-2"><div class="card p-3">Completed: <b>@Model.Kpi.Completed</b></div></div>
+        <div class="col-md-2">
+            <div class="card p-3">
+                Avg days accept: <b>@(Model.Kpi.AvgDaysToAccept?.ToString("0.##") ?? "-")</b>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <h6 class="mb-2">Xu hướng đăng ký theo tháng</h6>
+            <div id="gv_trend" style="height:360px;" class="border rounded"></div>
+        </div>
+        <div class="col-lg-6">
+            <h6 class="mb-2">Phân bố trạng thái</h6>
+            <div id="gv_status" style="height:360px;" class="border rounded"></div>
+        </div>
+
+        <div class="col-12">
+            <h6 class="mb-2">Lấp đầy theo đề tài</h6>
+            <div id="gv_fill" style="height:420px;" class="border rounded"></div>
+        </div>
+    </div>
+
+    @if (!Model.DeTaiFill.Any() && !Model.Trend.Any() && !Model.StatusDist.Any())
+    {
+        <div class="alert alert-info mt-4">
+            Chưa có dữ liệu thống kê cho bộ lọc hiện tại.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/lib/echarts/dist/echarts.min.js"></script>
+    <script>
+        const trendData  = @Html.Raw(trendJson);
+        const statusData = @Html.Raw(statusJson);
+        const fillData   = @Html.Raw(fillJson);
+
+        // Trend
+        (function () {
+            const el = document.getElementById('gv_trend');
+            const chart = echarts.init(el);
+            const xs = trendData.map(p => `${p.Nam}-${String(p.Thang).padStart(2, '0')}`);
+            const ys = trendData.map(p => p.SoDangKy);
+            chart.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: xs },
+                yAxis: { type: 'value' },
+                series: [{ type: 'line', data: ys, smooth: true }]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        })();
+
+        // Status
+        (function () {
+            const el = document.getElementById('gv_status');
+            const chart = echarts.init(el);
+            const labelMap = { 0: 'Pending', 1: 'Accepted', 2: 'InProgress', 3: 'Completed', 4: 'Rejected', 5: 'Withdrawn' };
+            chart.setOption({
+                tooltip: { trigger: 'item' },
+                legend: { top: 'bottom' },
+                series: [{
+                    type: 'pie',
+                    radius: ['35%', '70%'],
+                    data: statusData.map(s => ({ name: labelMap[s.TrangThai] ?? s.TrangThai, value: s.SoLuong }))
+                }]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        })();
+
+        // Fill per topic
+        (function () {
+            const el = document.getElementById('gv_fill');
+            const chart = echarts.init(el);
+            const names = fillData.map(d => d.TenDt);
+            const used = fillData.map(d => d.SlotDaDung);
+            const left = fillData.map(d => d.SlotConLai);
+            const wait = fillData.map(d => d.DangChoDuyet);
+            chart.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: 80, right: 20, bottom: 20, containLabel: true },
+                xAxis: { type: 'value' },
+                yAxis: { type: 'category', data: names },
+                series: [
+                    { name: 'Đã dùng', type: 'bar', stack: 't', data: used },
+                    { name: 'Còn lại', type: 'bar', stack: 't', data: left },
+                    { name: 'Chờ duyệt', type: 'bar', stack: 't', data: wait }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        })();
+    </script>
+}

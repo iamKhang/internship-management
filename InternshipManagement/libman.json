@@ -5,6 +5,11 @@
     {
       "library": "bootstrap-icons@1.11.3",
       "destination": "wwwroot/lib/bootstrap-icons/"
+    },
+    {
+      "provider": "unpkg",
+      "library": "echarts@5.5.0",
+      "destination": "wwwroot/lib/echarts"
     }
   ]
 }
