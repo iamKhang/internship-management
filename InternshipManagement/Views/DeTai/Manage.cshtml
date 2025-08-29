@@ -60,48 +60,46 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-sm mb-0 align-middle">
-                    <thead class="table-light">
+                <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
+                    <thead class="table-primary">
                         <tr>
-                            <th>Mã</th>
-                            <th>Tên</th>
-                            <th>HK/NH</th>
-                            <th>Tối đa</th>
-                            <th>Tham gia</th>
-                            <th>Còn</th>
-                            <th class="text-center" style="width:1%; white-space:nowrap;">Hành động</th>
+                            <th class="text-nowrap fw-bold">Mã</th>
+                            <th class="text-nowrap fw-bold">Tên</th>
+                            <th class="text-nowrap fw-bold">HK/NH</th>
+                            <th class="text-nowrap fw-bold">Tối đa</th>
+                            <th class="text-nowrap fw-bold">Tham gia</th>
+                            <th class="text-nowrap fw-bold">Còn</th>
+                            <th class="text-nowrap fw-bold text-center">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var t in Model.Topics)
                         {
                             <tr>
-                                <td class="text-nowrap">@t.MaDt</td>
+                                <td class="text-nowrap text-monospace">@t.MaDt</td>
                                 <td class="text-truncate" style="max-width: 360px;">@t.TenDt</td>
                                 <td>@($"HK{t.HocKy} / {t.NamHoc}")</td>
-                                <td>@t.SoLuongToiDa</td>
-                                <td>@t.ThamGia</td>
-                                <td class="@(t.ConLai > 0 ? "text-success" : "text-danger")">@t.ConLai</td>
+                                <td class="text-center">@t.SoLuongToiDa</td>
+                                <td class="text-center">@t.ThamGia</td>
+                                <td class="text-center @(t.ConLai > 0 ? "text-success" : "text-danger")">@t.ConLai</td>
                                 <td class="text-center text-nowrap">
                                     <!-- Sửa -->
-                                    <a class="btn btn-sm btn-outline-primary me-1"
+                                    <a class="btn btn-primary btn-sm me-1 text-white"
                                        asp-action="EditDeTai" asp-route-id="@t.MaDt" title="Sửa">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-
                                     <!-- Xóa (mở modal) -->
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                    <button type="button" class="btn btn-danger btn-sm"
                                             data-bs-toggle="modal" data-bs-target="#deleteTopicModal"
-                                            data-madt="@t.MaDt" data-tendt="@t.TenDt">
+                                            data-madt="@t.MaDt" data-tendt="@t.TenDt" title="Xóa">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                         }
-
                         @if (!Model.Topics.Any())
                         {
-                            <tr><td colspan="7" class="text-muted text-center py-3">Không có đề tài</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted py-5 fs-5"><i class="bi bi-info-circle me-2"></i>Không có đề tài</td></tr>
                         }
                     </tbody>
                 </table>
@@ -113,39 +111,39 @@
         <div class="card-header bg-white">Sinh viên đang hướng dẫn</div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light">
+                <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
+                    <thead class="table-primary">
                         <tr>
-                            <th>Mã SV</th>
-                            <th>Họ tên</th>
-                            <th>Khoa</th>
-                            <th>Đề tài</th>
-                            <th>HK/NH</th>
-                            <th>Trạng thái</th>
-                            <th>ĐK</th>
-                            <th>CN</th>
+                            <th class="text-nowrap fw-bold">Mã SV</th>
+                            <th class="text-nowrap fw-bold">Họ tên</th>
+                            <th class="text-nowrap fw-bold">Khoa</th>
+                            <th class="text-nowrap fw-bold">Đề tài</th>
+                            <th class="text-nowrap fw-bold">HK/NH</th>
+                            <th class="text-nowrap fw-bold">Trạng thái</th>
+                            <th class="text-nowrap fw-bold">ĐK</th>
+                            <th class="text-nowrap fw-bold">CN</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var s in Model.Students)
                         {
                             <tr>
-                                <td>@s.Masv</td>
+                                <td class="text-monospace">@s.Masv</td>
                                 <td>@s.HotenSv</td>
                                 <td>@s.Sv_TenKhoa</td>
-                                <td>@s.MaDt</td>
+                                <td class="text-monospace">@s.MaDt</td>
                                 <td>@s.HocKy / @s.NamHoc</td>
                                 <td>
                                     @{
-                                        var label = s.TrangThai switch
+                                        var (label, badgeClass) = s.TrangThai switch
                                         {
-                                            1 => "Chấp nhận",
-                                            2 => "Đang thực hiện",
-                                            3 => "Hoàn thành",
-                                            _ => "?"
+                                            1 => ("Chấp nhận", "bg-success text-white"),
+                                            2 => ("Đang thực hiện", "bg-info text-dark"),
+                                            3 => ("Hoàn thành", "bg-success text-white"),
+                                            _ => ("?", "bg-secondary text-white")
                                         };
                                     }
-                                    @label
+                                    <span class="badge @badgeClass">@label</span>
                                 </td>
                                 <td>@(s.NgayDangKy?.ToString("dd/MM/yyyy") ?? "—")</td>
                                 <td>@(s.NgayChapNhan?.ToString("dd/MM/yyyy") ?? "—")</td>
@@ -153,7 +151,7 @@
                         }
                         @if (!Model.Students.Any())
                         {
-                            <tr><td colspan="8" class="text-muted text-center py-3">Không có sinh viên</td></tr>
+                            <tr><td colspan="8" class="text-center text-muted py-5 fs-5"><i class="bi bi-info-circle me-2"></i>Không có sinh viên</td></tr>
                         }
                     </tbody>
                 </table>
