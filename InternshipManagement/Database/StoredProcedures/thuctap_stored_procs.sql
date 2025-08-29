@@ -1431,7 +1431,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    IF (@NewStatus NOT IN (1,4))
+    IF (@NewStatus NOT IN (1,4,2))
     BEGIN
         RAISERROR (N'NewStatus chỉ hỗ trợ 1 (Accepted) hoặc 4 (Rejected).', 16, 1);
         RETURN;

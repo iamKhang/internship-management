@@ -27,6 +27,7 @@ namespace InternshipManagement.Repositories.Interfaces
         Task<(bool ok, string? error)> RegisterAsync(int maSv, string maDt);
         Task<(bool ok, string? error)> WithdrawAsync(int maSv, string maDt);
         Task<List<StudentMyTopicItemVm>> GetStudentMyTopicsAsync(int maSv, byte? hocKy, short? namHoc, byte? trangThai);
+        Task<(bool ok, string? error)> CompleteHuongDanAsync(int maGv, int maSv, string maDt, decimal ketQua, string? ghiChu);
 
 
     }

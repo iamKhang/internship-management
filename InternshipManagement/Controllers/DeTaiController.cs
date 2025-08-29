@@ -431,8 +431,9 @@ namespace InternshipManagement.Controllers
             ws.Cell(r, 7).Value = "Học kỳ";
             ws.Cell(r, 8).Value = "Năm học";
             ws.Cell(r, 9).Value = "Trạng thái";
-            ws.Range(r, 1, r, 9).Style.Font.Bold = true;
-            ws.Range(r, 1, r, 9).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
+            ws.Cell(r, 10).Value = "Kết quả";
+            ws.Range(r, 1, r, 10).Style.Font.Bold = true;
+            ws.Range(r, 1, r, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
             r++;
 
             // Data
@@ -460,6 +461,7 @@ namespace InternshipManagement.Controllers
                     _ => "Khác"
                 };
                 ws.Cell(r, 9).Value = statusText;
+                ws.Cell(r, 10).Value = x.KetQua;
 
                 r++;
             }
@@ -701,6 +703,69 @@ namespace InternshipManagement.Controllers
 
             return View(vm); // Views/DeTai/MyTopics.cshtml
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "GiangVien")]
+        public async Task<IActionResult> SetHuongDanCompleted(
+              int maSv,
+              string maDt,
+              decimal ketQua,
+              string? ghiChu,
+              byte? hocKy,
+              short? namHoc,
+              byte? trangThai,
+              string? filterMaDt)
+        {
+            // Lấy mã GV từ claims
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            // Gọi repo: Completed (3) + điểm
+            var (ok, error) = await _repo.CompleteHuongDanAsync(maGv, maSv, maDt, ketQua, ghiChu);
+
+            TempData["Toast"] = ok
+                ? "Đã cập nhật trạng thái: Hoàn thành và lưu điểm."
+                : (error ?? "Hoàn thành thất bại.");
+
+            return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "GiangVien")]
+        public async Task<IActionResult> SetHuongDanInProgress(
+    int maSv,
+    string maDt,
+    string? ghiChu,
+    byte? hocKy,
+    short? namHoc,
+    byte? trangThai,
+    string? filterMaDt)
+        {
+            // Lấy mã GV từ claims (đúng style controller hiện tại)
+            string? rawMaGv = User.FindFirst("MaGv")?.Value
+                           ?? User.FindFirst("code")?.Value
+                           ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                return Forbid();
+
+            // Gọi repo update status = 2 (InProgress)
+            var ok = await _repo.UpdateHuongDanStatusAsync(maGv, maSv, maDt, 2, ghiChu);
+
+            TempData["Toast"] = ok
+                ? "Đã cập nhật trạng thái: Đang thực hiện."
+                : "Cập nhật trạng thái thất bại.";
+
+            return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
+        }
+
+
 
     }
 }

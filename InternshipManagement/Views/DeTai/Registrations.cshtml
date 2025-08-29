@@ -79,26 +79,32 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-                <thead class="table-light">
+            <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
+                <thead class="table-primary">
                     <tr>
-                        <th>Ngày đăng ký</th>
-                        <th>Sinh viên</th>
-                        <th>Đề tài</th>
-                        <th>Học kỳ</th>
-                        <th>Trạng thái</th>
-                        <th style="width: 1%; white-space: nowrap;">Thao tác</th>
+                        <th class="text-nowrap fw-bold">Ngày đăng ký</th>
+                        <th class="text-nowrap fw-bold">Sinh viên</th>
+                        <th class="text-nowrap fw-bold">Đề tài</th>
+                        <th class="text-nowrap fw-bold">Học kỳ</th>
+                        <th class="text-nowrap fw-bold">Trạng thái</th>
+                        <th class="text-nowrap fw-bold">Kết quả</th>  @* <-- thêm *@
+                        <th class="text-nowrap fw-bold">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Items.Any())
                     {
-                        <tr><td colspan="6" class="text-center text-muted p-3">Không có đăng ký nào.</td></tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5 fs-5">
+                                <i class="bi bi-info-circle me-2"></i>Không có đăng ký nào
+                            </td>
+                        </tr>
                     }
                     else
                     {
                         foreach (var x in Model.Items)
                         {
+                            var modalId = $"completeModal_{x.Masv}_{x.MaDt}".Replace(" ", "").Replace(".", "").Replace("/", "").Replace("\\", "");
                             <tr>
                                 <td>@(x.NgayDangKy?.ToString("dd/MM/yyyy") ?? "")</td>
                                 <td>
@@ -111,7 +117,7 @@
                                 </td>
                                 <td>
                                     <div class="fw-semibold">@x.TenDt</div>
-                                    <div class="text-muted small">Mã: @x.MaDt</div>
+                                    <div class="text-muted small">Mã: <span class="text-monospace">@x.MaDt</span></div>
                                 </td>
                                 <td>@($"{x.HocKy} - {x.NamHoc}")</td>
                                 <td>
@@ -127,24 +133,31 @@
                                         };
                                         string badgeClass = x.TrangThai switch
                                         {
-                                            0 => "bg-warning",
-                                            1 => "bg-primary",
-                                            2 => "bg-info",
-                                            3 => "bg-success",
-                                            4 => "bg-danger",
-                                            _ => "bg-secondary"
+                                            0 => "bg-warning text-dark",
+                                            1 => "bg-success text-white",
+                                            2 => "bg-info text-dark",
+                                            3 => "bg-success text-white",
+                                            4 => "bg-danger text-white",
+                                            _ => "bg-secondary text-white"
                                         };
                                     }
                                     <span class="badge @badgeClass">@statusText</span>
                                 </td>
-                                <td class="align-middle text-nowrap" style="width: 1%; white-space: nowrap;">
-                                    @if (x.TrangThai == 1)
+
+                                <td class="text-center">
+                                    @if (x.KetQua.HasValue)
                                     {
-                                        <button class="btn btn-success btn-sm w-100" disabled>
-                                            <i class="bi bi-check-circle-fill me-1"></i>Đã chấp nhận
-                                        </button>
+                                        <span class="fw-semibold">@x.KetQua.Value</span>
                                     }
-                                    else if (x.TrangThai == 0)
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+
+                                <td class="text-nowrap">
+                                    @* 0 = Pending: giữ nguyên Duyệt/Từ chối *@
+                                    @if (x.TrangThai == 0)
                                     {
                                         <div class="d-grid gap-2">
                                             <form method="post" asp-action="ApproveRegistration">
@@ -159,7 +172,6 @@
                                                     <i class="bi bi-check-circle me-1"></i>Duyệt
                                                 </button>
                                             </form>
-
                                             <form method="post" asp-action="RejectRegistration">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="maSv" value="@x.Masv" />
@@ -168,10 +180,89 @@
                                                 <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
                                                 <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
                                                 <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
-                                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                <button type="submit" class="btn btn-danger btn-sm w-100">
                                                     <i class="bi bi-x-circle me-1"></i>Từ chối
                                                 </button>
                                             </form>
+                                        </div>
+                                    }
+                                    @* 1 = Accepted: thêm nút Bắt đầu -> InProgress (2) *@
+                                    else if (x.TrangThai == 1)
+                                    {
+                                        <div class="d-grid">
+                                            <form method="post" asp-action="SetHuongDanInProgress">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="maSv" value="@x.Masv" />
+                                                <input type="hidden" name="maDt" value="@x.MaDt" />
+                                                <input type="hidden" name="ghiChu" value="Bắt đầu thực hiện" />
+                                                <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
+                                                <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
+                                                <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
+                                                <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
+                                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                    <i class="bi bi-play-circle me-1"></i>Bắt đầu
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                    @* 2 = InProgress: thêm nút Hoàn thành (mở modal nhập điểm) *@
+                                    else if (x.TrangThai == 2)
+                                    {
+                                        <div class="d-grid">
+                                            <button type="button"
+                                                    class="btn btn-success btn-sm"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#@modalId">
+                                                <i class="bi bi-flag-checkered me-1"></i>Hoàn thành
+                                            </button>
+                                        </div>
+
+                                        @* Modal nhập điểm *@
+                                        <div class="modal fade" id="@modalId" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Nhập điểm hoàn thành</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <form method="post" asp-action="SetHuongDanCompleted">
+                                                        @Html.AntiForgeryToken()
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Sinh viên</label>
+                                                                <div class="form-control-plaintext fw-semibold">@x.HotenSv (#@x.Masv)</div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Đề tài</label>
+                                                                <div class="form-control-plaintext">@x.TenDt (<span class="text-monospace">@x.MaDt</span>)</div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label" for="ketQua_@modalId">Điểm (0–10)</label>
+                                                                <input type="number" step="0.01" min="0" max="10"
+                                                                       class="form-control" id="ketQua_@modalId" name="ketQua" required />
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <label class="form-label" for="ghiChu_@modalId">Ghi chú</label>
+                                                                <input type="text" class="form-control" id="ghiChu_@modalId" name="ghiChu" />
+                                                            </div>
+
+                                                            @* Hidden giữ ngữ cảnh *@
+                                                            <input type="hidden" name="maSv" value="@x.Masv" />
+                                                            <input type="hidden" name="maDt" value="@x.MaDt" />
+                                                            <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
+                                                            <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
+                                                            <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
+                                                            <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                                                            <button type="submit" class="btn btn-success">
+                                                                <i class="bi bi-check2-circle me-1"></i>Xác nhận hoàn thành
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
                                     }
                                     else
@@ -179,13 +270,13 @@
                                         <span class="text-muted d-block text-center">—</span>
                                     }
                                 </td>
-
                             </tr>
                         }
                     }
                 </tbody>
             </table>
         </div>
+
     </div>
 </div>
 

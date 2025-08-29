@@ -603,19 +603,19 @@ namespace InternshipManagement.Repositories.Implementations
                         (h.TrangThai == HuongDanStatus.Accepted
                       || h.TrangThai == HuongDanStatus.InProgress
                       || h.TrangThai == HuongDanStatus.Completed));
-                                if (hasActive)
-                                    return (false, "Đề tài đã có sinh viên đăng ký thành công hoặc đang thực hiện, không thể xóa.");
+                if (hasActive)
+                    return (false, "Đề tài đã có sinh viên đăng ký thành công hoặc đang thực hiện, không thể xóa.");
 
-                                var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
-                                if (e == null) return (false, "Không tìm thấy đề tài.");
+                var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
+                if (e == null) return (false, "Không tìm thấy đề tài.");
 
-                                var toRemove = await _db.Set<HuongDan>()
-                    .Where(h => h.MaDt == code &&
-                        (h.TrangThai == HuongDanStatus.Pending
-                      || h.TrangThai == HuongDanStatus.Rejected
-                      || h.TrangThai == HuongDanStatus.Withdrawn))
-                    .ToListAsync();
-                                if (toRemove.Count > 0) _db.RemoveRange(toRemove);
+                var toRemove = await _db.Set<HuongDan>()
+    .Where(h => h.MaDt == code &&
+        (h.TrangThai == HuongDanStatus.Pending
+      || h.TrangThai == HuongDanStatus.Rejected
+      || h.TrangThai == HuongDanStatus.Withdrawn))
+    .ToListAsync();
+                if (toRemove.Count > 0) _db.RemoveRange(toRemove);
 
                 _db.Remove(e);
                 await _db.SaveChangesAsync();
@@ -772,6 +772,32 @@ namespace InternshipManagement.Repositories.Implementations
             return list;
         }
 
+
+        public async Task<(bool ok, string? error)> CompleteHuongDanAsync(
+        int maGv, int maSv, string maDt, decimal ketQua, string? ghiChu)
+        {
+            // Validate điểm theo thang bạn dùng (ví dụ 0..10)
+            if (ketQua < 0m || ketQua > 10m)
+                return (false, "Điểm kết quả không hợp lệ (0–10).");
+
+            var hd = await _db.Set<HuongDan>()
+                .Where(x => x.MaSv == maSv && x.MaDt == maDt && x.MaGv == maGv)
+                .FirstOrDefaultAsync();
+
+            if (hd == null)
+                return (false, "Không tìm thấy hướng dẫn hoặc bạn không có quyền.");
+
+            // Chỉ hoàn thành từ Accepted (1) hoặc InProgress (2)
+            if (hd.TrangThai != HuongDanStatus.Accepted && hd.TrangThai != HuongDanStatus.InProgress)
+                return (false, "Chỉ có thể hoàn thành từ trạng thái 'Đã chấp nhận' hoặc 'Đang thực hiện'.");
+
+            hd.TrangThai = HuongDanStatus.Completed;
+            hd.KetQua = ketQua;
+            if (!string.IsNullOrWhiteSpace(ghiChu)) hd.GhiChu = ghiChu;
+
+            await _db.SaveChangesAsync();
+            return (true, null);
+        }
     }
 
 
