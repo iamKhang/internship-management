@@ -131,17 +131,22 @@
 <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
     @if (!isAuth)
     {
-        <a class="btn btn-sm btn-primary mt-1"
-           asp-controller="Account" asp-action="Login"
-           asp-route-returnUrl="@returnUrl">
-            Đăng nhập để đăng ký
-        </a>
+        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+            <i class="bi bi-info-circle align-middle p-1" "></i>
+            <span class="align-middle p-1">
+               Đăng nhập để đăng ký
+            </span>
+        </div>
+
     }
-    @if (registrationClosed && (reg is null || reg.ThisTrangThai is null || reg.ThisTrangThai == 4 || reg.ThisTrangThai == 5))
+    else if (registrationClosed && (reg is null || reg.ThisTrangThai is null || reg.ThisTrangThai == 4 || reg.ThisTrangThai == 5))
     {
-        <button class="btn btn-sm btn-secondary mt-1" disabled>
-            Đã qua lượt đăng ký
-        </button>
+        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+            <i class="bi bi-info-circle align-middle p-1" "></i>
+            <span class="align-middle p-1">
+                Đã qua lượt đăng ký
+            </span>
+        </div>
     }
     else if (!isStudent)
     {
@@ -149,10 +154,12 @@
     }
     else if (Model.SoChoConLai <= 0 && (reg is null || reg.ThisTrangThai is null))
     {
-        <!-- Hết chỗ, chưa đăng ký => không cho đăng ký -->
-        <button class="btn btn-sm btn-secondary mt-1" disabled>
-            Hết chỗ đăng ký
-        </button>
+        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+            <i class="bi bi-info-circle align-middle p-1"></i>
+            <span class="align-middle p-1">
+                Đề tài này đã đủ số lượng
+            </span>
+        </div>
     }
     else
     {
@@ -169,43 +176,42 @@
         }
         else if (reg.ThisTrangThai == -1)
         {
-            <button class="btn btn-sm btn-secondary mt-1" disabled>
-                Đã đăng ký đề tài khác trong kỳ này
-            </button>
-            @if (!string.IsNullOrWhiteSpace(reg.OtherMaDt))
-            {
-                <span class="small text-muted mt-1">
-                    (@reg.OtherMaDt - @reg.OtherTenDt)
-                </span>
-            }
+            <p class="text-muted mt-1">
+                <i class="bi bi-info-circle me-1"></i> Bạn đã đăng ký đề tài khác trong học kỳ này
+            </p>
         }
-        else if (reg.ThisTrangThai == 0)  // Pending
-        {
-            <button class="btn btn-sm btn-warning mt-1" disabled>Đang chờ duyệt</button>
-            <form asp-controller="DeTai" asp-action="ThuHoi" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="maDt" value="@maDt" />
-                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                <button type="submit" class="btn btn-sm btn-outline-danger mt-1">
-                    Hủy đăng ký
-                </button>
-            </form>
-        }
-        else if (reg.ThisTrangThai is 1 or 2 or 3)
-        {
-            <button class="btn btn-sm btn-success mt-1" disabled>Đã đăng ký</button>
-        }
-        else if (reg.ThisTrangThai == 4) // Rejected
-        {
-            <button class="btn btn-sm btn-danger mt-1" disabled>Bạn đã bị từ chối</button>
-            <form asp-controller="DeTai" asp-action="DangKy" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="maDt" value="@maDt" />
-                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                <button type="submit" class="btn btn-sm btn-outline-primary mt-1">
-                    Đăng ký lại
-                </button>
-            </form>
-        }
+        else @if (reg.ThisTrangThai == -1)
+  {
+    <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+        <i class="bi bi-info-circle align-middle p-1" "></i>
+        <span class="align-middle p-1">
+            Bạn đã đăng ký đề tài khác trong học kỳ này
+        </span>
+    </div>
+}
+
+
+
+else if (reg.ThisTrangThai is 1 or 2 or 3)
+{
+    <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+        <i class="bi bi-info-circle align-middle p-1" "></i>
+        <span class="align-middle p-1">
+            Đã đăng ký thành công
+        </span>
+    </div>
+}
+else if (reg.ThisTrangThai == 4) // Rejected
+{
+    <button class="btn btn-sm btn-danger mt-1" disabled>Bạn đã bị từ chối</button>
+    <form asp-controller="DeTai" asp-action="DangKy" method="post" class="d-inline">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="maDt" value="@maDt" />
+        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+        <button type="submit" class="btn btn-sm btn-outline-primary mt-1">
+            Đăng ký lại
+        </button>
+    </form>
+}
     }
 </div>
