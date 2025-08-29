@@ -73,8 +73,12 @@ namespace InternshipManagement.Repositories.Implementations
             if (conn.State != ConnectionState.Open) await conn.OpenAsync();
 
             await using var cmd = new SqlCommand(SP_FILTER, conn) { CommandType = CommandType.StoredProcedure };
+    //        var acceptedCsv = string.IsNullOrWhiteSpace(filter.AcceptedStatusesCsv)
+    //? "1,2,3"
+    //: filter.AcceptedStatusesCsv;
+            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", acceptedCsv);
 
-            cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
+            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? "1,2,3");
             cmd.Parameters.AddWithValue("@MaKhoa", (object?)filter.MaKhoa ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);
@@ -131,7 +135,7 @@ namespace InternshipManagement.Repositories.Implementations
 
             await using var cmd = new SqlCommand(SP_EXPORT, conn) { CommandType = CommandType.StoredProcedure };
 
-            cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
+            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaKhoa", (object?)filter.MaKhoa ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);
@@ -175,7 +179,7 @@ namespace InternshipManagement.Repositories.Implementations
 
             await using var cmd = new SqlCommand(SP_EXPORT_CHITIET, conn) { CommandType = CommandType.StoredProcedure };
 
-            cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
+            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaKhoa", (object?)filter.MaKhoa ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);

@@ -89,14 +89,25 @@ namespace InternshipManagement.Controllers
                 ws.Cell(r, 2).Value = x.TenDt ?? "";
                 ws.Cell(r, 3).Value = x.TenGv;
                 ws.Cell(r, 4).Value = x.TenKhoa;
-                ws.Cell(r, 5).Value = x.HocKy + "/" + x.NamHoc;
-                ws.Cell(r, 6).Value = x.SoChapNhan + "/" + x.SoLuongToiDa; ws.Column(7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                ws.Cell(r, 6).Value = x.IsFull ? "✓" : "";
+                ws.Cell(r, 5).Value = $"{x.HocKy}/{x.NamHoc}";
+
+                // C6: Số lượng tối đa
+                ws.Cell(r, 6).Value = x.SoLuongToiDa;
+
+                // C7: ĐÃ ĐỦ (✓ nếu full)
+                ws.Cell(r, 7).Value = x.IsFull ? "✓" : "";
                 ws.Column(7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                ws.Cell(r, 8).Value = x.KinhPhi.HasValue ? (double)(x.KinhPhi.Value * 1_000_000) : (double?)null;
+
+                // C8: Kinh phí (đổi sang VNĐ)
+                ws.Cell(r, 8).Value = x.KinhPhi.HasValue
+                    ? (double)(x.KinhPhi.Value * 1_000_000)
+                    : (double?)null;
                 ws.Column(8).Style.NumberFormat.Format = "#,##0\" ₫\"";
+
+                // C9: Nơi thực tập
                 ws.Cell(r, 9).Value = x.NoiThucTap ?? "";
             }
+
             ws.Columns().AdjustToContents();
             ws.SheetView.FreezeRows(1);
 

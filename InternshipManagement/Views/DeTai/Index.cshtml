@@ -51,13 +51,15 @@
                         <i class="bi-arrow-clockwise me-1"></i> Hủy
                     </a>
                 </div>
-                <div class="col-auto d-flex align-items-end">
-                    <button type="button"
-                            id="btnExport"
-                            class="btn btn-success d-flex align-items-center px-3">
-                        <i class="bi bi-table me-1"></i> Export
-                    </button>
-                </div>
+                @if (User.Identity?.IsAuthenticated == true
+                    && (User.IsInRole("GiangVien") || User.IsInRole("Admin")))
+                {
+                    <div class="col-auto d-flex align-items-end">
+                        <button type="button" id="btnExport" class="btn btn-success d-flex align-items-center px-3 py-2">
+                            <i class="bi bi-table me-1"></i> Export
+                        </button>
+                    </div>
+                }
 
 
 
@@ -144,14 +146,14 @@
             var pageSize = Model.Paging.PageSize <= 0 ? 20 : Model.Paging.PageSize;
             var totalPages = (int)Math.Ceiling((double)total / pageSize);
         }
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                Trang <strong>@pageIndex</strong>/<strong>@(totalPages == 0 ? 1 : totalPages)</strong>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">
+                Trang <strong>@pageIndex</strong> / <strong>@(totalPages == 0 ? 1 : totalPages)</strong>
             </div>
-            <nav>
-                <ul class="pagination mb-0">
+            <nav aria-label="pagination">
+                <ul class="pagination pagination-sm mb-0">
                     <li class="page-item @(pageIndex <= 1 ? "disabled" : "")">
-                        <a class="page-link"
+                        <a class="page-link bg-primary text-white border-primary"
                            asp-action="Index"
                            asp-route-PageIndex="@(pageIndex - 1)"
                            asp-route-PageSize="@pageSize"
@@ -162,13 +164,15 @@
                            asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
                            asp-route-Filter.Keyword="@Model.Filter.Keyword"
                            asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">«</a>
+                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())"
+                           aria-label="Previous">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
                     </li>
-
                     @for (int i = Math.Max(1, pageIndex - 2); i <= Math.Min(totalPages == 0 ? 1 : totalPages, pageIndex + 2); i++)
                     {
                         <li class="page-item @(i == pageIndex ? "active" : "")">
-                            <a class="page-link"
+                            <a class="page-link @(i == pageIndex ? "bg-primary text-white border-primary" : "bg-white border-primary text-dark")"
                                asp-action="Index"
                                asp-route-PageIndex="@i"
                                asp-route-PageSize="@pageSize"
@@ -179,12 +183,13 @@
                                asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
                                asp-route-Filter.Keyword="@Model.Filter.Keyword"
                                asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                               asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">@i</a>
+                               asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">
+                                @i
+                            </a>
                         </li>
                     }
-
                     <li class="page-item @(pageIndex >= (totalPages == 0 ? 1 : totalPages) ? "disabled" : "")">
-                        <a class="page-link"
+                        <a class="page-link bg-primary text-white border-primary"
                            asp-action="Index"
                            asp-route-PageIndex="@(pageIndex + 1)"
                            asp-route-PageSize="@pageSize"
@@ -195,7 +200,10 @@
                            asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
                            asp-route-Filter.Keyword="@Model.Filter.Keyword"
                            asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">»</a>
+                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())"
+                           aria-label="Next">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
                     </li>
                 </ul>
             </nav>
@@ -211,7 +219,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
-                Bạn có muốn <strong>kèm thông tin sinh viên</strong> (trạng thái 1/2/3, ngày đăng ký, ngày chấp nhận, kết quả, ghi chú) trong file export không?
+                Bạn có muốn <strong>kèm thông tin sinh viên</strong> (trạng thái (Chuẩn bị/Đang/Đã hoàn thành đề tài), ngày đăng ký, ngày chấp nhận, kết quả, ghi chú) trong file export không?
             </div>
             <div class="modal-footer">
                 <button type="button" id="btnExportBasic" class="btn btn-outline-secondary" data-bs-dismiss="modal">

@@ -635,97 +635,10 @@ BEGIN
 
     DROP TABLE #Base;
 END
-GO
 
 GO
 CREATE OR ALTER PROCEDURE dbo.sp_DeTai_FilterAdvanced
-    @AcceptedStatusesCsv NVARCHAR(50) = N'1', -- các trạng thái tính là "đã đăng ký" (mặc định: Accepted)
-    @MaKhoa      CHAR(10)      = NULL,
-    @MaGv        INT           = NULL,
-    @HocKy       TINYINT       = NULL,
-    @NamHoc      SMALLINT      = NULL,
-    @IsFull      BIT           = NULL,   -- giữ cho tương thích cũ
-    @OnlyNoStudent BIT         = NULL,   -- 1: SoChapNhan = 0
-    @OnlyFull    BIT           = NULL,   -- 1: SoChapNhan >= SoLuongToiDa
-    @OnlyNotEnough BIT         = NULL,   -- 1: 0 < SoChapNhan < SoLuongToiDa
-    @Keyword     NVARCHAR(200) = NULL,
-    @MinKinhPhi  INT           = NULL,
-    @MaxKinhPhi  INT           = NULL,
-    @PageIndex   INT           = 1,
-    @PageSize    INT           = 50
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    ;WITH StatusSet AS (
-        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS INT) AS st
-        FROM STRING_SPLIT(@AcceptedStatusesCsv, ',')
-        WHERE TRY_CAST(LTRIM(RTRIM(value)) AS INT) IS NOT NULL
-    ),
-    Stats AS (
-        SELECT
-            dt.madt,
-            COUNT(hd.masv) AS SoDangKy,
-            -- FIX: join StatusSet rồi đếm ss.st IS NOT NULL
-            SUM(CASE WHEN ss.st IS NOT NULL THEN 1 ELSE 0 END) AS SoChapNhan
-        FROM DeTai dt
-        LEFT JOIN HuongDan hd ON hd.madt = dt.madt
-        LEFT JOIN StatusSet ss ON ss.st = hd.trangthai
-        GROUP BY dt.madt
-    ),
-    Base AS (
-        SELECT
-            dt.madt, dt.tendt, dt.magv, dt.hocky, dt.namhoc,
-            dt.soluongtoida, dt.NoiThucTap, dt.kinhphi,
-            gv.makhoa,
-            s.SoDangKy,
-            ISNULL(s.SoChapNhan,0) AS SoChapNhan,
-            CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida
-                 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFull
-        FROM DeTai dt
-        INNER JOIN GiangVien gv ON gv.magv = dt.magv
-        LEFT JOIN Stats s ON s.madt = dt.madt
-        WHERE (@MaKhoa IS NULL OR gv.makhoa = @MaKhoa)
-          AND (@MaGv   IS NULL OR dt.magv   = @MaGv)
-          AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
-          AND (@NamHoc IS NULL OR dt.namhoc = @NamHoc)
-          AND (@MinKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) >= @MinKinhPhi)
-          AND (@MaxKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) <= @MaxKinhPhi)
-          AND (
-                @Keyword IS NULL
-             OR dt.tendt LIKE N'%' + @Keyword + N'%'
-             OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
-          )
-          -- tương thích cũ: @IsFull
-          AND (
-                @IsFull IS NULL OR
-                (CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida THEN 1 ELSE 0 END) = @IsFull
-          )
-          -- chưa có SV
-          AND (
-                @OnlyNoStudent IS NULL
-             OR (@OnlyNoStudent = 1 AND ISNULL(s.SoChapNhan,0) = 0)
-          )
-          -- đủ/đầy
-          AND (
-                @OnlyFull IS NULL
-             OR (@OnlyFull = 1 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)
-          )
-          -- CHƯA ĐỦ
-          AND (
-                @OnlyNotEnough IS NULL
-             OR (@OnlyNotEnough = 1 AND ISNULL(s.SoChapNhan,0) > 0 AND ISNULL(s.SoChapNhan,0) < dt.soluongtoida)
-          )
-    )
-    SELECT *, COUNT(*) OVER() AS TotalRows
-    FROM Base
-    ORDER BY namhoc DESC, hocky DESC, madt
-    OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
-END
-GO
-GO
-CREATE OR ALTER PROCEDURE dbo.sp_DeTai_FilterAdvanced
-    @AcceptedStatusesCsv NVARCHAR(50) = N'1', -- Accepted
+    @FilterTrangThaiCsv  NVARCHAR(50) = NULL,  -- chỉ dùng để LỌC hiển thị
     @MaKhoa      CHAR(10)      = NULL,
     @MaGv        INT           = NULL,
     @HocKy       TINYINT       = NULL,
@@ -735,25 +648,28 @@ CREATE OR ALTER PROCEDURE dbo.sp_DeTai_FilterAdvanced
     @MinKinhPhi  INT           = NULL,
     @MaxKinhPhi  INT           = NULL,
     @PageIndex   INT           = 1,
-    @PageSize    INT           = 50    -- NULL => KHÔNG PHÂN TRANG
+    @PageSize    INT           = 50
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    ;WITH StatusSet AS (
-        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS INT) AS st
-        FROM STRING_SPLIT(@AcceptedStatusesCsv, ',')
-        WHERE TRY_CAST(LTRIM(RTRIM(value)) AS INT) IS NOT NULL
+    ;WITH ParsedFilter AS (
+        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT) AS st
+        FROM STRING_SPLIT(@FilterTrangThaiCsv, ',')
+        WHERE @FilterTrangThaiCsv IS NOT NULL
+          AND TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT) IS NOT NULL
     ),
-    Stats AS (
-        SELECT
-            dt.madt,
-            COUNT(hd.masv) AS SoDangKy,
-            SUM(CASE WHEN ss.st IS NOT NULL THEN 1 ELSE 0 END) AS SoChapNhan
-        FROM DeTai dt
-        LEFT JOIN HuongDan hd ON hd.madt = dt.madt
-        LEFT JOIN StatusSet ss ON ss.st = hd.trangthai
-        GROUP BY dt.madt
+    -- Đếm theo TẬP CỐ ĐỊNH {1,2,3}
+    AcceptedPerTopic AS (
+        SELECT hd.madt, COUNT(DISTINCT hd.masv) AS SoChapNhan
+        FROM HuongDan hd
+        WHERE hd.trangthai IN (1,2,3)
+        GROUP BY hd.madt
+    ),
+    RegisteredPerTopic AS (
+        SELECT hd.madt, COUNT(DISTINCT hd.masv) AS SoDangKy
+        FROM HuongDan hd
+        GROUP BY hd.madt
     ),
     Base AS (
         SELECT
@@ -765,16 +681,18 @@ BEGIN
             dt.soluongtoida,
             dt.NoiThucTap,
             dt.kinhphi,
-            CONVERT(VARCHAR(10), gv.makhoa) AS MaKhoa, -- khoa của GV
+            CONVERT(VARCHAR(10), gv.makhoa) AS MaKhoa,
             k.TenKhoa,
-            s.SoDangKy,
-            ISNULL(s.SoChapNhan,0) AS SoChapNhan,
-            CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida
+            ISNULL(rp.SoDangKy, 0)   AS SoDangKy,
+            ISNULL(ap.SoChapNhan, 0) AS SoChapNhan,
+            CASE WHEN ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida
                  THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFull
         FROM DeTai dt
-        INNER JOIN GiangVien gv ON gv.magv = dt.magv
-        LEFT  JOIN Khoa k ON CONVERT(VARCHAR(10), k.MaKhoa) = CONVERT(VARCHAR(10), gv.MaKhoa)
-        LEFT  JOIN Stats s ON s.madt = dt.madt
+        -- 🔧 ĐỔI THÀNH LEFT JOIN để KHÔNG LOẠI ĐỀ TÀI
+        LEFT  JOIN GiangVien gv ON gv.magv = dt.magv
+        LEFT  JOIN Khoa k  ON CONVERT(VARCHAR(10), k.MaKhoa) = CONVERT(VARCHAR(10), gv.MaKhoa)
+        LEFT  JOIN AcceptedPerTopic  ap ON ap.madt = dt.madt
+        LEFT  JOIN RegisteredPerTopic rp ON rp.madt = dt.madt
         WHERE (@MaKhoa IS NULL OR CONVERT(VARCHAR(10), gv.makhoa) = CONVERT(VARCHAR(10), @MaKhoa))
           AND (@MaGv   IS NULL OR dt.magv   = @MaGv)
           AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
@@ -786,45 +704,43 @@ BEGIN
              OR dt.tendt LIKE N'%' + @Keyword + N'%'
              OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
           )
+          -- Lọc hiển thị theo trạng thái (nếu có). Nếu có filter thì đề tài
+          -- KHÔNG có bản ghi HuongDan tất nhiên sẽ không khớp và sẽ bị loại khi lọc trạng thái là đúng.
+          AND (
+                @FilterTrangThaiCsv IS NULL
+             OR EXISTS (
+                    SELECT 1
+                    FROM HuongDan hd2
+                    WHERE hd2.madt = dt.madt
+                      AND hd2.trangthai IN (SELECT st FROM ParsedFilter)
+                )
+          )
+          -- Lọc theo tình trạng chỗ dựa trên SoChapNhan (đã tính theo {1,2,3})
           AND (
                @TinhTrang = 0
-            OR (@TinhTrang = 1 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)                                -- IsFull
-            OR (@TinhTrang = 2 AND ISNULL(s.SoChapNhan,0) = 0)                                               -- OnlyNoStudent
-            OR (@TinhTrang = 3 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)                                -- OnlyFull
-            OR (@TinhTrang = 4 AND ISNULL(s.SoChapNhan,0) > 0 AND ISNULL(s.SoChapNhan,0) < dt.soluongtoida)  -- OnlyNotEnough
+            OR (@TinhTrang = 1 AND ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida)
+            OR (@TinhTrang = 2 AND ISNULL(ap.SoChapNhan,0) = 0)
+            OR (@TinhTrang = 3 AND ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida)
+            OR (@TinhTrang = 4 AND ISNULL(ap.SoChapNhan,0) > 0 AND ISNULL(ap.SoChapNhan,0) < dt.soluongtoida)
           )
     )
-    -- materialize CTE vào temp table để có thể IF/ELSE
-    SELECT *
-    INTO #Base
-    FROM Base;
+    SELECT * INTO #Base FROM Base;
 
     IF @PageSize IS NULL
     BEGIN
-        SELECT
-            madt, tendt, magv, hocky, namhoc,
-            soluongtoida, NoiThucTap, kinhphi,
-            MaKhoa, TenKhoa,
-            SoDangKy, SoChapNhan, IsFull,
-            COUNT(*) OVER() AS TotalRows
+        SELECT *, COUNT(*) OVER() AS TotalRows
         FROM #Base
         ORDER BY namhoc DESC, hocky DESC, madt;
     END
     ELSE
     BEGIN
-        SELECT
-            madt, tendt, magv, hocky, namhoc,
-            soluongtoida, NoiThucTap, kinhphi,
-            MaKhoa, TenKhoa,
-            SoDangKy, SoChapNhan, IsFull,
-            COUNT(*) OVER() AS TotalRows
+        SELECT *, COUNT(*) OVER() AS TotalRows
         FROM #Base
         ORDER BY namhoc DESC, hocky DESC, madt
         OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
     END
 END
 GO
-
 
 
 
@@ -881,59 +797,52 @@ BEGIN
     OFFSET (@PageIndex-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY;
 END
 GO
-
 GO
 CREATE OR ALTER PROCEDURE dbo.sp_DeTai_Export
-    @AcceptedStatusesCsv NVARCHAR(50) = N'1', -- Accepted/In-progress... dùng cho SoChapNhan
-    @MaKhoa      CHAR(10)      = NULL,        -- lọc theo khoa GIẢNG VIÊN
+    @MaKhoa      CHAR(10)      = NULL,
     @MaGv        INT           = NULL,
     @HocKy       TINYINT       = NULL,
     @NamHoc      SMALLINT      = NULL,
-    @TinhTrang   TINYINT       = 0,           -- 0=All,1=IsFull,2=OnlyNoStudent,3=OnlyFull,4=OnlyNotEnough
-    @Keyword     NVARCHAR(200) = NULL,        -- tìm trong tendt / NoiThucTap
+    @TinhTrang   TINYINT       = 0,   -- 0=All,1=IsFull,2=OnlyNoStudent(=SoChapNhan=0),3=OnlyFull,4=OnlyNotEnough,5=OnlyNoAccepted(=SoChapNhan=0) [tuỳ chọn]
+    @Keyword     NVARCHAR(200) = NULL,
     @MinKinhPhi  INT           = NULL,
     @MaxKinhPhi  INT           = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    ;WITH StatusSet AS (
-        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS INT) AS st
-        FROM STRING_SPLIT(@AcceptedStatusesCsv, ',')
-        WHERE TRY_CAST(LTRIM(RTRIM(value)) AS INT) IS NOT NULL
+    WITH AcceptedPerTopic AS (   -- SV đã nhận/đang làm/đã xong
+        SELECT hd.madt, COUNT(DISTINCT hd.masv) AS SoChapNhan
+        FROM HuongDan hd
+        WHERE hd.trangthai IN (1,2,3)
+        GROUP BY hd.madt
     ),
-    Stats AS (
-        SELECT
-            dt.madt,
-            COUNT(hd.masv) AS SoDangKy,                                       -- tổng số đăng ký
-            SUM(CASE WHEN ss.st IS NOT NULL THEN 1 ELSE 0 END) AS SoChapNhan  -- số SV có trạng thái trong AcceptedStatusesCsv
-        FROM DeTai dt
-        LEFT JOIN HuongDan hd ON hd.madt = dt.madt
-        LEFT JOIN StatusSet ss ON ss.st = hd.trangthai
-        GROUP BY dt.madt
+    RegisteredPerTopic AS (      -- tổng SV đăng ký (tham khảo hiển thị)
+        SELECT hd.madt, COUNT(DISTINCT hd.masv) AS SoDangKy
+        FROM HuongDan hd
+        GROUP BY hd.madt
     ),
     Base AS (
         SELECT
             dt.madt         AS MaDt,
             dt.tendt        AS TenDt,
             dt.magv         AS MaGv,
-            gv.hoTenGv      AS TenGv,          -- 👈 TÊN GIẢNG VIÊN
+            gv.hoTenGv      AS TenGv,
             CONVERT(VARCHAR(10), gv.makhoa) AS MaKhoa,
-            k.TenKhoa,                          -- 👈 TÊN KHOA (của GV)
+            k.TenKhoa,
             dt.hocky        AS HocKy,
             dt.namhoc       AS NamHoc,
             dt.soluongtoida AS SoLuongToiDa,
             dt.NoiThucTap,
             dt.kinhphi      AS KinhPhi,
-            s.SoDangKy,
-            ISNULL(s.SoChapNhan,0) AS SoChapNhan,
-            CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida
-                 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFull
+            ISNULL(rp.SoDangKy, 0)   AS SoDangKy,
+            ISNULL(ap.SoChapNhan, 0) AS SoChapNhan,
+            CASE WHEN ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida THEN 1 ELSE 0 END AS IsFull
         FROM DeTai dt
-        INNER JOIN GiangVien gv ON gv.magv = dt.magv
-        LEFT  JOIN Khoa k
-               ON CONVERT(VARCHAR(10), k.MaKhoa) = CONVERT(VARCHAR(10), gv.MaKhoa) -- tránh padding CHAR
-        LEFT  JOIN Stats s ON s.madt = dt.madt
+        LEFT JOIN GiangVien gv ON gv.magv = dt.magv
+        LEFT JOIN Khoa k ON CONVERT(VARCHAR(10), k.MaKhoa) = CONVERT(VARCHAR(10), gv.MaKhoa)
+        LEFT JOIN AcceptedPerTopic  ap ON ap.madt = dt.madt
+        LEFT JOIN RegisteredPerTopic rp ON rp.madt = dt.madt
         WHERE (@MaKhoa IS NULL OR CONVERT(VARCHAR(10), gv.makhoa) = CONVERT(VARCHAR(10), @MaKhoa))
           AND (@MaGv   IS NULL OR dt.magv   = @MaGv)
           AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
@@ -941,16 +850,17 @@ BEGIN
           AND (@MinKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) >= @MinKinhPhi)
           AND (@MaxKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) <= @MaxKinhPhi)
           AND (
-               @Keyword IS NULL
-            OR dt.tendt LIKE N'%' + @Keyword + N'%'
-            OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
+                @Keyword IS NULL
+             OR dt.tendt LIKE N'%' + @Keyword + N'%'
+             OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
           )
           AND (
                @TinhTrang = 0
-            OR (@TinhTrang = 1 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)                                -- IsFull
-            OR (@TinhTrang = 2 AND ISNULL(s.SoChapNhan,0) = 0)                                               -- OnlyNoStudent
-            OR (@TinhTrang = 3 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)                                -- OnlyFull
-            OR (@TinhTrang = 4 AND ISNULL(s.SoChapNhan,0) > 0 AND ISNULL(s.SoChapNhan,0) < dt.soluongtoida)  -- OnlyNotEnough
+            OR (@TinhTrang = 1 AND ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida)                                -- IsFull
+            OR (@TinhTrang = 2 AND ISNULL(ap.SoChapNhan,0) = 0)                                               -- ✅ Chưa có sinh viên (đồng bộ UI)
+            OR (@TinhTrang = 3 AND ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida)                                -- OnlyFull
+            OR (@TinhTrang = 4 AND ISNULL(ap.SoChapNhan,0) > 0 AND ISNULL(ap.SoChapNhan,0) < dt.soluongtoida) -- OnlyNotEnough
+            OR (@TinhTrang = 5 AND ISNULL(ap.SoChapNhan,0) = 0)                                               -- alias của 2 (nếu cần)
           )
     )
     SELECT
@@ -968,14 +878,13 @@ END
 GO
 
 GO
-GO
 CREATE OR ALTER PROCEDURE dbo.sp_DeTai_ExportChiTiet
-    @AcceptedStatusesCsv NVARCHAR(50) = N'1,2,3', -- mặc định Accepted/InProgress/Completed
+    @AcceptedStatusesCsv NVARCHAR(50) = N'1,2,3', -- Accepted/InProgress/Completed dùng để ĐẾM & liệt kê chi tiết
     @MaKhoa      CHAR(10)      = NULL,
     @MaGv        INT           = NULL,
     @HocKy       TINYINT       = NULL,
     @NamHoc      SMALLINT      = NULL,
-    @TinhTrang   TINYINT       = 0,           -- 0=All,1=IsFull,2=OnlyNoStudent,3=OnlyFull,4=OnlyNotEnough
+    @TinhTrang   TINYINT       = 0,           -- 0=All,1=IsFull,2=OnlyNoStudent(=SoChapNhan=0),3=OnlyFull,4=OnlyNotEnough
     @Keyword     NVARCHAR(200) = NULL,
     @MinKinhPhi  INT           = NULL,
     @MaxKinhPhi  INT           = NULL
@@ -984,26 +893,29 @@ BEGIN
     SET NOCOUNT ON;
 
     ;WITH StatusSet AS (
-        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS INT) AS st
+        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT) AS st
         FROM STRING_SPLIT(@AcceptedStatusesCsv, ',')
-        WHERE TRY_CAST(LTRIM(RTRIM(value)) AS INT) IS NOT NULL
+        WHERE TRY_CAST(LTRIM(RTRIM(value)) AS TINYINT) IS NOT NULL
     ),
-    Stats AS (   -- thống kê để tính SoDangKy và SoChapNhan
-        SELECT
-            dt.madt,
-            COUNT(hd.masv) AS SoDangKy,
-            SUM(CASE WHEN ss.st IS NOT NULL THEN 1 ELSE 0 END) AS SoChapNhan
-        FROM DeTai dt
-        LEFT JOIN HuongDan hd ON hd.madt = dt.madt
-        LEFT JOIN StatusSet ss ON ss.st = hd.trangthai
-        GROUP BY dt.madt
+    -- Tổng SV đã được nhận/đang làm/đã xong (1,2,3)
+    AcceptedPerTopic AS (
+        SELECT hd.madt, COUNT(DISTINCT hd.masv) AS SoChapNhan
+        FROM HuongDan hd
+        WHERE hd.trangthai IN (SELECT st FROM StatusSet)
+        GROUP BY hd.madt
     ),
-    Base AS (    -- danh sách đề tài sau lọc + thống kê
+    -- Tổng SV đã đăng ký (bất kỳ trạng thái)
+    RegisteredPerTopic AS (
+        SELECT hd.madt, COUNT(DISTINCT hd.masv) AS SoDangKy
+        FROM HuongDan hd
+        GROUP BY hd.madt
+    ),
+    Base AS (
         SELECT
             dt.madt         AS MaDt,
             dt.tendt        AS TenDt,
             dt.magv         AS MaGv,
-            gv.hoTenGv      AS TenGv,
+            gv.hotengv      AS TenGv,
             CONVERT(VARCHAR(10), gv.makhoa) AS MaKhoa,
             k.TenKhoa,
             dt.hocky        AS HocKy,
@@ -1011,14 +923,16 @@ BEGIN
             dt.soluongtoida AS SoLuongToiDa,
             dt.NoiThucTap,
             dt.kinhphi      AS KinhPhi,
-            s.SoDangKy,
-            ISNULL(s.SoChapNhan,0) AS SoChapNhan,
-            CASE WHEN ISNULL(s.SoChapNhan,0) >= dt.soluongtoida
-                 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFull
+            ISNULL(rp.SoDangKy, 0)   AS SoDangKy,
+            ISNULL(ap.SoChapNhan, 0) AS SoChapNhan,
+            CASE WHEN ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida
+                 THEN CAST(1 AS TINYINT) ELSE CAST(0 AS TINYINT) END AS IsFull
         FROM DeTai dt
-        INNER JOIN GiangVien gv ON gv.magv = dt.magv
-        LEFT  JOIN Khoa k ON CONVERT(VARCHAR(10), k.MaKhoa) = CONVERT(VARCHAR(10), gv.MaKhoa)
-        LEFT  JOIN Stats s ON s.madt = dt.madt
+        -- ✔ GIỮ đề tài: dùng LEFT JOIN
+        LEFT JOIN GiangVien gv ON gv.magv = dt.magv
+        LEFT JOIN Khoa k ON CONVERT(VARCHAR(10), k.MaKhoa) = CONVERT(VARCHAR(10), gv.MaKhoa)
+        LEFT JOIN AcceptedPerTopic  ap ON ap.madt = dt.madt
+        LEFT JOIN RegisteredPerTopic rp ON rp.madt = dt.madt
         WHERE (@MaKhoa IS NULL OR CONVERT(VARCHAR(10), gv.makhoa) = CONVERT(VARCHAR(10), @MaKhoa))
           AND (@MaGv   IS NULL OR dt.magv   = @MaGv)
           AND (@HocKy  IS NULL OR dt.hocky  = @HocKy)
@@ -1026,49 +940,54 @@ BEGIN
           AND (@MinKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) >= @MinKinhPhi)
           AND (@MaxKinhPhi IS NULL OR ISNULL(dt.kinhphi,0) <= @MaxKinhPhi)
           AND (
-               @Keyword IS NULL
-            OR dt.tendt LIKE N'%' + @Keyword + N'%'
-            OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
+                @Keyword IS NULL
+             OR dt.tendt LIKE N'%' + @Keyword + N'%'
+             OR ISNULL(dt.NoiThucTap,N'') LIKE N'%' + @Keyword + N'%'
           )
           AND (
                @TinhTrang = 0
-            OR (@TinhTrang = 1 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)                                -- IsFull
-            OR (@TinhTrang = 2 AND ISNULL(s.SoChapNhan,0) = 0)                                               -- OnlyNoStudent
-            OR (@TinhTrang = 3 AND ISNULL(s.SoChapNhan,0) >= dt.soluongtoida)                                -- OnlyFull
-            OR (@TinhTrang = 4 AND ISNULL(s.SoChapNhan,0) > 0 AND ISNULL(s.SoChapNhan,0) < dt.soluongtoida)  -- OnlyNotEnough
+            OR (@TinhTrang = 1 AND ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida)                                -- IsFull
+            OR (@TinhTrang = 2 AND ISNULL(ap.SoChapNhan,0) = 0)                                               -- OnlyNoStudent (đồng bộ FilterAdvanced)
+            OR (@TinhTrang = 3 AND ISNULL(ap.SoChapNhan,0) >= dt.soluongtoida)                                -- OnlyFull
+            OR (@TinhTrang = 4 AND ISNULL(ap.SoChapNhan,0) > 0 AND ISNULL(ap.SoChapNhan,0) < dt.soluongtoida) -- OnlyNotEnough
           )
     )
     SELECT
-        -- Thông tin đề tài
+        -- Thông tin đề tài (1 hàng/đề tài nếu không có SV, nhiều hàng nếu có nhiều SV)
         b.MaDt, b.TenDt,
         b.MaGv, b.TenGv,
         b.MaKhoa, b.TenKhoa,
         b.HocKy, b.NamHoc,
         b.SoLuongToiDa,
         b.SoDangKy, b.SoChapNhan,
-        CAST(b.IsFull AS TINYINT) AS IsFull,
+        b.IsFull,
         b.KinhPhi, b.NoiThucTap,
 
-        -- Thông tin hướng dẫn + sinh viên (chỉ trạng thái 1,2,3)
+        -- Thông tin hướng dẫn + sinh viên (chỉ các trạng thái trong @AcceptedStatusesCsv)
         sv.masv       AS MaSv,
         sv.hoTenSv    AS HoTenSv,
-        hd.trangthai  AS TrangThai,
-        CASE hd.trangthai
+        hdA.trangthai AS TrangThai,
+        CASE hdA.trangthai
             WHEN 1 THEN N'Accepted'
             WHEN 2 THEN N'InProgress'
             WHEN 3 THEN N'Completed'
         END AS TrangThaiName,
-        hd.ngaydangky   AS NgayDangKy,
-        hd.ngaychapnhan AS NgayChapNhan,
-        hd.ketqua       AS KetQua,
-        hd.ghichu       AS GhiChu
+        hdA.ngaydangky   AS NgayDangKy,
+        hdA.ngaychapnhan AS NgayChapNhan,
+        hdA.ketqua       AS KetQua,
+        hdA.ghichu       AS GhiChu
     FROM Base b
-    LEFT JOIN HuongDan hd ON hd.madt = b.MaDt
-    LEFT JOIN StatusSet ss ON ss.st = hd.trangthai
-    LEFT JOIN SinhVien sv ON sv.masv = hd.masv
-    WHERE hd.trangthai IN (SELECT st FROM StatusSet)  -- 👈 chỉ lấy 1,2,3
+    -- ✔ Lấy chi tiết SV theo tập trạng thái accepted, nhưng vẫn LEFT JOIN để đề tài không SV vẫn hiện
+    LEFT JOIN (
+        SELECT hd.madt, hd.masv, hd.trangthai, hd.ngaydangky, hd.ngaychapnhan, hd.ketqua, hd.ghichu
+        FROM HuongDan hd
+        WHERE hd.trangthai IN (SELECT st FROM StatusSet)
+    ) hdA ON hdA.madt = b.MaDt
+    LEFT JOIN SinhVien sv ON sv.masv = hdA.masv
     ORDER BY b.NamHoc DESC, b.HocKy DESC, b.MaDt, sv.masv;
 END
+GO
+
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_DeTai_ChiTiet

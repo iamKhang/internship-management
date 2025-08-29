@@ -5,10 +5,10 @@ namespace InternshipManagement.Models.ViewModels
 {
     public class DeTaiFilterVm
     {
-        /// <summary>
-        /// CSV các trạng thái được tính là "đã đăng ký". Mặc định: "1" (Accepted)
-        /// </summary>
-        public string? AcceptedStatusesCsv { get; set; } = "1";
+        ///// <summary>
+        ///// CSV các trạng thái được tính là "đã đăng ký". Mặc định: "1" (Accepted)
+        ///// </summary>
+        //public string? AcceptedStatusesCsv { get; set; }
 
         [StringLength(10)]
         public string? MaKhoa { get; set; }
