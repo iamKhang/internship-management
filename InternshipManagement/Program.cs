@@ -81,6 +81,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+var mvc = builder.Services.AddControllersWithViews();
+if (builder.Environment.IsDevelopment())
+{
+    mvc.AddRazorRuntimeCompilation();
+}
+
 
 
 var app = builder.Build();
