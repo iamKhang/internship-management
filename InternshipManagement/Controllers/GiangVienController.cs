@@ -2,6 +2,7 @@
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 
@@ -17,7 +18,7 @@ namespace InternshipManagement.Controllers
             _repo = repo;
             _khoaRepo = khoaRepo;
         }
-
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index([FromQuery] GiangVienFilterVm filter, [FromQuery] PagingRequest paging)
         {
             var (items, total) = await _repo.SearchAsync(filter, paging);
@@ -45,6 +46,7 @@ namespace InternshipManagement.Controllers
             return View(vm);
         }
 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Details(int id)
         {
             var gv = await _repo.GetByIdAsync(id);
@@ -66,6 +68,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(GiangVien model)
         {
             if (!ModelState.IsValid)
@@ -102,6 +105,7 @@ namespace InternshipManagement.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id)
         {
             var gv = await _repo.GetEntityAsync(id);
@@ -124,6 +128,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id, GiangVien model)
         {
             if (id != model.MaGv) return BadRequest();
@@ -147,6 +152,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             try

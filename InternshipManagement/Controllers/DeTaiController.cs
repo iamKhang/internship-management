@@ -217,6 +217,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ExportChiTiet([FromQuery] DeTaiFilterVm filter,
             bool includeMaDt = true, bool includeTenDt = true, bool includeGiangVien = true,
             bool includeKhoa = true, bool includeHocKy = true, bool includeSoLuong = true,
@@ -565,6 +566,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> Manage(byte? hocKy, string? namHoc, string? maDt, byte? trangThai)
         {
             // Bắt buộc đăng nhập & đúng vai trò giảng viên
@@ -617,6 +619,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> Registrations(byte? hocKy, string? namHoc, byte? trangThai, string? maDt)
         {
             // Auth + role GiangVien (như Manage của bạn)
@@ -667,6 +670,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> ApproveRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, string? namHoc, byte? trangThai, string? filterMaDt)
         {
             // Lấy MaGv như trên
@@ -685,6 +689,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> RejectRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, string? namHoc, byte? trangThai, string? filterMaDt)
         {
             string? rawMaGv = User.FindFirst("MaGv")?.Value
@@ -777,6 +782,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> EditDeTai(string id)
         {
             var e = await _repo.GetAsync(id);
@@ -799,6 +805,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> EditDeTai(string id, DeTaiCreateDto vm)
         {
             if (!ModelState.IsValid) { ViewBag.MaDt = id; return View(vm); }
@@ -926,6 +933,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost("DangKy")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "SinhVien")]
         public async Task<IActionResult> DangKy(string maDt)
         {
             if (!TryGetMaSv(out var maSv)) return Forbid();
@@ -939,6 +947,7 @@ namespace InternshipManagement.Controllers
         // POST /DeTai/ThuHoi  (chỉ cần maSv (claims) + maDt)
         [HttpPost("ThuHoi")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "SinhVien")]
         public async Task<IActionResult> ThuHoi(string maDt)
         {
             if (!TryGetMaSv(out var maSv)) return Forbid();
@@ -950,6 +959,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "SinhVien")]
         public async Task<IActionResult> MyTopics(byte? hocKy, string? namHoc, byte? trangThai)
         {
             // Bắt buộc đăng nhập
@@ -1038,13 +1048,13 @@ namespace InternshipManagement.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "GiangVien")]
         public async Task<IActionResult> SetHuongDanInProgress(
-    int maSv,
-    string maDt,
-    string? ghiChu,
-    byte? hocKy,
-    string? namHoc,
-    byte? trangThai,
-    string? filterMaDt)
+            int maSv,
+            string maDt,
+            string? ghiChu,
+            byte? hocKy,
+            string? namHoc,
+            byte? trangThai,
+            string? filterMaDt)
         {
             // Lấy mã GV từ claims (đúng style controller hiện tại)
             string? rawMaGv = User.FindFirst("MaGv")?.Value

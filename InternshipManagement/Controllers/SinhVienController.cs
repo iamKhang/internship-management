@@ -2,6 +2,7 @@
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -18,6 +19,7 @@ namespace InternshipManagement.Controllers
             _khoaRepo = khoaRepo;
         }
 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index([FromQuery] SinhVienFilterVm filter, [FromQuery] PagingRequest paging)
         {
             var (items, total) = await _repo.SearchAsync(filter, paging);
@@ -38,6 +40,7 @@ namespace InternshipManagement.Controllers
             return View(vm);
         }
 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Details(int id)
         {
             // Hồ sơ SV
@@ -78,6 +81,7 @@ namespace InternshipManagement.Controllers
 
             return View(vm); // Views/SinhVien/Details.cshtml
         }
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create()
         {
             var khoaList = await _khoaRepo.GetOptionsAsync();
@@ -94,6 +98,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(SinhVien model)
         {
             if (!ModelState.IsValid)
@@ -127,6 +132,7 @@ namespace InternshipManagement.Controllers
                 return View(model);
             }
         }
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id)
         {
             var sv = await _repo.GetEntityAsync(id);
@@ -153,6 +159,8 @@ namespace InternshipManagement.Controllers
 
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id, SinhVien model)
         {
             if (id != model.MaSv) return BadRequest();
@@ -171,6 +179,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -185,6 +194,7 @@ namespace InternshipManagement.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DownloadTemplate()
         {
             // Lấy danh sách khoa để thêm vào sheet hướng dẫn
@@ -255,6 +265,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Import(SinhVienImportVm model)
         {
             if (!ModelState.IsValid)
