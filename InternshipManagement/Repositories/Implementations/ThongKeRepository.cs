@@ -1,9 +1,8 @@
-﻿using InternshipManagement.Data;
+using InternshipManagement.Data;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
-using Microsoft.Data.SqlClient;
+using InternshipManagement.Models.Enums;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
 
 namespace InternshipManagement.Repositories.Implementations
 {
@@ -12,226 +11,358 @@ namespace InternshipManagement.Repositories.Implementations
         private readonly AppDbContext _db;
         public ThongKeRepository(AppDbContext db) => _db = db;
 
-        private const string SP_GV = "dbo.sp_GV_ThongKeTongHop";
-        private const string SP_ADM = "dbo.sp_Admin_ThongKeTongHop";
-
         // ======================= GIẢNG VIÊN =======================
         public async Task<ThongKeGiangVienVm> GetThongKeGiangVienAsync(
             int maGv, DateTime? fromDate = null, DateTime? toDate = null, byte? hocKy = null, string? namHoc = null)
         {
-            var vm = new ThongKeGiangVienVm();
+            // Build base query for lecturer's guidance records
+            var baseQuery = _db.HuongDans
+                .Include(h => h.DeTai)
+                .Include(h => h.SinhVien)
+                .AsNoTracking()
+                .Where(h => h.MaGv == maGv);
 
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
-            await using var cmd = new SqlCommand(SP_GV, conn) { CommandType = CommandType.StoredProcedure };
+            // Apply filters
+            if (fromDate.HasValue)
+                baseQuery = baseQuery.Where(h => h.CreatedAt >= fromDate.Value);
+            if (toDate.HasValue)
+                baseQuery = baseQuery.Where(h => h.CreatedAt <= toDate.Value);
+            if (hocKy.HasValue)
+                baseQuery = baseQuery.Where(h => h.DeTai.HocKy == hocKy.Value);
+            if (!string.IsNullOrWhiteSpace(namHoc))
+                baseQuery = baseQuery.Where(h => h.DeTai.NamHoc == namHoc);
 
-            cmd.Parameters.AddWithValue("@MaGv", maGv);
-            cmd.Parameters.AddWithValue("@FromDate", (object?)fromDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@ToDate", (object?)toDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
+            var guidanceRecords = await baseQuery.ToListAsync();
 
-            await using var rd = await cmd.ExecuteReaderAsync();
+            // Calculate KPIs for lecturer
+            var totalTopics = await _db.DeTais
+                .AsNoTracking()
+                .Where(d => d.MaGv == maGv &&
+                    (!hocKy.HasValue || d.HocKy == hocKy.Value) &&
+                    (string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc))
+                .CountAsync();
 
-            // rs1: KPI
-            if (await rd.ReadAsync())
+            var statusCounts = guidanceRecords
+                .GroupBy(h => h.TrangThai)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var pending = statusCounts.GetValueOrDefault(HuongDanStatus.Pending, 0);
+            var accepted = statusCounts.GetValueOrDefault(HuongDanStatus.Accepted, 0);
+            var inProgress = statusCounts.GetValueOrDefault(HuongDanStatus.InProgress, 0);
+            var completed = statusCounts.GetValueOrDefault(HuongDanStatus.Completed, 0);
+            var rejected = statusCounts.GetValueOrDefault(HuongDanStatus.Rejected, 0);
+            var withdrawn = statusCounts.GetValueOrDefault(HuongDanStatus.Withdrawn, 0);
+
+            var totalRegistrations = guidanceRecords.Count;
+            var acceptanceRate = totalRegistrations > 0 ? (decimal)(accepted + inProgress + completed) / totalRegistrations * 100 : 0;
+            var completionRate = (accepted + inProgress) > 0 ? (decimal)completed / (accepted + inProgress) * 100 : 0;
+
+            // Calculate average days to accept
+            var acceptedRecords = guidanceRecords.Where(h => h.AcceptedAt.HasValue).ToList();
+            double? avgDaysToAccept = acceptedRecords.Any() 
+                ? acceptedRecords.Average(h => (h.AcceptedAt!.Value - h.CreatedAt).TotalDays)
+                : null;
+
+            // Trend data - registrations by month (last 12 months)
+            var trend = guidanceRecords
+                .Where(h => h.CreatedAt >= DateTime.Now.AddMonths(-12))
+                .GroupBy(h => new { h.CreatedAt.Year, h.CreatedAt.Month })
+                .Select(g => new TrendPointVm
+                {
+                    Nam = g.Key.Year,
+                    Thang = g.Key.Month,
+                    SoDangKy = g.Count()
+                })
+                .OrderBy(t => t.Nam).ThenBy(t => t.Thang)
+                .ToList();
+
+            // Status distribution
+            var statusDist = statusCounts.Select(kvp => new StatusCountVm
             {
-                vm.Kpi = new KpiVm
-                {
-                    TongDeTai = GetInt(rd, "TongDeTai"),
-                    TongSinhVien = GetInt(rd, "TongSV_DaDangKy"),
-                    Pending = GetInt(rd, "Pending"),
-                    Accepted = GetInt(rd, "Accepted"),
-                    InProgress = GetInt(rd, "InProgress"),
-                    Completed = GetInt(rd, "Completed"),
-                    Rejected = GetInt(rd, "Rejected"),
-                    Withdrawn = GetInt(rd, "Withdrawn"),
-                    AcceptanceRatePct = GetDecimal(rd, "AcceptanceRatePct"),
-                    CompletionRatePct = GetDecimal(rd, "CompletionRatePct"),
-                    AvgDaysToAccept = GetDoubleNullable(rd, "AvgDaysToAccept")
-                };
-            }
+                TrangThai = (int)kvp.Key,
+                SoLuong = kvp.Value
+            }).ToList();
 
-            // rs2: Trend
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.Trend.Add(new TrendPointVm
+            // Topic fill status - only lecturer's topics
+            var topicFill = await _db.DeTais
+                .Include(d => d.HuongDans)
+                .AsNoTracking()
+                .Where(d => d.MaGv == maGv &&
+                    (!hocKy.HasValue || d.HocKy == hocKy.Value) &&
+                    (string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc))
+                .Select(d => new DeTaiFillVm
                 {
-                    Nam = GetInt(rd, "Nam"),
-                    Thang = GetInt(rd, "Thang"),
-                    SoDangKy = GetInt(rd, "SoDangKy")
-                });
+                    MaDt = d.MaDt,
+                    TenDt = d.TenDt ?? "",
+                    SlotToiDa = d.SoLuongToiDa,
+                    SlotDaDung = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed),
+                    SlotConLai = Math.Max(0, d.SoLuongToiDa - d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed)),
+                    DangChoDuyet = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Pending)
+                })
+                .OrderByDescending(t => t.SlotDaDung)
+                .ToListAsync();
 
-            // rs3: Status distribution
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.StatusDist.Add(new StatusCountVm
+            // Top students by activity with lecturer
+            var topStudents = guidanceRecords
+                .GroupBy(h => new { h.MaSv, h.SinhVien?.HoTenSv })
+                .Select(g => new
                 {
-                    TrangThai = GetInt(rd, "trangthai"),
-                    SoLuong = GetInt(rd, "SoLuong")
-                });
+                    masv = g.Key.MaSv,
+                    hoTenSv = g.Key.HoTenSv ?? "",
+                    Pending = g.Count(h => h.TrangThai == HuongDanStatus.Pending),
+                    Accepted = g.Count(h => h.TrangThai == HuongDanStatus.Accepted),
+                    InProgress = g.Count(h => h.TrangThai == HuongDanStatus.InProgress),
+                    Completed = g.Count(h => h.TrangThai == HuongDanStatus.Completed),
+                    Rejected = g.Count(h => h.TrangThai == HuongDanStatus.Rejected),
+                    Withdrawn = g.Count(h => h.TrangThai == HuongDanStatus.Withdrawn),
+                    avgScore = g.Where(h => h.KetQua.HasValue).Any() 
+                        ? g.Where(h => h.KetQua.HasValue).Average(h => h.KetQua!.Value) 
+                        : (decimal?)null
+                })
+                .OrderByDescending(s => s.Completed)
+                .ThenByDescending(s => s.avgScore)
+                .Take(10)
+                .ToList();
 
-            // rs4: Fill per topic
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.DeTaiFill.Add(new DeTaiFillVm
-                {
-                    MaDt = GetString(rd, "madt"),
-                    TenDt = GetString(rd, "tendt"),
-                    SlotToiDa = GetInt(rd, "SlotToiDa"),
-                    SlotDaDung = GetInt(rd, "SlotDaDung"),
-                    SlotConLai = GetInt(rd, "SlotConLai"),
-                    DangChoDuyet = GetInt(rd, "DangChoDuyet")
-                });
-
-            // rs5: Top SV
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
+            return new ThongKeGiangVienVm
             {
-                vm.TopSinhVien.Add(new
+                Kpi = new KpiVm
                 {
-                    masv = rd["masv"],
-                    Pending = GetInt(rd, "Pending"),
-                    Accepted = GetInt(rd, "Accepted"),
-                    InProgress = GetInt(rd, "InProgress"),
-                    Completed = GetInt(rd, "Completed"),
-                    Rejected = GetInt(rd, "Rejected"),
-                    Withdrawn = GetInt(rd, "Withdrawn")
-                });
-            }
-
-            return vm;
+                    TongDeTai = totalTopics,
+                    TongSinhVien = totalRegistrations,
+                    Pending = pending,
+                    Accepted = accepted,
+                    InProgress = inProgress,
+                    Completed = completed,
+                    Rejected = rejected,
+                    Withdrawn = withdrawn,
+                    AcceptanceRatePct = acceptanceRate,
+                    CompletionRatePct = completionRate,
+                    AvgDaysToAccept = avgDaysToAccept
+                },
+                Trend = trend,
+                StatusDist = statusDist,
+                DeTaiFill = topicFill,
+                TopSinhVien = topStudents.Cast<dynamic>().ToList()
+            };
         }
 
         // ======================= ADMIN =======================
         public async Task<ThongKeAdminVm> GetThongKeAdminAsync(
             string? maKhoa = null, int? maGv = null, DateTime? fromDate = null, DateTime? toDate = null, byte? hocKy = null, string? namHoc = null)
         {
-            var vm = new ThongKeAdminVm();
+            // Build base query for all guidance records
+            var baseQuery = _db.HuongDans
+                .Include(h => h.DeTai)
+                .ThenInclude(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(h => h.SinhVien)
+                .AsNoTracking()
+                .AsQueryable();
 
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
-            await using var cmd = new SqlCommand(SP_ADM, conn) { CommandType = CommandType.StoredProcedure };
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(maKhoa))
+                baseQuery = baseQuery.Where(h => h.DeTai.GiangVien.MaKhoa == maKhoa);
+            if (maGv.HasValue)
+                baseQuery = baseQuery.Where(h => h.MaGv == maGv.Value);
+            if (fromDate.HasValue)
+                baseQuery = baseQuery.Where(h => h.CreatedAt >= fromDate.Value);
+            if (toDate.HasValue)
+                baseQuery = baseQuery.Where(h => h.CreatedAt <= toDate.Value);
+            if (hocKy.HasValue)
+                baseQuery = baseQuery.Where(h => h.DeTai.HocKy == hocKy.Value);
+            if (!string.IsNullOrWhiteSpace(namHoc))
+                baseQuery = baseQuery.Where(h => h.DeTai.NamHoc == namHoc);
 
-            cmd.Parameters.AddWithValue("@MaKhoa", (object?)maKhoa ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaGv", (object?)maGv ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@FromDate", (object?)fromDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@ToDate", (object?)toDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
+            var guidanceRecords = await baseQuery.ToListAsync();
 
-            await using var rd = await cmd.ExecuteReaderAsync();
+            // Build topic query with same filters
+            var topicQuery = _db.DeTais
+                .Include(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(d => d.HuongDans)
+                .AsNoTracking()
+                .AsQueryable();
 
-            // rs1: KPI
-            if (await rd.ReadAsync())
+            if (!string.IsNullOrWhiteSpace(maKhoa))
+                topicQuery = topicQuery.Where(d => d.GiangVien.MaKhoa == maKhoa);
+            if (maGv.HasValue)
+                topicQuery = topicQuery.Where(d => d.MaGv == maGv.Value);
+            if (hocKy.HasValue)
+                topicQuery = topicQuery.Where(d => d.HocKy == hocKy.Value);
+            if (!string.IsNullOrWhiteSpace(namHoc))
+                topicQuery = topicQuery.Where(d => d.NamHoc == namHoc);
+
+            var topics = await topicQuery.ToListAsync();
+
+            // Calculate comprehensive KPIs
+            var statusCounts = guidanceRecords
+                .GroupBy(h => h.TrangThai)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var pending = statusCounts.GetValueOrDefault(HuongDanStatus.Pending, 0);
+            var accepted = statusCounts.GetValueOrDefault(HuongDanStatus.Accepted, 0);
+            var inProgress = statusCounts.GetValueOrDefault(HuongDanStatus.InProgress, 0);
+            var completed = statusCounts.GetValueOrDefault(HuongDanStatus.Completed, 0);
+            var rejected = statusCounts.GetValueOrDefault(HuongDanStatus.Rejected, 0);
+            var withdrawn = statusCounts.GetValueOrDefault(HuongDanStatus.Withdrawn, 0);
+
+            var totalRegistrations = guidanceRecords.Count;
+            var acceptanceRate = totalRegistrations > 0 ? (decimal)(accepted + inProgress + completed) / totalRegistrations * 100 : 0;
+            var completionRate = (accepted + inProgress) > 0 ? (decimal)completed / (accepted + inProgress) * 100 : 0;
+
+            // Count unique entities
+            var uniqueLecturers = await _db.GiangViens
+                .AsNoTracking()
+                .Where(g => string.IsNullOrWhiteSpace(maKhoa) || g.MaKhoa == maKhoa)
+                .CountAsync();
+
+            var uniqueStudents = guidanceRecords.Select(h => h.MaSv).Distinct().Count();
+
+            // Enhanced trend data - registrations by month (last 18 months for better context)
+            var trend = guidanceRecords
+                .Where(h => h.CreatedAt >= DateTime.Now.AddMonths(-18))
+                .GroupBy(h => new { h.CreatedAt.Year, h.CreatedAt.Month })
+                .Select(g => new TrendPointVm
+                {
+                    Nam = g.Key.Year,
+                    Thang = g.Key.Month,
+                    SoDangKy = g.Count()
+                })
+                .OrderBy(t => t.Nam).ThenBy(t => t.Thang)
+                .ToList();
+
+            // Enhanced status distribution
+            var statusDist = statusCounts.Select(kvp => new StatusCountVm
             {
-                vm.Kpi = new KpiVm
-                {
-                    TongDeTai = GetInt(rd, "TongDeTai"),
-                    TongGiangVien = GetInt(rd, "TongGiangVien"),
-                    TongSinhVien = GetInt(rd, "TongSinhVien"),
-                    Pending = GetInt(rd, "Pending"),
-                    Accepted = GetInt(rd, "Accepted"),
-                    InProgress = GetInt(rd, "InProgress"),
-                    Completed = GetInt(rd, "Completed"),
-                    Rejected = GetInt(rd, "Rejected"),
-                    Withdrawn = GetInt(rd, "Withdrawn"),
-                    AcceptanceRatePct = GetDecimal(rd, "AcceptanceRatePct"),
-                    CompletionRatePct = GetDecimal(rd, "CompletionRatePct")
-                };
-            }
+                TrangThai = (int)kvp.Key,
+                SoLuong = kvp.Value
+            }).OrderByDescending(s => s.SoLuong).ToList();
 
-            // rs2: Trend
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.Trend.Add(new TrendPointVm
+            // Enhanced topic fill analysis - focus on capacity utilization
+            var topicFill = topics
+                .Where(d => d.HuongDans.Any()) // Only topics with registrations
+                .Select(d => new DeTaiFillVm
                 {
-                    Nam = GetInt(rd, "Nam"),
-                    Thang = GetInt(rd, "Thang"),
-                    SoDangKy = GetInt(rd, "SoDangKy")
-                });
+                    MaDt = d.MaDt,
+                    TenDt = d.TenDt ?? "",
+                    SlotToiDa = d.SoLuongToiDa,
+                    SlotDaDung = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed),
+                    SlotConLai = Math.Max(0, d.SoLuongToiDa - d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed)),
+                    DangChoDuyet = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Pending),
+                    MaGv = d.MaGv
+                })
+                .OrderByDescending(t => (double)t.SlotDaDung / Math.Max(t.SlotToiDa, 1)) // Sort by utilization rate
+                .ThenByDescending(t => t.SlotDaDung)
+                .Take(15)
+                .ToList();
 
-            // rs3: Status distribution
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.StatusDist.Add(new StatusCountVm
+            // Enhanced statistics by Khoa
+            var byKhoa = await _db.Khoas
+                .Include(k => k.GiangViens)
+                .ThenInclude(g => g.DeTais)
+                .ThenInclude(d => d.HuongDans)
+                .AsNoTracking()
+                .Select(k => new ByKhoaVm
                 {
-                    TrangThai = GetInt(rd, "trangthai"),
-                    SoLuong = GetInt(rd, "SoLuong")
-                });
+                    MaKhoa = k.MaKhoa ?? "",
+                    SoDeTai = k.GiangViens.SelectMany(g => g.DeTais)
+                        .Count(d => string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc),
+                    TongSlotDaDung = k.GiangViens.SelectMany(g => g.DeTais)
+                        .Where(d => string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc)
+                        .Sum(d => d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed)),
+                    DaHoanThanh = k.GiangViens.SelectMany(g => g.DeTais)
+                        .Where(d => string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc)
+                        .Sum(d => d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed)),
+                    SoGiangVien = k.GiangViens.Count
+                })
+                .Where(k => k.SoDeTai > 0 || k.SoGiangVien > 0)
+                .OrderByDescending(k => k.DaHoanThanh)
+                .ToListAsync();
 
-            // rs4: Fill per topic
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.DeTaiFill.Add(new DeTaiFillVm
+            // Top performing lecturers across system
+            var topGv = await _db.GiangViens
+                .Include(g => g.HuongDans)
+                .ThenInclude(h => h.DeTai)
+                .Include(g => g.Khoa)
+                .AsNoTracking()
+                .Where(g => string.IsNullOrWhiteSpace(maKhoa) || g.MaKhoa == maKhoa)
+                .Select(g => new TopGvVm
                 {
-                    MaDt = GetString(rd, "madt"),
-                    TenDt = GetString(rd, "tendt"),
-                    SlotToiDa = GetInt(rd, "SlotToiDa"),
-                    SlotDaDung = GetInt(rd, "SlotDaDung"),
-                    SlotConLai = GetInt(rd, "SlotConLai"),
-                    DangChoDuyet = GetInt(rd, "DangChoDuyet"),
-                    MaGv = GetIntNullable(rd, "magv")
-                });
+                    MaGv = g.MaGv,
+                    HoTenGv = $"{g.HoTenGv} ({(g.Khoa != null ? g.Khoa.TenKhoa : "")})",
+                    Completed = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed &&
+                        (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
+                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                    DangThucHien = g.HuongDans.Count(h => (h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress) &&
+                        (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
+                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                    Pending = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Pending &&
+                        (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
+                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                    Rejected = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Rejected &&
+                        (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
+                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                    Withdrawn = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Withdrawn &&
+                        (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
+                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value))
+                })
+                .Where(g => g.Completed + g.DangThucHien + g.Pending + g.Rejected + g.Withdrawn > 0)
+                .OrderByDescending(g => g.Completed)
+                .ThenByDescending(g => g.DangThucHien)
+                .Take(15)
+                .ToListAsync();
 
-            // rs5: ByKhoa
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.ByKhoa.Add(new ByKhoaVm
+            // Enhanced summary by term with completion rates
+            var byTerm = await _db.DeTais
+                .Include(d => d.HuongDans)
+                .Include(d => d.GiangVien)
+                .AsNoTracking()
+                .Where(d => string.IsNullOrWhiteSpace(maKhoa) || d.GiangVien.MaKhoa == maKhoa)
+                .GroupBy(d => new { d.NamHoc, d.HocKy })
+                .Select(g => new TermSummaryVm
                 {
-                    MaKhoa = GetString(rd, "makhoa"),
-                    SoDeTai = GetInt(rd, "SoDeTai"),
-                    TongSlotDaDung = GetInt(rd, "TongSlotDaDung"),
-                    DaHoanThanh = GetInt(rd, "DaHoanThanh"),
-                    SoGiangVien = GetInt(rd, "SoGiangVien")
-                });
+                    NamHoc = g.Key.NamHoc ?? "",
+                    HocKy = g.Key.HocKy,
+                    SlotDaDung = g.Sum(d => d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed)),
+                    HoanThanh = g.Sum(d => d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed)),
+                    ChoDuyet = g.Sum(d => d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Pending))
+                })
+                .Where(t => t.SlotDaDung > 0 || t.ChoDuyet > 0)
+                .OrderByDescending(t => t.NamHoc)
+                .ThenBy(t => t.HocKy)
+                .ToListAsync();
 
-            // rs6: TopGV
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.TopGv.Add(new TopGvVm
+            // Calculate average days to accept
+            var acceptedRecords = guidanceRecords.Where(h => h.AcceptedAt.HasValue).ToList();
+            var avgDaysToAccept = acceptedRecords.Any() 
+                ? acceptedRecords.Average(h => (h.AcceptedAt!.Value - h.CreatedAt).TotalDays)
+                : (double?)null;
+
+            return new ThongKeAdminVm
+            {
+                Kpi = new KpiVm
                 {
-                    MaGv = GetInt(rd, "magv"),
-                    HoTenGv = GetString(rd, "hotengv"),
-                    Completed = GetInt(rd, "Completed"),
-                    DangThucHien = GetInt(rd, "DangThucHien"),
-                    Pending = GetInt(rd, "Pending")
-                });
-
-            // rs7: ByTerm
-            await rd.NextResultAsync();
-            while (await rd.ReadAsync())
-                vm.ByTerm.Add(new TermSummaryVm
-                {
-                    NamHoc = GetString(rd, "namhoc"),
-                    HocKy = (byte)GetInt(rd, "hocky"),
-                    SlotDaDung = GetInt(rd, "SlotDaDung"),
-                    HoanThanh = GetInt(rd, "HoanThanh"),
-                    ChoDuyet = GetInt(rd, "ChoDuyet")
-                });
-
-            return vm;
+                    TongDeTai = topics.Count,
+                    TongGiangVien = uniqueLecturers,
+                    TongSinhVien = uniqueStudents,
+                    Pending = pending,
+                    Accepted = accepted,
+                    InProgress = inProgress,
+                    Completed = completed,
+                    Rejected = rejected,
+                    Withdrawn = withdrawn,
+                    AcceptanceRatePct = acceptanceRate,
+                    CompletionRatePct = completionRate,
+                    AvgDaysToAccept = avgDaysToAccept
+                },
+                Trend = trend,
+                StatusDist = statusDist,
+                DeTaiFill = topicFill,
+                ByKhoa = byKhoa,
+                TopGv = topGv,
+                ByTerm = byTerm
+            };
         }
-
-        // ======================= HELPERS =======================
-        private static async Task EnsureOpenAsync(SqlConnection conn)
-        {
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
-        }
-
-        private static int GetInt(SqlDataReader r, string name)
-            => r[name] == DBNull.Value ? 0 : Convert.ToInt32(r[name]);
-
-        private static int? GetIntNullable(SqlDataReader r, string name)
-            => r[name] == DBNull.Value ? (int?)null : Convert.ToInt32(r[name]);
-
-        private static decimal GetDecimal(SqlDataReader r, string name)
-            => r[name] == DBNull.Value ? 0m : Convert.ToDecimal(r[name]);
-
-        private static double? GetDoubleNullable(SqlDataReader r, string name)
-            => r[name] == DBNull.Value ? (double?)null : Convert.ToDouble(r[name]);
-
-        private static string GetString(SqlDataReader r, string name)
-            => r[name] == DBNull.Value ? "" : r[name]!.ToString()!;
     }
 }

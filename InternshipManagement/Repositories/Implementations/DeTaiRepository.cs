@@ -446,7 +446,10 @@ namespace InternshipManagement.Repositories.Implementations
                 .ThenInclude(s => s.Khoa)
                 .Include(h => h.DeTai)
                 .AsNoTracking()
-                .Where(h => h.MaGv == maGv);
+                .Where(h => h.MaGv == maGv &&
+                    (h.TrangThai == HuongDanStatus.Accepted ||
+                     h.TrangThai == HuongDanStatus.InProgress ||
+                     h.TrangThai == HuongDanStatus.Completed));
 
             // Apply filters
             if (hocKy.HasValue)

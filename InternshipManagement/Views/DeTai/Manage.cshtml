@@ -137,9 +137,12 @@
                                     @{
                                         var (label, badgeClass) = s.TrangThai switch
                                         {
+                                            0 => ("Chờ duyệt", "bg-warning text-dark"),
                                             1 => ("Chấp nhận", "bg-success text-white"),
                                             2 => ("Đang thực hiện", "bg-info text-dark"),
                                             3 => ("Hoàn thành", "bg-success text-white"),
+                                            4 => ("Từ chối", "bg-danger text-white"),
+                                            5 => ("Rút đăng ký", "bg-secondary text-white"),
                                             _ => ("?", "bg-secondary text-white")
                                         };
                                     }

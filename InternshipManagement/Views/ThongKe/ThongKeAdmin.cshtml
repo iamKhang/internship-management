@@ -10,6 +10,25 @@
     var byKhoaJson = JsonSerializer.Serialize(Model.ByKhoa);
     var topGvJson = JsonSerializer.Serialize(Model.TopGv);
     var termJson = JsonSerializer.Serialize(Model.ByTerm);
+
+    // Tính học kỳ và năm học mặc định
+    var now = DateTime.Now;
+    var currentYear = now.Year;
+    var nextYear = currentYear + 1;
+    var currentMonth = now.Month;
+    
+    // Xác định học kỳ dựa vào tháng hiện tại
+    var currentTerm = currentMonth switch
+    {
+        >= 9 and <= 12 => 1,  // HK1: 9-12
+        >= 1 and <= 4 => 2,   // HK2: 1-4
+        _ => 3                 // HK3: 5-8
+    };
+
+    // Xác định năm học
+    var academicYear = currentTerm == 1 
+        ? $"{currentYear}-{nextYear}"      // HK1 bắt đầu năm học mới
+        : $"{currentYear-1}-{currentYear}"; // HK2,3 thuộc năm học cũ
 }
 
 <div class="container py-3">
@@ -21,8 +40,26 @@
             <div class="col-auto"><input type="number" name="maGv" class="form-control form-control-sm" placeholder="Mã GV" /></div>
             <div class="col-auto"><input type="date" name="from" class="form-control form-control-sm" /></div>
             <div class="col-auto"><input type="date" name="to" class="form-control form-control-sm" /></div>
-            <div class="col-auto"><input type="number" name="namHoc" class="form-control form-control-sm" placeholder="Năm học" /></div>
-            <div class="col-auto"><input type="number" name="hocKy" class="form-control form-control-sm" placeholder="Học kỳ" /></div>
+            <div class="col-auto">
+                <select name="namHoc" class="form-control form-control-sm">
+                    <option value="">-- Năm học --</option>
+                    @{
+                        for (int y = currentYear - 3; y <= currentYear + 2; y++)
+                        {
+                            var yearStr = $"{y}-{y+1}";
+                            <option value="@yearStr" selected="@(yearStr == academicYear)">@yearStr</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <select name="hocKy" class="form-control form-control-sm">
+                    <option value="">-- Học kỳ --</option>
+                    <option value="1" selected="@(currentTerm == 1)">Học kỳ 1</option>
+                    <option value="2" selected="@(currentTerm == 2)">Học kỳ 2</option>
+                    <option value="3" selected="@(currentTerm == 3)">Học kỳ 3</option>
+                </select>
+            </div>
             <div class="col-auto"><button class="btn btn-sm btn-primary" type="submit">Lọc</button></div>
         </form>
     </div>
@@ -58,9 +95,54 @@
             <div id="adm_khoa" style="height:360px;" class="border rounded"></div>
         </div>
         <div class="col-lg-6">
-            <h6 class="mb-2">Top Giảng viên</h6>
-            <div id="adm_topgv" style="height:360px;" class="border rounded"></div>
+            <div class="card shadow-sm border-0 bg-transparent">
+                <div class="card-body p-0">
+                    <h6 class="mb-3">Top Giảng viên</h6>
+                    
+                    <!-- Legend tùy biến -->
+                    <div class="d-flex flex-wrap gap-3 mb-3 align-items-center" id="legend-top-giangvien">
+                        <span class="d-inline-flex align-items-center gap-2">
+                            <span class="legend-dot" style="background:#22c55e"></span> Hoàn thành
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-2">
+                            <span class="legend-dot" style="background:#3b82f6"></span> Đang thực hiện
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-2">
+                            <span class="legend-dot" style="background:#f59e0b"></span> Chờ duyệt
+                        </span>
+                    </div>
+
+                    <!-- Canvas tự co chiều cao -->
+                    <div class="position-relative">
+                        <canvas id="topGiangVienChart"></canvas>
+                    </div>
+
+                    <!-- JSON data -->
+                    <script id="top-giangvien-data" type="application/json">
+                        @Html.Raw(JsonSerializer.Serialize(Model.TopGv.Select(g => new
+                        {
+                            name = g.HoTenGv,
+                            hoanThanh = g.Completed,
+                            dangThucHien = g.DangThucHien,
+                            choDuyet = g.Pending
+                        })))
+                    </script>
+                </div>
+            </div>
         </div>
+
+        <style>
+            .legend-dot {
+                width: 14px;
+                height: 14px;
+                display: inline-block;
+                border-radius: 999px;
+                box-shadow: 0 0 0 1px rgba(0,0,0,.08) inset;
+            }
+            #topGiangVienChart {
+                max-width: 100%;
+            }
+        </style>
 
         <div class="col-12">
             <h6 class="mb-2">Theo Học kỳ / Năm học</h6>
@@ -76,6 +158,7 @@
 
 @section Scripts {
     <script src="~/lib/echarts/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
         const trendData  = @Html.Raw(trendJson);
         const statusData = @Html.Raw(statusJson);
@@ -157,26 +240,116 @@
             window.addEventListener('resize', () => chart.resize());
         })();
 
-        // Top GV
-        (function () {
-            const el = document.getElementById('adm_topgv');
-            const chart = echarts.init(el);
-            const names = topGvData.map(g => `${g.MaGv} - ${g.HoTenGv}`);
-            const completed = topGvData.map(g => g.Completed);
-            const doing     = topGvData.map(g => g.DangThucHien);
-            const pending   = topGvData.map(g => g.Pending);
-            chart.setOption({
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                grid: { left: 140, right: 20, bottom: 20, containLabel: true },
-                xAxis: { type: 'value' },
-                yAxis: { type: 'category', data: names },
-                series: [
-                    { name: 'Completed',       type: 'bar', stack: 's', data: completed },
-                    { name: 'Đang thực hiện',  type: 'bar', stack: 's', data: doing },
-                    { name: 'Pending',         type: 'bar', stack: 's', data: pending }
-                ]
+        // Top GV with Chart.js
+        (function() {
+            // 1) Lấy dữ liệu
+            let raw = (() => {
+                try {
+                    const el = document.getElementById('top-giangvien-data');
+                    return el ? JSON.parse(el.textContent || '[]') : [];
+                } catch { return []; }
+            })();
+
+            if (!Array.isArray(raw) || raw.length === 0) {
+                raw = [
+                    { name: "Nguyễn Văn A (Khoa CNTT)", hoanThanh: 5, dangThucHien: 3, choDuyet: 2 },
+                    { name: "Trần Thị B (Khoa Cơ khí)", hoanThanh: 4, dangThucHien: 2, choDuyet: 1 },
+                    { name: "Lê Văn C (Khoa Kế toán)", hoanThanh: 6, dangThucHien: 1, choDuyet: 0 },
+                ];
+            }
+
+            // 2) Chuẩn hóa key
+            const norm = (item) => ({
+                name: item.name || item.ten || item.tenGiangVien || item.tenGV || item.label || "",
+                hoanThanh: Number(item.hoanThanh ?? item.HoanThanh ?? item.done ?? 0),
+                dangThucHien: Number(item.dangThucHien ?? item.DangThucHien ?? item.inprogress ?? 0),
+                choDuyet: Number(item.choDuyet ?? item.ChoDuyet ?? item.pending ?? 0),
             });
-            window.addEventListener('resize', () => chart.resize());
+            const data = raw.map(norm);
+
+            // 3) Tách label & datasets
+            const labels = data.map(x => x.name);
+            const dsHoanThanh   = data.map(x => x.hoanThanh);
+            const dsDangThucHien= data.map(x => x.dangThucHien);
+            const dsChoDuyet    = data.map(x => x.choDuyet);
+
+            // 4) Tự động đặt chiều cao: mỗi hàng ~ 34px
+            const perRow = 34;
+            const canvas = document.getElementById('topGiangVienChart');
+            const desired = Math.max(280, labels.length * perRow + 60);
+            canvas.height = desired;
+
+            // 5) Hàm truncate nhãn dài
+            function truncateLabel(str, max=28) {
+                if (typeof str !== "string") return "";
+                return str.length > max ? (str.slice(0, max) + "…") : str;
+            }
+
+            // 6) Tạo chart
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => truncateLabel(l)),
+                    datasets: [
+                        { label: 'Hoàn thành',     data: dsHoanThanh,    backgroundColor: '#22c55e', borderWidth: 0 },
+                        { label: 'Đang thực hiện', data: dsDangThucHien, backgroundColor: '#3b82f6', borderWidth: 0 },
+                        { label: 'Chờ duyệt',      data: dsChoDuyet,     backgroundColor: '#f59e0b', borderWidth: 0 },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',                 // Biểu đồ ngang
+                    interaction: { mode: 'nearest', axis: 'y', intersect: false },
+                    layout: { padding: { left: 4, right: 8, top: 4, bottom: 4 } },
+                    plugins: {
+                        legend: {
+                            display: false // Legend đã custom bên trên cho gọn
+                        },
+                        tooltip: {
+                            callbacks: {
+                                // Hiện tên đầy đủ trong tooltip
+                                title: (items) => {
+                                    if (!items?.length) return '';
+                                    const idx = items[0].dataIndex;
+                                    return labels[idx] || '';
+                                },
+                                label: (item) => {
+                                    const dsLabel = item.dataset?.label ?? '';
+                                    const v = item.parsed?.x ?? 0;
+                                    return ` ${dsLabel}: ${v}`;
+                                },
+                                footer: (items) => {
+                                    if (!items?.length) return '';
+                                    const idx = items[0].dataIndex;
+                                    const sum = (dsHoanThanh[idx] || 0) + (dsDangThucHien[idx] || 0) + (dsChoDuyet[idx] || 0);
+                                    return `Tổng: ${sum}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            stacked: true,
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                font: { size: 12 }
+                            },
+                            grid: { display: false }
+                        },
+                        x: {
+                            stacked: true,
+                            ticks: {
+                                precision: 0,
+                                stepSize: 1
+                            },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        }
+                    }
+                }
+            });
         })();
 
         // By Term

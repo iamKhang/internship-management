@@ -37,6 +37,8 @@
         public int Completed { get; set; }
         public int DangThucHien { get; set; }
         public int Pending { get; set; }
+        public int Rejected { get; set; }
+        public int Withdrawn { get; set; }
     }
 
     public class ByKhoaVm

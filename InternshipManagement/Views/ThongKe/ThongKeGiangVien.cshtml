@@ -18,7 +18,17 @@
         <form method="get" class="d-flex gap-2">
             <input type="date" name="from" class="form-control form-control-sm" />
             <input type="date" name="to" class="form-control form-control-sm" />
-            <input type="number" name="namHoc" class="form-control form-control-sm" placeholder="Năm học" />
+            <select name="namHoc" class="form-control form-control-sm">
+                <option value="">-- Năm học --</option>
+                @{
+                    var currentYear = DateTime.Now.Year;
+                    for (int y = currentYear - 3; y <= currentYear + 2; y++)
+                    {
+                        var yearStr = $"{y}-{y+1}";
+                        <option value="@yearStr">@yearStr</option>
+                    }
+                }
+            </select>
             <input type="number" name="hocKy" class="form-control form-control-sm" placeholder="Học kỳ" />
             <button class="btn btn-sm btn-primary" type="submit">Lọc</button>
         </form>
