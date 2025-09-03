@@ -3,7 +3,7 @@
 public class StudentMyTopicFilterVm
 {
     public byte? HocKy { get; set; }
-    public short? NamHoc { get; set; }
+    public string? NamHoc { get; set; }
     // Chọn 1 trạng thái cụ thể; nếu bạn muốn nhiều trạng thái CSV, đổi sang string TrangThaiCsv
     public byte? TrangThai { get; set; }
 }
@@ -18,7 +18,7 @@ public class StudentMyTopicItemVm
     public string MaDt { get; set; } = "";
     public string? TenDt { get; set; }
     public byte HocKy { get; set; }
-    public short NamHoc { get; set; }
+    public string NamHoc { get; set; } = "";
     public int? KinhPhi { get; set; }
     public string? NoiThucTap { get; set; }
     public int SoLuongToiDa { get; set; }

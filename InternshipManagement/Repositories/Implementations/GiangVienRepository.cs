@@ -49,7 +49,7 @@ namespace InternshipManagement.Repositories.Implementations
             // Apply paging and project to ViewModel
             var items = await query
                 .OrderBy(g => g.MaGv)
-                .Skip(page.PageIndex * page.PageSize)
+                .Skip((page.PageIndex - 1) * page.PageSize)
                 .Take(page.PageSize)
                 .Select(g => new GiangVienListItemVm
                 {

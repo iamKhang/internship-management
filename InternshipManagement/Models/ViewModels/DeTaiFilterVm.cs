@@ -18,7 +18,7 @@ namespace InternshipManagement.Models.ViewModels
         [Range(1, 3)]
         public byte? HocKy { get; set; }   // 1/2 (hoặc 3 - hè)
 
-        public short? NamHoc { get; set; }
+        public string? NamHoc { get; set; }
 
         public TinhTrangFilter TinhTrang { get; set; } = TinhTrangFilter.All;
 

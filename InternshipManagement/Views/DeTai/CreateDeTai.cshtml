@@ -3,7 +3,7 @@
     ViewData["Title"] = "Thêm đề tài";
     // năm hiện tại ± 5 năm
     var nowY = DateTime.Now.Year;
-    var years = Enumerable.Range(nowY - 5, 11).Select(y => y).ToList();
+    var years = Enumerable.Range(nowY - 5, 11).Select(y => $"{y}-{y+1}").ToList();
 }
 
 <div class="card shadow-sm">

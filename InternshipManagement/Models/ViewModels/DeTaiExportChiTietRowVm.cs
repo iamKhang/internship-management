@@ -12,7 +12,7 @@
 
         // Học kỳ, năm học, quy mô
         public byte HocKy { get; set; }
-        public short NamHoc { get; set; }
+        public string NamHoc { get; set; } = "";
         public int SoLuongToiDa { get; set; }
         public int SoChapNhan { get; set; }   // từ Stats
         public bool IsFull { get; set; }

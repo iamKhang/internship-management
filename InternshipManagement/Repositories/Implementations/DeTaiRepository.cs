@@ -22,7 +22,7 @@ public class GvRegistrationVm
     public string MaDt { get; set; } = "";
     public string? TenDt { get; set; }
     public byte HocKy { get; set; }
-    public short NamHoc { get; set; }
+    public string NamHoc { get; set; } = "";
 
     // Hướng dẫn
     public byte TrangThai { get; set; }
@@ -36,7 +36,7 @@ public class GvRegistrationFilterVm
 {
     public int MaGv { get; set; }
     public byte? HocKy { get; set; }
-    public short? NamHoc { get; set; }
+    public string? NamHoc { get; set; }
     public byte? TrangThai { get; set; }
     public string? MaDt { get; set; }
 }
@@ -86,9 +86,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.HocKy == filter.HocKy.Value);
             }
 
-            if (filter.NamHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(filter.NamHoc))
             {
-                query = query.Where(d => d.NamHoc == filter.NamHoc.Value);
+                query = query.Where(d => d.NamHoc == filter.NamHoc);
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
@@ -115,7 +115,7 @@ namespace InternshipManagement.Repositories.Implementations
             // Apply paging and project to ViewModel
             var items = await query
                 .OrderBy(d => d.MaDt)
-                .Skip(page.PageIndex * page.PageSize)
+                .Skip((page.PageIndex - 1) * page.PageSize)
                 .Take(page.PageSize)
                 .Select(d => new DeTaiListItemVm
                 {
@@ -123,7 +123,7 @@ namespace InternshipManagement.Repositories.Implementations
                     TenDt = d.TenDt,
                     MaGv = d.MaGv,
                     HocKy = d.HocKy,
-                    NamHoc = d.NamHoc,
+                    NamHoc = d.NamHoc ?? "",
                     SoLuongToiDa = d.SoLuongToiDa,
                     NoiThucTap = d.NoiThucTap,
                     KinhPhi = d.KinhPhi,
@@ -170,9 +170,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.HocKy == filter.HocKy.Value);
             }
 
-            if (filter.NamHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(filter.NamHoc))
             {
-                query = query.Where(d => d.NamHoc == filter.NamHoc.Value);
+                query = query.Where(d => d.NamHoc == filter.NamHoc);
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
@@ -205,7 +205,7 @@ namespace InternshipManagement.Repositories.Implementations
                     MaKhoa = d.GiangVien != null ? d.GiangVien.MaKhoa ?? "" : "",
                     TenKhoa = d.GiangVien != null && d.GiangVien.Khoa != null ? d.GiangVien.Khoa.TenKhoa ?? "" : "",
                     HocKy = d.HocKy,
-                    NamHoc = d.NamHoc,
+                    NamHoc = d.NamHoc ?? "",
                     SoLuongToiDa = d.SoLuongToiDa,
                     SoDangKy = d.HuongDans.Count,
                     SoChapNhan = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress),
@@ -243,9 +243,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.HocKy == filter.HocKy.Value);
             }
 
-            if (filter.NamHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(filter.NamHoc))
             {
-                query = query.Where(d => d.NamHoc == filter.NamHoc.Value);
+                query = query.Where(d => d.NamHoc == filter.NamHoc);
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
@@ -278,7 +278,7 @@ namespace InternshipManagement.Repositories.Implementations
                     MaKhoa = d.GiangVien.MaKhoa ?? "",
                     TenKhoa = d.GiangVien.Khoa.TenKhoa ?? "",
                     HocKy = d.HocKy,
-                    NamHoc = d.NamHoc,
+                    NamHoc = d.NamHoc ?? "",
                     SoLuongToiDa = d.SoLuongToiDa,
                     SoChapNhan = d.HuongDans.Count(hd => hd.TrangThai == HuongDanStatus.Accepted || hd.TrangThai == HuongDanStatus.InProgress),
                     IsFull = d.HuongDans.Count(hd => hd.TrangThai == HuongDanStatus.Accepted || hd.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa,
@@ -395,7 +395,7 @@ namespace InternshipManagement.Repositories.Implementations
         }
 
 
-        public async Task<List<GvTopicVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy, short? namHoc)
+        public async Task<List<GvTopicVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy, string? namHoc)
         {
             // Build base query
             var query = _db.DeTais
@@ -409,9 +409,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.HocKy == hocKy.Value);
             }
 
-            if (namHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(namHoc))
             {
-                query = query.Where(d => d.NamHoc == namHoc.Value);
+                query = query.Where(d => d.NamHoc == namHoc);
             }
 
             // Project to ViewModel
@@ -424,7 +424,7 @@ namespace InternshipManagement.Repositories.Implementations
                     NoiThucTap = d.NoiThucTap,
                     KinhPhi = d.KinhPhi,
                     HocKy = d.HocKy,
-                    NamHoc = d.NamHoc,
+                    NamHoc = d.NamHoc ?? "",
                     SoLuongToiDa = d.SoLuongToiDa,
                     ThamGia = d.HuongDans.Count(h => 
                         h.TrangThai == HuongDanStatus.Accepted || 
@@ -438,7 +438,7 @@ namespace InternshipManagement.Repositories.Implementations
                 .ToListAsync();
         }
 
-        public async Task<List<GvStudentVm>> GetLecturerStudentsAsync(int maGv, byte? hocKy, short? namHoc, string? maDt, byte? trangThai)
+        public async Task<List<GvStudentVm>> GetLecturerStudentsAsync(int maGv, byte? hocKy, string? namHoc, string? maDt, byte? trangThai)
         {
             // Build base query
             var query = _db.HuongDans
@@ -454,9 +454,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(h => h.DeTai.HocKy == hocKy.Value);
             }
 
-            if (namHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(namHoc))
             {
-                query = query.Where(h => h.DeTai.NamHoc == namHoc.Value);
+                query = query.Where(h => h.DeTai.NamHoc == namHoc);
             }
 
             if (!string.IsNullOrWhiteSpace(maDt))
@@ -485,7 +485,7 @@ namespace InternshipManagement.Repositories.Implementations
                     MaDt = h.MaDt,
                     TenDt = h.DeTai.TenDt,
                     HocKy = h.DeTai.HocKy,
-                    NamHoc = h.DeTai.NamHoc,
+                    NamHoc = h.DeTai.NamHoc ?? "",
 
                     TrangThai = (byte)h.TrangThai,
                     NgayDangKy = h.CreatedAt,
@@ -496,7 +496,7 @@ namespace InternshipManagement.Repositories.Implementations
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<SelectListItem>> GetLecturerTopicOptionsAsync(int maGv, byte? hocKy, short? namHoc)
+        public async Task<IEnumerable<SelectListItem>> GetLecturerTopicOptionsAsync(int maGv, byte? hocKy, string? namHoc)
         {
             // Build base query
             var query = _db.DeTais
@@ -509,9 +509,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.HocKy == hocKy.Value);
             }
 
-            if (namHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(namHoc))
             {
-                query = query.Where(d => d.NamHoc == namHoc.Value);
+                query = query.Where(d => d.NamHoc == namHoc);
             }
 
             // Get topics and create select list items
@@ -527,7 +527,7 @@ namespace InternshipManagement.Repositories.Implementations
         }
 
 
-        public async Task<List<GvRegistrationVm>> GetRegistrationsAsync(int maGv, byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
+        public async Task<List<GvRegistrationVm>> GetRegistrationsAsync(int maGv, byte? hocKy, string? namHoc, byte? trangThai, string? maDt)
         {
             // Build base query
             var query = _db.HuongDans
@@ -543,9 +543,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(h => h.DeTai.HocKy == hocKy.Value);
             }
 
-            if (namHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(namHoc))
             {
-                query = query.Where(h => h.DeTai.NamHoc == namHoc.Value);
+                query = query.Where(h => h.DeTai.NamHoc == namHoc);
             }
 
             if (trangThai.HasValue)
@@ -574,7 +574,7 @@ namespace InternshipManagement.Repositories.Implementations
                     MaDt = h.MaDt,
                     TenDt = h.DeTai.TenDt,
                     HocKy = h.DeTai.HocKy,
-                    NamHoc = h.DeTai.NamHoc,
+                    NamHoc = h.DeTai.NamHoc ?? "",
 
                     TrangThai = (byte)h.TrangThai,
                     NgayDangKy = h.CreatedAt,
@@ -638,7 +638,8 @@ namespace InternshipManagement.Repositories.Implementations
         public async Task<(bool ok, string? error, string? maDt)> CreateAutoAsync(DeTaiCreateDto dto)
         {
             if (dto.HocKy is < 1 or > 3) return (false, "Học kỳ chỉ nhận 1..3.", null);
-            if (dto.NamHoc < 2000 || dto.NamHoc > 3000) return (false, "Năm học không hợp lệ.", null);
+            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.NamHoc, @"^\d{4}-\d{4}$"))
+                return (false, "Năm học phải có định dạng YYYY-YYYY.", null);
             if (dto.SoLuongToiDa < 0) return (false, "Số lượng tối đa không hợp lệ.", null);
 
             // Giảng viên tồn tại?
@@ -723,11 +724,11 @@ namespace InternshipManagement.Repositories.Implementations
 
                 // Xóa các hướng dẫn có trạng thái cho phép xóa
                 var toRemove = await _db.HuongDans
-                    .Where(h => h.MaDt == code &&
-                        (h.TrangThai == HuongDanStatus.Pending
-                      || h.TrangThai == HuongDanStatus.Rejected
-                      || h.TrangThai == HuongDanStatus.Withdrawn))
-                    .ToListAsync();
+    .Where(h => h.MaDt == code &&
+        (h.TrangThai == HuongDanStatus.Pending
+      || h.TrangThai == HuongDanStatus.Rejected
+      || h.TrangThai == HuongDanStatus.Withdrawn))
+    .ToListAsync();
                 if (toRemove.Count > 0) _db.HuongDans.RemoveRange(toRemove);
 
                 // Xóa đề tài
@@ -752,7 +753,8 @@ namespace InternshipManagement.Repositories.Implementations
             mutate(e);
 
             if (e.HocKy is < 1 or > 3) return (false, "Học kỳ chỉ nhận 1..3.");
-            if (e.NamHoc < 2000 || e.NamHoc > 3000) return (false, "Năm học không hợp lệ.");
+            if (!System.Text.RegularExpressions.Regex.IsMatch(e.NamHoc, @"^\d{4}-\d{4}$"))
+                return (false, "Năm học phải có định dạng YYYY-YYYY.");
             if (e.SoLuongToiDa < 0) return (false, "Số lượng tối đa không hợp lệ.");
 
             try
@@ -838,7 +840,7 @@ namespace InternshipManagement.Repositories.Implementations
             catch (DbUpdateException ex) { return (false, $"Lỗi thu hồi: {ex.GetBaseException().Message}"); }
         }
         public async Task<List<StudentMyTopicItemVm>> GetStudentMyTopicsAsync(
-            int maSv, byte? hocKy, short? namHoc, byte? trangThai)
+            int maSv, byte? hocKy, string? namHoc, byte? trangThai)
         {
             // Build base query
             var query = _db.HuongDans
@@ -855,9 +857,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(h => h.DeTai.HocKy == hocKy.Value);
             }
 
-            if (namHoc.HasValue)
+            if (!string.IsNullOrWhiteSpace(namHoc))
             {
-                query = query.Where(h => h.DeTai.NamHoc == namHoc.Value);
+                query = query.Where(h => h.DeTai.NamHoc == namHoc);
             }
 
             if (trangThai.HasValue)
@@ -876,7 +878,7 @@ namespace InternshipManagement.Repositories.Implementations
                     MaDt = h.MaDt,
                     TenDt = h.DeTai.TenDt,
                     HocKy = h.DeTai.HocKy,
-                    NamHoc = h.DeTai.NamHoc,
+                    NamHoc = h.DeTai.NamHoc ?? "",
                     KinhPhi = h.DeTai.KinhPhi,
                     NoiThucTap = h.DeTai.NoiThucTap,
                     SoLuongToiDa = h.DeTai.SoLuongToiDa,
@@ -948,7 +950,7 @@ namespace InternshipManagement.Repositories.Implementations
         public string MaKhoa { get; set; } = "";
         public string TenKhoa { get; set; } = "";
         public byte HocKy { get; set; }
-        public short NamHoc { get; set; }
+        public string NamHoc { get; set; } = "";
         public int SoLuongToiDa { get; set; }
         public int SoDangKy { get; set; }
         public int SoChapNhan { get; set; }

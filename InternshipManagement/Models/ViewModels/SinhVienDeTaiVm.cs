@@ -32,7 +32,7 @@ namespace InternshipManagement.Models.ViewModels
         public string? TenDt { get; set; }
         public int MaGv { get; set; }
         public byte HocKy { get; set; }
-        public short NamHoc { get; set; }
+        public string NamHoc { get; set; } = "";
         public int SoLuongToiDa { get; set; }
 
         public string? Gv_HoTen { get; set; }

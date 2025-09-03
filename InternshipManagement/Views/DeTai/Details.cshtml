@@ -101,23 +101,34 @@
     DateTime today = DateTime.Today;
     DateTime regStart, regEnd;
 
+    // Parse năm học từ string "YYYY-YYYY" để lấy năm đầu
+    int baseYear = DateTime.Now.Year; // fallback
+    if (!string.IsNullOrEmpty(Model.NamHoc) && Model.NamHoc.Contains("-"))
+    {
+        var parts = Model.NamHoc.Split('-');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var year))
+        {
+            baseYear = year;
+        }
+    }
+
     // Tính theo quy ước năm học
     switch (Model.HocKy)
     {
         case 1:
-            // HK1: 5/9 -> 31/12, nằm trong năm NamHoc
-            regStart = new DateTime(Model.NamHoc, 9, 5);
-            regEnd = new DateTime(Model.NamHoc, 12, 31);
+            // HK1: 5/9 -> 31/12, nằm trong năm đầu của năm học
+            regStart = new DateTime(baseYear, 9, 5);
+            regEnd = new DateTime(baseYear, 12, 31);
             break;
         case 2:
             // HK2: 1/1 -> 25/5, nhưng của NĂM SAU
-            regStart = new DateTime(Model.NamHoc + 1, 1, 1);
-            regEnd = new DateTime(Model.NamHoc + 1, 5, 25);
+            regStart = new DateTime(baseYear + 1, 1, 1);
+            regEnd = new DateTime(baseYear + 1, 5, 25);
             break;
         case 3:
             // HK3: 26/5 -> 4/9, nhưng của NĂM SAU
-            regStart = new DateTime(Model.NamHoc + 1, 5, 26);
-            regEnd = new DateTime(Model.NamHoc + 1, 9, 4);
+            regStart = new DateTime(baseYear + 1, 5, 26);
+            regEnd = new DateTime(baseYear + 1, 9, 4);
             break;
         default:
             regStart = regEnd = today.AddDays(-1); // đóng luôn nếu dữ liệu kỳ lạ

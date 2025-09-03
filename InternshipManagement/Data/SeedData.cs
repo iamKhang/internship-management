@@ -165,53 +165,53 @@ namespace InternshipManagement.Data
 
             mb.Entity<DeTai>().HasData(
                 // Giảng viên 1 (CNTT)
-                new DeTai { MaDt = "DT001", TenDt = "Hệ thống quản lý sinh viên", KinhPhi = 10, NoiThucTap = "Công ty FPT Software", MaGv = 1, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT002", TenDt = "Ứng dụng web thương mại điện tử", KinhPhi = 15, NoiThucTap = "Công ty VNPT", MaGv = 1, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT003", TenDt = "AI gợi ý đề tài nghiên cứu", KinhPhi = 20, NoiThucTap = "Công ty Viettel", MaGv = 1, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT001", TenDt = "Hệ thống quản lý sinh viên", KinhPhi = 10, NoiThucTap = "Công ty FPT Software", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT002", TenDt = "Ứng dụng web thương mại điện tử", KinhPhi = 15, NoiThucTap = "Công ty VNPT", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT003", TenDt = "AI gợi ý đề tài nghiên cứu", KinhPhi = 20, NoiThucTap = "Công ty Viettel", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 1 },
 
                 // Giảng viên 2 (CNTT)
-                new DeTai { MaDt = "DT004", TenDt = "Phát triển hệ thống IoT giám sát môi trường", KinhPhi = 12, NoiThucTap = "Công ty EVN", MaGv = 2, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT005", TenDt = "Ứng dụng phân tích dữ liệu lớn", KinhPhi = 18, NoiThucTap = "Công ty Mobifone", MaGv = 2, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT006", TenDt = "Ứng dụng di động quản lý y tế", KinhPhi = 8, NoiThucTap = "Công ty VNG", MaGv = 2, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT004", TenDt = "Phát triển hệ thống IoT giám sát môi trường", KinhPhi = 12, NoiThucTap = "Công ty EVN", MaGv = 2, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT005", TenDt = "Ứng dụng phân tích dữ liệu lớn", KinhPhi = 18, NoiThucTap = "Công ty Mobifone", MaGv = 2, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT006", TenDt = "Ứng dụng di động quản lý y tế", KinhPhi = 8, NoiThucTap = "Công ty VNG", MaGv = 2, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 1 },
 
                 // Giảng viên 3 (CNHH)
-                new DeTai { MaDt = "DT007", TenDt = "Nghiên cứu vật liệu mới", KinhPhi = 9, NoiThucTap = "Công ty Hóa chất Việt Nam", MaGv = 3, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT008", TenDt = "Quy trình sản xuất hóa chất xanh", KinhPhi = 14, NoiThucTap = "Công ty Sơn Hà", MaGv = 3, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT009", TenDt = "Xử lý nước thải công nghiệp", KinhPhi = 11, NoiThucTap = "Công ty Nước sạch Hà Nội", MaGv = 3, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT007", TenDt = "Nghiên cứu vật liệu mới", KinhPhi = 9, NoiThucTap = "Công ty Hóa chất Việt Nam", MaGv = 3, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT008", TenDt = "Quy trình sản xuất hóa chất xanh", KinhPhi = 14, NoiThucTap = "Công ty Sơn Hà", MaGv = 3, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT009", TenDt = "Xử lý nước thải công nghiệp", KinhPhi = 11, NoiThucTap = "Công ty Nước sạch Hà Nội", MaGv = 3, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 1 },
 
                 // Giảng viên 4 (CNHH)
-                new DeTai { MaDt = "DT010", TenDt = "Nghiên cứu xúc tác hữu cơ", KinhPhi = 7, NoiThucTap = "Công ty Hóa chất Việt Nam", MaGv = 4, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT011", TenDt = "Sản xuất nhựa sinh học", KinhPhi = 13, NoiThucTap = "Công ty Nhựa Bình Minh", MaGv = 4, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT012", TenDt = "Xử lý rác thải đô thị", KinhPhi = 19, NoiThucTap = "Công ty Môi trường Đô thị Hà Nội", MaGv = 4, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT010", TenDt = "Nghiên cứu xúc tác hữu cơ", KinhPhi = 7, NoiThucTap = "Công ty Hóa chất Việt Nam", MaGv = 4, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT011", TenDt = "Sản xuất nhựa sinh học", KinhPhi = 13, NoiThucTap = "Công ty Nhựa Bình Minh", MaGv = 4, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT012", TenDt = "Xử lý rác thải đô thị", KinhPhi = 19, NoiThucTap = "Công ty Môi trường Đô thị Hà Nội", MaGv = 4, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 1 },
 
                 // Giảng viên 5 (TCKT)
-                new DeTai { MaDt = "DT013", TenDt = "Phân tích tài chính doanh nghiệp", KinhPhi = 6, NoiThucTap = "Công ty KPMG Việt Nam", MaGv = 5, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT014", TenDt = "Hệ thống kế toán quản trị", KinhPhi = 11, NoiThucTap = "Công ty Deloitte Việt Nam", MaGv = 5, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT015", TenDt = "Ứng dụng Blockchain trong kế toán", KinhPhi = 17, NoiThucTap = "Công ty PwC Việt Nam", MaGv = 5, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT013", TenDt = "Phân tích tài chính doanh nghiệp", KinhPhi = 6, NoiThucTap = "Công ty KPMG Việt Nam", MaGv = 5, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT014", TenDt = "Hệ thống kế toán quản trị", KinhPhi = 11, NoiThucTap = "Công ty Deloitte Việt Nam", MaGv = 5, HocKy = 2, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT015", TenDt = "Ứng dụng Blockchain trong kế toán", KinhPhi = 17, NoiThucTap = "Công ty PwC Việt Nam", MaGv = 5, HocKy = 3, NamHoc = "2024-2025", SoLuongToiDa = 1 },
 
                 // Giảng viên 6 (TCKT)
-                new DeTai { MaDt = "DT016", TenDt = "Phân tích rủi ro tài chính", KinhPhi = 10, NoiThucTap = "Ngân hàng Vietcombank", MaGv = 6, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT017", TenDt = "Dự báo thị trường chứng khoán", KinhPhi = 14, NoiThucTap = "Công ty Chứng khoán SSI", MaGv = 6, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT018", TenDt = "Ứng dụng AI trong ngân hàng", KinhPhi = 20, NoiThucTap = "Ngân hàng BIDV", MaGv = 6, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT016", TenDt = "Phân tích rủi ro tài chính", KinhPhi = 10, NoiThucTap = "Ngân hàng Vietcombank", MaGv = 6, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT017", TenDt = "Dự báo thị trường chứng khoán", KinhPhi = 14, NoiThucTap = "Công ty Chứng khoán SSI", MaGv = 6, HocKy = 2, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT018", TenDt = "Ứng dụng AI trong ngân hàng", KinhPhi = 20, NoiThucTap = "Ngân hàng BIDV", MaGv = 6, HocKy = 3, NamHoc = "2024-2025", SoLuongToiDa = 1 },
 
                 // Giảng viên 7 (COKHI)
-                new DeTai { MaDt = "DT019", TenDt = "Thiết kế robot công nghiệp", KinhPhi = 18, NoiThucTap = "Công ty VinFast", MaGv = 7, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT020", TenDt = "Gia công cơ khí chính xác", KinhPhi = 9, NoiThucTap = "Công ty Cơ khí Hà Nội", MaGv = 7, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT021", TenDt = "Ứng dụng CAD/CAM trong sản xuất", KinhPhi = 12, NoiThucTap = "Công ty SamSung Việt Nam", MaGv = 7, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT019", TenDt = "Thiết kế robot công nghiệp", KinhPhi = 18, NoiThucTap = "Công ty VinFast", MaGv = 7, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT020", TenDt = "Gia công cơ khí chính xác", KinhPhi = 9, NoiThucTap = "Công ty Cơ khí Hà Nội", MaGv = 7, HocKy = 2, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT021", TenDt = "Ứng dụng CAD/CAM trong sản xuất", KinhPhi = 12, NoiThucTap = "Công ty SamSung Việt Nam", MaGv = 7, HocKy = 3, NamHoc = "2024-2025", SoLuongToiDa = 1 },
 
                 // Giảng viên 8 (COKHI)
-                new DeTai { MaDt = "DT022", TenDt = "Nghiên cứu động cơ hybrid", KinhPhi = 16, NoiThucTap = "Công ty Toyota Việt Nam", MaGv = 8, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT023", TenDt = "Mô phỏng dòng chảy chất lỏng", KinhPhi = 5, NoiThucTap = "Công ty Thủy điện Hòa Bình", MaGv = 8, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT024", TenDt = "Ứng dụng in 3D trong cơ khí", KinhPhi = 8, NoiThucTap = "Công ty Cơ khí Đông Anh", MaGv = 8, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT022", TenDt = "Nghiên cứu động cơ hybrid", KinhPhi = 16, NoiThucTap = "Công ty Toyota Việt Nam", MaGv = 8, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT023", TenDt = "Mô phỏng dòng chảy chất lỏng", KinhPhi = 5, NoiThucTap = "Công ty Thủy điện Hòa Bình", MaGv = 8, HocKy = 2, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT024", TenDt = "Ứng dụng in 3D trong cơ khí", KinhPhi = 8, NoiThucTap = "Công ty Cơ khí Đông Anh", MaGv = 8, HocKy = 3, NamHoc = "2024-2025", SoLuongToiDa = 1 },
 
                 // Giảng viên 9 (VCNMT)
-                new DeTai { MaDt = "DT025", TenDt = "Công nghệ năng lượng tái tạo", KinhPhi = 15, NoiThucTap = "Công ty Điện mặt trời TTC", MaGv = 9, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT026", TenDt = "Ứng dụng năng lượng gió", KinhPhi = 13, NoiThucTap = "Công ty Điện gió Bạc Liêu", MaGv = 9, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 },
-                new DeTai { MaDt = "DT027", TenDt = "Nghiên cứu pin lưu trữ năng lượng", KinhPhi = 19, NoiThucTap = "Công ty Pin Rạng Đông", MaGv = 9, HocKy = 3, NamHoc = 2025, SoLuongToiDa = 1 },
+                new DeTai { MaDt = "DT025", TenDt = "Công nghệ năng lượng tái tạo", KinhPhi = 15, NoiThucTap = "Công ty Điện mặt trời TTC", MaGv = 9, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT026", TenDt = "Ứng dụng năng lượng gió", KinhPhi = 13, NoiThucTap = "Công ty Điện gió Bạc Liêu", MaGv = 9, HocKy = 2, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT027", TenDt = "Nghiên cứu pin lưu trữ năng lượng", KinhPhi = 19, NoiThucTap = "Công ty Pin Rạng Đông", MaGv = 9, HocKy = 3, NamHoc = "2024-2025", SoLuongToiDa = 1 },
 
                 // Giảng viên 10 (VCNMT)
-                new DeTai { MaDt = "DT028", TenDt = "Xử lý chất thải rắn", KinhPhi = 4, NoiThucTap = "Công ty Môi trường Bình Dương", MaGv = 10, HocKy = 1, NamHoc = 2025, SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT029", TenDt = "Quản lý tài nguyên nước", KinhPhi = 11, NoiThucTap = "Công ty Cấp nước Sài Gòn", MaGv = 10, HocKy = 2, NamHoc = 2025, SoLuongToiDa = 3 }
+                new DeTai { MaDt = "DT028", TenDt = "Xử lý chất thải rắn", KinhPhi = 4, NoiThucTap = "Công ty Môi trường Bình Dương", MaGv = 10, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
+                new DeTai { MaDt = "DT029", TenDt = "Quản lý tài nguyên nước", KinhPhi = 11, NoiThucTap = "Công ty Cấp nước Sài Gòn", MaGv = 10, HocKy = 2, NamHoc = "2024-2025", SoLuongToiDa = 3 }
 
             );
 

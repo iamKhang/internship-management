@@ -50,7 +50,7 @@ namespace InternshipManagement.Repositories.Implementations
             // Apply paging and project to ViewModel
             var items = await query
                 .OrderBy(s => s.MaSv)
-                .Skip(page.PageIndex * page.PageSize)
+                .Skip((page.PageIndex - 1) * page.PageSize)
                 .Take(page.PageSize)
                 .Select(s => new SinhVienListItemVm
                 {
@@ -148,7 +148,7 @@ namespace InternshipManagement.Repositories.Implementations
                     TenDt = h.DeTai.TenDt,
                     MaGv = h.MaGv,
                     HocKy = h.DeTai.HocKy,
-                    NamHoc = h.DeTai.NamHoc,
+                    NamHoc = h.DeTai.NamHoc ?? "",
                     SoLuongToiDa = h.DeTai.SoLuongToiDa,
                     Gv_HoTen = h.GiangVien.HoTenGv,
                     Gv_MaKhoa = h.GiangVien.MaKhoa,

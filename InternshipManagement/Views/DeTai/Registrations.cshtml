@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Sinh viên đăng ký đề tài";
     byte? selectedHk = Model.Filter.HocKy;
-    short? selectedYear = Model.Filter.NamHoc;
+    string? selectedYear = Model.Filter.NamHoc;
 }
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -18,23 +18,22 @@
                 <select class="form-select py-2" id="hkNamSelect">
                     <option value="">-- Tất cả --</option>
                     @{
-                        short nowY = (short)DateTime.Now.Year;
+                        var nowY = DateTime.Now.Year;
                         var pairs = Enumerable.Range(nowY - 5, 8)
-                                    .Select(y => (short)y)
-                                    .SelectMany(y => new[] { (hk: (byte)1, y), (hk: (byte)2, y), (hk: (byte)3, y) });
-                        var selectedValue = selectedHk.HasValue && selectedYear.HasValue
+                                    .SelectMany(y => new[] { (hk: (byte)1, yearStr: $"{y}-{y+1}"), (hk: (byte)2, yearStr: $"{y}-{y+1}"), (hk: (byte)3, yearStr: $"{y}-{y+1}") });
+                        var selectedValue = selectedHk.HasValue && !string.IsNullOrEmpty(selectedYear)
                                             ? $"{selectedHk}-{selectedYear}"
                                             : "";
                         foreach (var p in pairs)
                         {
-                            var val = $"{p.hk}-{p.y}";
-                            var text = $"HK{p.hk} - {p.y}";
+                            var val = $"{p.hk}-{p.yearStr}";
+                            var text = $"HK{p.hk} - {p.yearStr}";
                             <option value="@val" selected="@(val == selectedValue ? "selected" : null)">@text</option>
                         }
                     }
                 </select>
                 <input type="hidden" name="hocKy" id="hocKyHidden" value="@(selectedHk?.ToString() ?? "")" />
-                <input type="hidden" name="namHoc" id="namHocHidden" value="@(selectedYear?.ToString() ?? "")" />
+                <input type="hidden" name="namHoc" id="namHocHidden" value="@(selectedYear ?? "")" />
             </div>
             <div class="col-md-3">
                 <label class="form-label">Đề tài</label>

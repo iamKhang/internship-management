@@ -17,7 +17,7 @@ namespace InternshipManagement.Repositories.Implementations
 
         // ======================= GIẢNG VIÊN =======================
         public async Task<ThongKeGiangVienVm> GetThongKeGiangVienAsync(
-            int maGv, DateTime? fromDate = null, DateTime? toDate = null, byte? hocKy = null, int? namHoc = null)
+            int maGv, DateTime? fromDate = null, DateTime? toDate = null, byte? hocKy = null, string? namHoc = null)
         {
             var vm = new ThongKeGiangVienVm();
 
@@ -105,7 +105,7 @@ namespace InternshipManagement.Repositories.Implementations
 
         // ======================= ADMIN =======================
         public async Task<ThongKeAdminVm> GetThongKeAdminAsync(
-            string? maKhoa = null, int? maGv = null, DateTime? fromDate = null, DateTime? toDate = null, byte? hocKy = null, int? namHoc = null)
+            string? maKhoa = null, int? maGv = null, DateTime? fromDate = null, DateTime? toDate = null, byte? hocKy = null, string? namHoc = null)
         {
             var vm = new ThongKeAdminVm();
 
@@ -203,7 +203,7 @@ namespace InternshipManagement.Repositories.Implementations
             while (await rd.ReadAsync())
                 vm.ByTerm.Add(new TermSummaryVm
                 {
-                    NamHoc = GetInt(rd, "namhoc"),
+                    NamHoc = GetString(rd, "namhoc"),
                     HocKy = (byte)GetInt(rd, "hocky"),
                     SlotDaDung = GetInt(rd, "SlotDaDung"),
                     HoanThanh = GetInt(rd, "HoanThanh"),

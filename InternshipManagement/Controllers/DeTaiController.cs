@@ -43,7 +43,10 @@ namespace InternshipManagement.Controllers
             var now = DateTime.UtcNow;
             var years = Enumerable.Range(now.Year - 3, 6).OrderByDescending(y => y);
             var namHocOptions = years
-                .Select(y => new SelectListItem { Value = y.ToString(), Text = y.ToString(), Selected = (filter.NamHoc == y) })
+                .Select(y => {
+                    var yearStr = $"{y}-{y+1}";
+                    return new SelectListItem { Value = yearStr, Text = yearStr, Selected = (filter.NamHoc == yearStr) };
+                })
                 .ToList();
 
             var (items, total) = await _repo.FilterAsync(filter, paging);
@@ -286,7 +289,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Manage(byte? hocKy, short? namHoc, string? maDt, byte? trangThai)
+        public async Task<IActionResult> Manage(byte? hocKy, string? namHoc, string? maDt, byte? trangThai)
         {
             // Bắt buộc đăng nhập & đúng vai trò giảng viên
             if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
@@ -310,9 +313,12 @@ namespace InternshipManagement.Controllers
                 new("Tất cả học kỳ",""), new("HK1","1"), new("HK2","2"), new("HK3","3")
             };
 
-            short nowY = (short)DateTime.Now.Year;
+            var nowY = DateTime.Now.Year;
             var namHocOptions = Enumerable.Range(nowY - 5, 8)
-                .Select(y => new SelectListItem(y.ToString(), y.ToString()));
+                .Select(y => {
+                    var yearStr = $"{y}-{y+1}";
+                    return new SelectListItem(yearStr, yearStr);
+                });
 
             var trangThaiOptions = new List<SelectListItem> {
                 new("Tất cả",""),
@@ -335,7 +341,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Registrations(byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
+        public async Task<IActionResult> Registrations(byte? hocKy, string? namHoc, byte? trangThai, string? maDt)
         {
             // Auth + role GiangVien (như Manage của bạn)
             if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
@@ -351,7 +357,7 @@ namespace InternshipManagement.Controllers
             var items = await _repo.GetRegistrationsAsync(maGv, hocKy, namHoc, trangThai, maDt);
             var deTaiOptions = await _repo.GetLecturerTopicOptionsAsync(maGv, hocKy, namHoc);
 
-            short nowY = (short)DateTime.Now.Year;
+            var nowY = DateTime.Now.Year;
             var vm = new GvRegistrationsPageVm
             {
                 Filter = new GvRegistrationFilterVm
@@ -367,7 +373,10 @@ namespace InternshipManagement.Controllers
             new("Tất cả học kỳ",""), new("HK1","1"), new("HK2","2"), new("HK3","3")
         },
                 NamHocOptions = Enumerable.Range(nowY - 5, 8)
-                    .Select(y => new SelectListItem(y.ToString(), y.ToString())),
+                    .Select(y => {
+                        var yearStr = $"{y}-{y+1}";
+                        return new SelectListItem(yearStr, yearStr);
+                    }),
                 TrangThaiOptions = new List<SelectListItem> {
             new("Tất cả",""),
             new("Chờ duyệt","0"), new("Chấp nhận)","1"),
@@ -382,7 +391,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApproveRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, short? namHoc, byte? trangThai, string? filterMaDt)
+        public async Task<IActionResult> ApproveRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, string? namHoc, byte? trangThai, string? filterMaDt)
         {
             // Lấy MaGv như trên
             string? rawMaGv = User.FindFirst("MaGv")?.Value
@@ -400,7 +409,7 @@ namespace InternshipManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RejectRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, short? namHoc, byte? trangThai, string? filterMaDt)
+        public async Task<IActionResult> RejectRegistration(int maSv, string maDt, string? ghiChu, byte? hocKy, string? namHoc, byte? trangThai, string? filterMaDt)
         {
             string? rawMaGv = User.FindFirst("MaGv")?.Value
                            ?? User.FindFirst("code")?.Value
@@ -414,7 +423,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportRegistrationsExcel(byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
+        public async Task<IActionResult> ExportRegistrationsExcel(byte? hocKy, string? namHoc, byte? trangThai, string? maDt)
         {
             // Auth + lấy mã GV như action Registrations
             if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
@@ -581,7 +590,7 @@ namespace InternshipManagement.Controllers
 
         [Authorize(Roles = "GiangVien")]
         [HttpGet]
-        public IActionResult CreateDeTai(byte? hk, short? nh)
+        public IActionResult CreateDeTai(byte? hk, string? nh)
         {
             //// Lấy mã GV đang đăng nhập
             //string? rawMaGv = User.FindFirst("MaGv")?.Value
@@ -595,7 +604,7 @@ namespace InternshipManagement.Controllers
             {
                 Magv = 0,                       // không cho user nhập
                 HocKy = (byte)(hk ?? 1),
-                NamHoc = nh ?? (short)DateTime.Now.Year,
+                NamHoc = nh ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}",
                 SoLuongToiDa = 1
             };
             return View(vm); // Views/DeTai/CreateDeTai.cshtml
@@ -665,7 +674,7 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> MyTopics(byte? hocKy, short? namHoc, byte? trangThai)
+        public async Task<IActionResult> MyTopics(byte? hocKy, string? namHoc, byte? trangThai)
         {
             // Bắt buộc đăng nhập
             if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
@@ -688,9 +697,12 @@ namespace InternshipManagement.Controllers
                 it.Selected = (!hocKy.HasValue && it.Value == "") || (hocKy.HasValue && it.Value == hocKy.Value.ToString());
 
             // Combobox Năm học (±5 năm)
-            short nowY = (short)DateTime.Now.Year;
+            var nowY = DateTime.Now.Year;
             var namHocOptions = Enumerable.Range(nowY - 5, 8)
-                .Select(y => new SelectListItem(y.ToString(), y.ToString()) { Selected = (namHoc == y) })
+                .Select(y => {
+                    var yearStr = $"{y}-{y+1}";
+                    return new SelectListItem(yearStr, yearStr) { Selected = (namHoc == yearStr) };
+                })
                 .ToList();
 
             // Combobox Trạng thái (0..5)
@@ -724,7 +736,7 @@ namespace InternshipManagement.Controllers
               decimal ketQua,
               string? ghiChu,
               byte? hocKy,
-              short? namHoc,
+              string? namHoc,
               byte? trangThai,
               string? filterMaDt)
         {
@@ -754,7 +766,7 @@ namespace InternshipManagement.Controllers
     string maDt,
     string? ghiChu,
     byte? hocKy,
-    short? namHoc,
+    string? namHoc,
     byte? trangThai,
     string? filterMaDt)
         {

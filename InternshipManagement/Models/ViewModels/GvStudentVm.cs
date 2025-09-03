@@ -7,7 +7,7 @@ namespace InternshipManagement.Models.ViewModels
     {
         public int MaGv { get; set; }
         public byte? HocKy { get; set; }
-        public short? NamHoc { get; set; }
+        public string? NamHoc { get; set; }
         public string? MaDt { get; set; }         // mã đề tài
         public byte? TrangThai { get; set; }      // NULL = tất cả
     }
@@ -19,7 +19,7 @@ namespace InternshipManagement.Models.ViewModels
         public string? NoiThucTap { get; set; }
         public int? KinhPhi { get; set; }
         public byte HocKy { get; set; }
-        public short NamHoc { get; set; }
+        public string NamHoc { get; set; } = "";
         public int SoLuongToiDa { get; set; }
         public int ThamGia { get; set; }
         public int ConLai { get; set; }
@@ -37,7 +37,7 @@ namespace InternshipManagement.Models.ViewModels
         public string MaDt { get; set; } = "";
         public string? TenDt { get; set; }
         public byte HocKy { get; set; }
-        public short NamHoc { get; set; }
+        public string NamHoc { get; set; } = "";
 
         public byte TrangThai { get; set; }
         public DateTime? NgayDangKy { get; set; }

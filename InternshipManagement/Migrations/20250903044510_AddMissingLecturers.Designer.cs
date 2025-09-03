@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InternshipManagement.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250826083044_init_schema_and_seed")]
-    partial class init_schema_and_seed
+    [Migration("20250903044510_AddMissingLecturers")]
+    partial class AddMissingLecturers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -63,14 +63,16 @@ namespace InternshipManagement.Migrations
                         .HasColumnType("int")
                         .HasColumnName("magv");
 
-                    b.Property<short>("NamHoc")
-                        .HasColumnType("smallint")
+                    b.Property<string>("NamHoc")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("varchar(9)")
                         .HasColumnName("namhoc");
 
                     b.Property<string>("NoiThucTap")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
-                        .HasColumnName("NoiThucTap");
+                        .HasColumnName("noithucTap");
 
                     b.Property<int>("SoLuongToiDa")
                         .HasColumnType("int")
@@ -94,7 +96,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 10,
                             MaGv = 1,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty FPT Software",
                             SoLuongToiDa = 2,
                             TenDt = "Hệ thống quản lý sinh viên"
@@ -105,7 +107,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 15,
                             MaGv = 1,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty VNPT",
                             SoLuongToiDa = 3,
                             TenDt = "Ứng dụng web thương mại điện tử"
@@ -116,7 +118,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 20,
                             MaGv = 1,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Viettel",
                             SoLuongToiDa = 1,
                             TenDt = "AI gợi ý đề tài nghiên cứu"
@@ -127,7 +129,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 12,
                             MaGv = 2,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty EVN",
                             SoLuongToiDa = 3,
                             TenDt = "Phát triển hệ thống IoT giám sát môi trường"
@@ -138,7 +140,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 18,
                             MaGv = 2,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Mobifone",
                             SoLuongToiDa = 2,
                             TenDt = "Ứng dụng phân tích dữ liệu lớn"
@@ -149,7 +151,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 8,
                             MaGv = 2,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty VNG",
                             SoLuongToiDa = 1,
                             TenDt = "Ứng dụng di động quản lý y tế"
@@ -160,7 +162,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 9,
                             MaGv = 3,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Hóa chất Việt Nam",
                             SoLuongToiDa = 2,
                             TenDt = "Nghiên cứu vật liệu mới"
@@ -171,7 +173,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 14,
                             MaGv = 3,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Sơn Hà",
                             SoLuongToiDa = 3,
                             TenDt = "Quy trình sản xuất hóa chất xanh"
@@ -182,7 +184,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 11,
                             MaGv = 3,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Nước sạch Hà Nội",
                             SoLuongToiDa = 1,
                             TenDt = "Xử lý nước thải công nghiệp"
@@ -193,7 +195,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 7,
                             MaGv = 4,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Hóa chất Việt Nam",
                             SoLuongToiDa = 2,
                             TenDt = "Nghiên cứu xúc tác hữu cơ"
@@ -204,7 +206,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 13,
                             MaGv = 4,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Nhựa Bình Minh",
                             SoLuongToiDa = 3,
                             TenDt = "Sản xuất nhựa sinh học"
@@ -215,7 +217,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 19,
                             MaGv = 4,
-                            NamHoc = (short)2025,
+                            NamHoc = "2023-2024",
                             NoiThucTap = "Công ty Môi trường Đô thị Hà Nội",
                             SoLuongToiDa = 1,
                             TenDt = "Xử lý rác thải đô thị"
@@ -226,7 +228,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 6,
                             MaGv = 5,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty KPMG Việt Nam",
                             SoLuongToiDa = 2,
                             TenDt = "Phân tích tài chính doanh nghiệp"
@@ -237,7 +239,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 11,
                             MaGv = 5,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Deloitte Việt Nam",
                             SoLuongToiDa = 3,
                             TenDt = "Hệ thống kế toán quản trị"
@@ -248,7 +250,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 17,
                             MaGv = 5,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty PwC Việt Nam",
                             SoLuongToiDa = 1,
                             TenDt = "Ứng dụng Blockchain trong kế toán"
@@ -259,7 +261,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 10,
                             MaGv = 6,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Ngân hàng Vietcombank",
                             SoLuongToiDa = 2,
                             TenDt = "Phân tích rủi ro tài chính"
@@ -270,7 +272,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 14,
                             MaGv = 6,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Chứng khoán SSI",
                             SoLuongToiDa = 3,
                             TenDt = "Dự báo thị trường chứng khoán"
@@ -281,7 +283,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 20,
                             MaGv = 6,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Ngân hàng BIDV",
                             SoLuongToiDa = 1,
                             TenDt = "Ứng dụng AI trong ngân hàng"
@@ -292,7 +294,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 18,
                             MaGv = 7,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty VinFast",
                             SoLuongToiDa = 2,
                             TenDt = "Thiết kế robot công nghiệp"
@@ -303,7 +305,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 9,
                             MaGv = 7,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Cơ khí Hà Nội",
                             SoLuongToiDa = 3,
                             TenDt = "Gia công cơ khí chính xác"
@@ -314,7 +316,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 12,
                             MaGv = 7,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty SamSung Việt Nam",
                             SoLuongToiDa = 1,
                             TenDt = "Ứng dụng CAD/CAM trong sản xuất"
@@ -325,7 +327,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 16,
                             MaGv = 8,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Toyota Việt Nam",
                             SoLuongToiDa = 2,
                             TenDt = "Nghiên cứu động cơ hybrid"
@@ -336,7 +338,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 5,
                             MaGv = 8,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Thủy điện Hòa Bình",
                             SoLuongToiDa = 3,
                             TenDt = "Mô phỏng dòng chảy chất lỏng"
@@ -347,7 +349,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 8,
                             MaGv = 8,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Cơ khí Đông Anh",
                             SoLuongToiDa = 1,
                             TenDt = "Ứng dụng in 3D trong cơ khí"
@@ -358,7 +360,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 15,
                             MaGv = 9,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Điện mặt trời TTC",
                             SoLuongToiDa = 2,
                             TenDt = "Công nghệ năng lượng tái tạo"
@@ -369,7 +371,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 13,
                             MaGv = 9,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Điện gió Bạc Liêu",
                             SoLuongToiDa = 3,
                             TenDt = "Ứng dụng năng lượng gió"
@@ -380,7 +382,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)3,
                             KinhPhi = 19,
                             MaGv = 9,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Pin Rạng Đông",
                             SoLuongToiDa = 1,
                             TenDt = "Nghiên cứu pin lưu trữ năng lượng"
@@ -391,7 +393,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)1,
                             KinhPhi = 4,
                             MaGv = 10,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Môi trường Bình Dương",
                             SoLuongToiDa = 2,
                             TenDt = "Xử lý chất thải rắn"
@@ -402,7 +404,7 @@ namespace InternshipManagement.Migrations
                             HocKy = (byte)2,
                             KinhPhi = 11,
                             MaGv = 10,
-                            NamHoc = (short)2025,
+                            NamHoc = "2024-2025",
                             NoiThucTap = "Công ty Cấp nước Sài Gòn",
                             SoLuongToiDa = 3,
                             TenDt = "Quản lý tài nguyên nước"
@@ -1557,7 +1559,7 @@ namespace InternshipManagement.Migrations
                     b.HasOne("InternshipManagement.Models.Khoa", "Khoa")
                         .WithMany("GiangViens")
                         .HasForeignKey("MaKhoa")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Khoa");
@@ -1595,7 +1597,7 @@ namespace InternshipManagement.Migrations
                     b.HasOne("InternshipManagement.Models.Khoa", "Khoa")
                         .WithMany("SinhViens")
                         .HasForeignKey("MaKhoa")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Khoa");

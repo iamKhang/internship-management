@@ -9,7 +9,7 @@ namespace InternshipManagement.Controllers
         private readonly IThongKeRepository _repo;
         public ThongKeController(IThongKeRepository repo) => _repo = repo;
 
-        public async Task<IActionResult> Index(DateTime? from = null, DateTime? to = null, byte? hocKy = null, int? namHoc = null, string? maKhoa = null, int? maGv = null)
+        public async Task<IActionResult> Index(DateTime? from = null, DateTime? to = null, byte? hocKy = null, string? namHoc = null, string? maKhoa = null, int? maGv = null)
         {
             var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value;
             var code = User.FindFirst("code")?.Value;

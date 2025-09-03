@@ -7,7 +7,7 @@
         public int Magv { get; set; }
         public int? KinhPhi { get; set; }
         public byte HocKy { get; set; }    // 1..3
-        public short NamHoc { get; set; }  // vd 2025
+        public string NamHoc { get; set; } = "";  // vd "2023-2024"
         public int SoLuongToiDa { get; set; } = 1;
     }
 

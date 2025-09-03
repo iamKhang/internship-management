@@ -18,7 +18,7 @@ public class DeTai
     [Column("kinhphi")]
     public int? KinhPhi { get; set; }
 
-    [Column("NoiThucTap", TypeName = "nvarchar(200)")]
+    [Column("noithucTap", TypeName = "nvarchar(200)")]
     [StringLength(200)]
     public string? NoiThucTap { get; set; }
 
@@ -30,8 +30,10 @@ public class DeTai
     [Column("hocky")]
     public byte HocKy { get; set; }  // 1/2 (hoặc 3 - hè)
 
-    [Column("namhoc")]
-    public short NamHoc { get; set; }
+    [Column("namhoc", TypeName = "varchar(9)")]
+    [StringLength(9)]
+    [RegularExpression(@"^\d{4}-\d{4}$", ErrorMessage = "Năm học phải có định dạng YYYY-YYYY")]
+    public string NamHoc { get; set; } = null!;
 
     [Column("soluongtoida")]
     public int SoLuongToiDa { get; set; } = 1;

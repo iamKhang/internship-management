@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace InternshipManagement.Migrations
 {
     /// <inheritdoc />
-    public partial class init_schema_and_seed : Migration
+    public partial class InitialCreateWithStringNamHoc : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -57,7 +57,7 @@ namespace InternshipManagement.Migrations
                         column: x => x.makhoa,
                         principalTable: "Khoa",
                         principalColumn: "makhoa",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -79,7 +79,7 @@ namespace InternshipManagement.Migrations
                         column: x => x.makhoa,
                         principalTable: "Khoa",
                         principalColumn: "makhoa",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -89,10 +89,10 @@ namespace InternshipManagement.Migrations
                     madt = table.Column<string>(type: "char(10)", maxLength: 10, nullable: false),
                     tendt = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     kinhphi = table.Column<int>(type: "int", nullable: true),
-                    NoiThucTap = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    noithucTap = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     magv = table.Column<int>(type: "int", nullable: false),
                     hocky = table.Column<byte>(type: "tinyint", nullable: false),
-                    namhoc = table.Column<short>(type: "smallint", nullable: false),
+                    namhoc = table.Column<string>(type: "varchar(9)", maxLength: 9, nullable: false),
                     soluongtoida = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -262,38 +262,38 @@ namespace InternshipManagement.Migrations
 
             migrationBuilder.InsertData(
                 table: "DeTai",
-                columns: new[] { "madt", "hocky", "kinhphi", "magv", "namhoc", "NoiThucTap", "soluongtoida", "tendt" },
+                columns: new[] { "madt", "hocky", "kinhphi", "magv", "namhoc", "noithucTap", "soluongtoida", "tendt" },
                 values: new object[,]
                 {
-                    { "DT001", (byte)1, 10, 1, (short)2025, "Công ty FPT Software", 2, "Hệ thống quản lý sinh viên" },
-                    { "DT002", (byte)2, 15, 1, (short)2025, "Công ty VNPT", 3, "Ứng dụng web thương mại điện tử" },
-                    { "DT003", (byte)3, 20, 1, (short)2025, "Công ty Viettel", 1, "AI gợi ý đề tài nghiên cứu" },
-                    { "DT004", (byte)1, 12, 2, (short)2025, "Công ty EVN", 3, "Phát triển hệ thống IoT giám sát môi trường" },
-                    { "DT005", (byte)2, 18, 2, (short)2025, "Công ty Mobifone", 2, "Ứng dụng phân tích dữ liệu lớn" },
-                    { "DT006", (byte)3, 8, 2, (short)2025, "Công ty VNG", 1, "Ứng dụng di động quản lý y tế" },
-                    { "DT007", (byte)1, 9, 3, (short)2025, "Công ty Hóa chất Việt Nam", 2, "Nghiên cứu vật liệu mới" },
-                    { "DT008", (byte)2, 14, 3, (short)2025, "Công ty Sơn Hà", 3, "Quy trình sản xuất hóa chất xanh" },
-                    { "DT009", (byte)3, 11, 3, (short)2025, "Công ty Nước sạch Hà Nội", 1, "Xử lý nước thải công nghiệp" },
-                    { "DT010", (byte)1, 7, 4, (short)2025, "Công ty Hóa chất Việt Nam", 2, "Nghiên cứu xúc tác hữu cơ" },
-                    { "DT011", (byte)2, 13, 4, (short)2025, "Công ty Nhựa Bình Minh", 3, "Sản xuất nhựa sinh học" },
-                    { "DT012", (byte)3, 19, 4, (short)2025, "Công ty Môi trường Đô thị Hà Nội", 1, "Xử lý rác thải đô thị" },
-                    { "DT013", (byte)1, 6, 5, (short)2025, "Công ty KPMG Việt Nam", 2, "Phân tích tài chính doanh nghiệp" },
-                    { "DT014", (byte)2, 11, 5, (short)2025, "Công ty Deloitte Việt Nam", 3, "Hệ thống kế toán quản trị" },
-                    { "DT015", (byte)3, 17, 5, (short)2025, "Công ty PwC Việt Nam", 1, "Ứng dụng Blockchain trong kế toán" },
-                    { "DT016", (byte)1, 10, 6, (short)2025, "Ngân hàng Vietcombank", 2, "Phân tích rủi ro tài chính" },
-                    { "DT017", (byte)2, 14, 6, (short)2025, "Công ty Chứng khoán SSI", 3, "Dự báo thị trường chứng khoán" },
-                    { "DT018", (byte)3, 20, 6, (short)2025, "Ngân hàng BIDV", 1, "Ứng dụng AI trong ngân hàng" },
-                    { "DT019", (byte)1, 18, 7, (short)2025, "Công ty VinFast", 2, "Thiết kế robot công nghiệp" },
-                    { "DT020", (byte)2, 9, 7, (short)2025, "Công ty Cơ khí Hà Nội", 3, "Gia công cơ khí chính xác" },
-                    { "DT021", (byte)3, 12, 7, (short)2025, "Công ty SamSung Việt Nam", 1, "Ứng dụng CAD/CAM trong sản xuất" },
-                    { "DT022", (byte)1, 16, 8, (short)2025, "Công ty Toyota Việt Nam", 2, "Nghiên cứu động cơ hybrid" },
-                    { "DT023", (byte)2, 5, 8, (short)2025, "Công ty Thủy điện Hòa Bình", 3, "Mô phỏng dòng chảy chất lỏng" },
-                    { "DT024", (byte)3, 8, 8, (short)2025, "Công ty Cơ khí Đông Anh", 1, "Ứng dụng in 3D trong cơ khí" },
-                    { "DT025", (byte)1, 15, 9, (short)2025, "Công ty Điện mặt trời TTC", 2, "Công nghệ năng lượng tái tạo" },
-                    { "DT026", (byte)2, 13, 9, (short)2025, "Công ty Điện gió Bạc Liêu", 3, "Ứng dụng năng lượng gió" },
-                    { "DT027", (byte)3, 19, 9, (short)2025, "Công ty Pin Rạng Đông", 1, "Nghiên cứu pin lưu trữ năng lượng" },
-                    { "DT028", (byte)1, 4, 10, (short)2025, "Công ty Môi trường Bình Dương", 2, "Xử lý chất thải rắn" },
-                    { "DT029", (byte)2, 11, 10, (short)2025, "Công ty Cấp nước Sài Gòn", 3, "Quản lý tài nguyên nước" }
+                    { "DT001", (byte)1, 10, 1, "2023-2024", "Công ty FPT Software", 2, "Hệ thống quản lý sinh viên" },
+                    { "DT002", (byte)2, 15, 1, "2023-2024", "Công ty VNPT", 3, "Ứng dụng web thương mại điện tử" },
+                    { "DT003", (byte)3, 20, 1, "2023-2024", "Công ty Viettel", 1, "AI gợi ý đề tài nghiên cứu" },
+                    { "DT004", (byte)1, 12, 2, "2023-2024", "Công ty EVN", 3, "Phát triển hệ thống IoT giám sát môi trường" },
+                    { "DT005", (byte)2, 18, 2, "2023-2024", "Công ty Mobifone", 2, "Ứng dụng phân tích dữ liệu lớn" },
+                    { "DT006", (byte)3, 8, 2, "2023-2024", "Công ty VNG", 1, "Ứng dụng di động quản lý y tế" },
+                    { "DT007", (byte)1, 9, 3, "2023-2024", "Công ty Hóa chất Việt Nam", 2, "Nghiên cứu vật liệu mới" },
+                    { "DT008", (byte)2, 14, 3, "2023-2024", "Công ty Sơn Hà", 3, "Quy trình sản xuất hóa chất xanh" },
+                    { "DT009", (byte)3, 11, 3, "2023-2024", "Công ty Nước sạch Hà Nội", 1, "Xử lý nước thải công nghiệp" },
+                    { "DT010", (byte)1, 7, 4, "2023-2024", "Công ty Hóa chất Việt Nam", 2, "Nghiên cứu xúc tác hữu cơ" },
+                    { "DT011", (byte)2, 13, 4, "2023-2024", "Công ty Nhựa Bình Minh", 3, "Sản xuất nhựa sinh học" },
+                    { "DT012", (byte)3, 19, 4, "2023-2024", "Công ty Môi trường Đô thị Hà Nội", 1, "Xử lý rác thải đô thị" },
+                    { "DT013", (byte)1, 6, 5, "2024-2025", "Công ty KPMG Việt Nam", 2, "Phân tích tài chính doanh nghiệp" },
+                    { "DT014", (byte)2, 11, 5, "2024-2025", "Công ty Deloitte Việt Nam", 3, "Hệ thống kế toán quản trị" },
+                    { "DT015", (byte)3, 17, 5, "2024-2025", "Công ty PwC Việt Nam", 1, "Ứng dụng Blockchain trong kế toán" },
+                    { "DT016", (byte)1, 10, 6, "2024-2025", "Ngân hàng Vietcombank", 2, "Phân tích rủi ro tài chính" },
+                    { "DT017", (byte)2, 14, 6, "2024-2025", "Công ty Chứng khoán SSI", 3, "Dự báo thị trường chứng khoán" },
+                    { "DT018", (byte)3, 20, 6, "2024-2025", "Ngân hàng BIDV", 1, "Ứng dụng AI trong ngân hàng" },
+                    { "DT019", (byte)1, 18, 7, "2024-2025", "Công ty VinFast", 2, "Thiết kế robot công nghiệp" },
+                    { "DT020", (byte)2, 9, 7, "2024-2025", "Công ty Cơ khí Hà Nội", 3, "Gia công cơ khí chính xác" },
+                    { "DT021", (byte)3, 12, 7, "2024-2025", "Công ty SamSung Việt Nam", 1, "Ứng dụng CAD/CAM trong sản xuất" },
+                    { "DT022", (byte)1, 16, 8, "2024-2025", "Công ty Toyota Việt Nam", 2, "Nghiên cứu động cơ hybrid" },
+                    { "DT023", (byte)2, 5, 8, "2024-2025", "Công ty Thủy điện Hòa Bình", 3, "Mô phỏng dòng chảy chất lỏng" },
+                    { "DT024", (byte)3, 8, 8, "2024-2025", "Công ty Cơ khí Đông Anh", 1, "Ứng dụng in 3D trong cơ khí" },
+                    { "DT025", (byte)1, 15, 9, "2024-2025", "Công ty Điện mặt trời TTC", 2, "Công nghệ năng lượng tái tạo" },
+                    { "DT026", (byte)2, 13, 9, "2024-2025", "Công ty Điện gió Bạc Liêu", 3, "Ứng dụng năng lượng gió" },
+                    { "DT027", (byte)3, 19, 9, "2024-2025", "Công ty Pin Rạng Đông", 1, "Nghiên cứu pin lưu trữ năng lượng" },
+                    { "DT028", (byte)1, 4, 10, "2024-2025", "Công ty Môi trường Bình Dương", 2, "Xử lý chất thải rắn" },
+                    { "DT029", (byte)2, 11, 10, "2024-2025", "Công ty Cấp nước Sài Gòn", 3, "Quản lý tài nguyên nước" }
                 });
 
             migrationBuilder.InsertData(

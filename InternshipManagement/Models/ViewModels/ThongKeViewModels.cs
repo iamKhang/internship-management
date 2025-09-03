@@ -50,7 +50,7 @@
 
     public class TermSummaryVm
     {
-        public int NamHoc { get; set; }
+        public string NamHoc { get; set; } = "";
         public byte HocKy { get; set; }
         public int SlotDaDung { get; set; }
         public int HoanThanh { get; set; }
