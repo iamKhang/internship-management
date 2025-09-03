@@ -6,6 +6,7 @@ using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
 
 static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
 {
@@ -63,6 +64,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllersWithViews();
+
+// Configure EPPlus
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 // Configure EF Core
 builder.Services.AddDbContext<AppDbContext>(options =>

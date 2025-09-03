@@ -55,7 +55,7 @@
                     && (User.IsInRole("GiangVien") || User.IsInRole("Admin")))
                 {
                     <div class="col-auto d-flex align-items-end">
-                        <button type="button" id="btnExport" class="btn btn-success d-flex align-items-center px-3 py-2">
+                        <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2" data-bs-toggle="modal" data-bs-target="#exportModal">
                             <i class="bi bi-table me-1"></i> Export
                         </button>
                     </div>
@@ -215,18 +215,91 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h6 class="modal-title">Xuất dữ liệu</h6>
+                <h6 class="modal-title">Tùy chọn xuất dữ liệu</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
-                Bạn có muốn <strong>kèm thông tin sinh viên</strong> (trạng thái (Chuẩn bị/Đang/Đã hoàn thành đề tài), ngày đăng ký, ngày chấp nhận, kết quả, ghi chú) trong file export không?
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Thông tin đề tài</label>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkMaDt" checked>
+                                <label class="form-check-label" for="chkMaDt">Mã đề tài</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkTenDt" checked>
+                                <label class="form-check-label" for="chkTenDt">Tên đề tài</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkGiangVien" checked>
+                                <label class="form-check-label" for="chkGiangVien">Giảng viên</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkKhoa" checked>
+                                <label class="form-check-label" for="chkKhoa">Khoa</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkHocKy" checked>
+                                <label class="form-check-label" for="chkHocKy">Học kỳ/Năm học</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkSoLuong" checked>
+                                <label class="form-check-label" for="chkSoLuong">Số lượng</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkKinhPhi" checked>
+                                <label class="form-check-label" for="chkKinhPhi">Kinh phí</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkNoiThucTap" checked>
+                                <label class="form-check-label" for="chkNoiThucTap">Nơi thực tập</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkSinhVien">
+                        <label class="form-check-label fw-bold" for="chkSinhVien">
+                            Kèm thông tin sinh viên
+                        </label>
+                    </div>
+                    <div class="ps-4 mt-2" id="sinhVienOptions" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSvHoTen" checked disabled>
+                            <label class="form-check-label" for="chkSvHoTen">Họ tên sinh viên</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSvMaSv" checked disabled>
+                            <label class="form-check-label" for="chkSvMaSv">Mã sinh viên</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSvTrangThai" checked disabled>
+                            <label class="form-check-label" for="chkSvTrangThai">Trạng thái</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSvNgayDK" checked disabled>
+                            <label class="form-check-label" for="chkSvNgayDK">Ngày đăng ký</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSvKetQua" checked disabled>
+                            <label class="form-check-label" for="chkSvKetQua">Kết quả</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSvGhiChu" checked disabled>
+                            <label class="form-check-label" for="chkSvGhiChu">Ghi chú</label>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="btnExportBasic" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    Chỉ đề tài
-                </button>
-                <button type="button" id="btnExportDetail" class="btn btn-success">
-                    Kèm sinh viên
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnExport" class="btn btn-success">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel
                 </button>
             </div>
         </div>
@@ -239,42 +312,75 @@
   const form = document.getElementById('filterForm');
   const btnExport = document.getElementById('btnExport');
   const tinhTrang = document.getElementById('Filter_TinhTrang');
+  const chkSinhVien = document.getElementById('chkSinhVien');
+  const sinhVienOptions = document.getElementById('sinhVienOptions');
 
-  const urlExport       = '@Url.Action("Export","DeTai")';
+  const urlExport = '@Url.Action("Export","DeTai")';
   const urlExportDetail = '@Url.Action("ExportChiTiet","DeTai")';
 
-  // Tạo URL với query string từ form mà KHÔNG đổi action của form
+  // Tạo URL với query string từ form và các checkbox
   function exportWith(url) {
-    const fd = new FormData(form);
-    const qs = new URLSearchParams(fd).toString();
-    // mở thẳng URL export (GET) với đầy đủ filter
-    window.location.href = url + (qs ? ('?' + qs) : '');
+    // Lấy các tham số từ form filter
+    const params = new URLSearchParams(new FormData(form));
+    
+    // Thêm các tùy chọn cột vào query string
+    params.append('includeMaDt', document.getElementById('chkMaDt').checked);
+    params.append('includeTenDt', document.getElementById('chkTenDt').checked);
+    params.append('includeGiangVien', document.getElementById('chkGiangVien').checked);
+    params.append('includeKhoa', document.getElementById('chkKhoa').checked);
+    params.append('includeHocKy', document.getElementById('chkHocKy').checked);
+    params.append('includeSoLuong', document.getElementById('chkSoLuong').checked);
+    params.append('includeKinhPhi', document.getElementById('chkKinhPhi').checked);
+    params.append('includeNoiThucTap', document.getElementById('chkNoiThucTap').checked);
+
+    if (chkSinhVien.checked) {
+      params.append('includeSinhVien', true);
+      params.append('includeSvHoTen', document.getElementById('chkSvHoTen').checked);
+      params.append('includeSvMaSv', document.getElementById('chkSvMaSv').checked);
+      params.append('includeSvTrangThai', document.getElementById('chkSvTrangThai').checked);
+      params.append('includeSvNgayDK', document.getElementById('chkSvNgayDK').checked);
+      params.append('includeSvKetQua', document.getElementById('chkSvKetQua').checked);
+      params.append('includeSvGhiChu', document.getElementById('chkSvGhiChu').checked);
+    }
+
+    window.location.href = url + '?' + params.toString();
   }
 
   // Modal Bootstrap 5
   const exportModalEl = document.getElementById('exportModal');
   const modal = new bootstrap.Modal(exportModalEl);
 
-  // Click Export
-  btnExport.addEventListener('click', function () {
-    // Nếu chọn "Chưa có sinh viên đăng ký" -> export thường, khỏi hỏi
+  // Xử lý khi mở modal export
+  exportModalEl.addEventListener('show.bs.modal', function () {
+    // Nếu chọn "Chưa có sinh viên đăng ký" -> ẩn phần sinh viên
     if (tinhTrang && tinhTrang.value === 'OnlyNoStudent') {
-      exportWith(urlExport);
-      return;
+      chkSinhVien.checked = false;
+      chkSinhVien.disabled = true;
+      sinhVienOptions.style.display = 'none';
+    } else {
+      chkSinhVien.disabled = false;
     }
-    // Ngược lại: hỏi người dùng
-    modal.show();
   });
 
-  // Nút trong modal
-  document.getElementById('btnExportBasic').addEventListener('click', function () {
-    modal.hide();
-    exportWith(urlExport);
+  // Xử lý hiện/ẩn tùy chọn sinh viên
+  chkSinhVien.addEventListener('change', function() {
+    sinhVienOptions.style.display = this.checked ? 'block' : 'none';
+    const svCheckboxes = sinhVienOptions.querySelectorAll('input[type="checkbox"]');
+    svCheckboxes.forEach(cb => {
+      cb.disabled = !this.checked;
+    });
   });
 
-  document.getElementById('btnExportDetail').addEventListener('click', function () {
+  // Click nút Export trong modal
+  btnExport.addEventListener('click', function() {
+    // Ẩn modal và xóa backdrop
     modal.hide();
-    exportWith(urlExportDetail);
+    document.querySelector('.modal-backdrop')?.remove();
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+    
+    // Export dữ liệu
+    exportWith(chkSinhVien.checked ? urlExportDetail : urlExport);
   });
 })();
     </script>

@@ -66,49 +66,142 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Export([FromQuery] DeTaiFilterVm filter)
+        public async Task<IActionResult> Export([FromQuery] DeTaiFilterVm filter,
+            bool includeMaDt = true, bool includeTenDt = true, bool includeGiangVien = true,
+            bool includeKhoa = true, bool includeHocKy = true, bool includeSoLuong = true,
+            bool includeKinhPhi = true, bool includeNoiThucTap = true)
         {
-            var rows = await _repo.GetForExportAsync(filter); // 👈 lấy full dữ liệu
+            var rows = await _repo.GetForExportAsync(filter);
 
             using var wb = new XLWorkbook();
-            var ws = wb.Worksheets.Add("DeTai");
+            
+            // Sheet thông tin
+            var infoSheet = wb.Worksheets.Add("ThongTin");
+            infoSheet.Cell("A1").Value = "THÔNG TIN FILE EXPORT";
+            infoSheet.Cell("A1").Style.Font.Bold = true;
+            infoSheet.Cell("A1").Style.Font.FontSize = 14;
 
+            infoSheet.Cell("A3").Value = "Ngày xuất:";
+            infoSheet.Cell("B3").Value = DateTime.Now;
+            infoSheet.Cell("B3").Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+
+            infoSheet.Cell("A4").Value = "Loại export:";
+            infoSheet.Cell("B4").Value = "Danh sách đề tài";
+
+            infoSheet.Cell("A5").Value = "Bộ lọc áp dụng:";
+            infoSheet.Cell("A6").Value = "- Khoa:";
+            infoSheet.Cell("B6").Value = filter.MaKhoa ?? "Tất cả";
+            infoSheet.Cell("A7").Value = "- Giảng viên:";
+            infoSheet.Cell("B7").Value = filter.MaGv.HasValue ? filter.MaGv.ToString() : "Tất cả";
+            infoSheet.Cell("A8").Value = "- Học kỳ:";
+            infoSheet.Cell("B8").Value = filter.HocKy.HasValue ? filter.HocKy.ToString() : "Tất cả";
+            infoSheet.Cell("A9").Value = "- Năm học:";
+            infoSheet.Cell("B9").Value = filter.NamHoc ?? "Tất cả";
+            infoSheet.Cell("A10").Value = "- Tình trạng:";
+            infoSheet.Cell("B10").Value = filter.TinhTrang.ToString();
+            infoSheet.Cell("A11").Value = "- Từ khóa:";
+            infoSheet.Cell("B11").Value = filter.Keyword ?? "Không";
+
+            infoSheet.Column(1).Width = 15;
+            infoSheet.Column(2).Width = 30;
+            infoSheet.Range("A1:B1").Merge();
+            infoSheet.Range("A1:B11").Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            // Sheet dữ liệu
+            var ws = wb.Worksheets.Add("DanhSachDeTai");
             var r = 1;
-            ws.Cell(r, 1).Value = "Mã ĐT";
-            ws.Cell(r, 2).Value = "Tên đề tài";
-            ws.Cell(r, 3).Value = "Giảng viên";
-            ws.Cell(r, 4).Value = "Tên khoa";
-            ws.Cell(r, 5).Value = "Học kỳ";
-            ws.Cell(r, 6).Value = "Số lượng tối đa";
-            ws.Cell(r, 7).Value = "Đã đủ";
-            ws.Cell(r, 8).Value = "Kinh phí";
-            ws.Cell(r, 9).Value = "Nơi thực tập";
-            ws.Row(r).Style.Font.Bold = true;
+            var c = 1;
+            var columnMap = new Dictionary<string, int>();
 
+            // STT luôn là cột đầu tiên
+            ws.Cell(r, c).Value = "STT";
+            columnMap["STT"] = c++;
+
+            // Thêm header theo tùy chọn
+            if (includeMaDt)
+            {
+                ws.Cell(r, c).Value = "Mã ĐT";
+                columnMap["MaDt"] = c++;
+            }
+            if (includeTenDt)
+            {
+                ws.Cell(r, c).Value = "Tên đề tài";
+                columnMap["TenDt"] = c++;
+            }
+            if (includeGiangVien)
+            {
+                ws.Cell(r, c).Value = "Giảng viên";
+                columnMap["GiangVien"] = c++;
+            }
+            if (includeKhoa)
+            {
+                ws.Cell(r, c).Value = "Tên khoa";
+                columnMap["Khoa"] = c++;
+            }
+            if (includeHocKy)
+            {
+                ws.Cell(r, c).Value = "Học kỳ";
+                columnMap["HocKy"] = c++;
+            }
+            if (includeSoLuong)
+            {
+                ws.Cell(r, c).Value = "Số lượng tối đa";
+                columnMap["SoLuong"] = c++;
+                ws.Cell(r, c).Value = "Đã đủ";
+                columnMap["DaDu"] = c++;
+            }
+            if (includeKinhPhi)
+            {
+                ws.Cell(r, c).Value = "Kinh phí";
+                columnMap["KinhPhi"] = c++;
+            }
+            if (includeNoiThucTap)
+            {
+                ws.Cell(r, c).Value = "Nơi thực tập";
+                columnMap["NoiThucTap"] = c++;
+            }
+
+            ws.Row(r).Style.Font.Bold = true;
+            ws.Row(r).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
+
+            // Thêm dữ liệu
             foreach (var x in rows)
             {
                 r++;
-                ws.Cell(r, 1).Value = x.MaDt;
-                ws.Cell(r, 2).Value = x.TenDt ?? "";
-                ws.Cell(r, 3).Value = x.TenGv;
-                ws.Cell(r, 4).Value = x.TenKhoa;
-                ws.Cell(r, 5).Value = $"{x.HocKy}/{x.NamHoc}";
-
-                // C6: Số lượng tối đa
-                ws.Cell(r, 6).Value = x.SoLuongToiDa;
-
-                // C7: ĐÃ ĐỦ (✓ nếu full)
-                ws.Cell(r, 7).Value = x.IsFull ? "✓" : "";
-                ws.Column(7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                // C8: Kinh phí (đổi sang VNĐ)
-                ws.Cell(r, 8).Value = x.KinhPhi.HasValue
-                    ? (double)(x.KinhPhi.Value * 1_000_000)
-                    : (double?)null;
-                ws.Column(8).Style.NumberFormat.Format = "#,##0\" ₫\"";
-
-                // C9: Nơi thực tập
-                ws.Cell(r, 9).Value = x.NoiThucTap ?? "";
+                if (includeMaDt)
+                    ws.Cell(r, columnMap["MaDt"]).Value = x.MaDt;
+                
+                if (includeTenDt)
+                    ws.Cell(r, columnMap["TenDt"]).Value = x.TenDt ?? "";
+                
+                if (includeGiangVien)
+                    ws.Cell(r, columnMap["GiangVien"]).Value = x.TenGv;
+                
+                if (includeKhoa)
+                    ws.Cell(r, columnMap["Khoa"]).Value = x.TenKhoa;
+                
+                if (includeHocKy)
+                    ws.Cell(r, columnMap["HocKy"]).Value = $"{x.HocKy}/{x.NamHoc}";
+                    ws.Cell(r, columnMap["HocKy"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                
+                if (includeSoLuong)
+                {
+                    ws.Cell(r, columnMap["SoLuong"]).Value = x.SoLuongToiDa;
+                    ws.Cell(r, columnMap["DaDu"]).Value = x.IsFull ? "✓" : "";
+                    ws.Column(columnMap["DaDu"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                
+                if (includeKinhPhi)
+                {
+                    var cellKinhPhi = ws.Cell(r, columnMap["KinhPhi"]);
+                    cellKinhPhi.Value = x.KinhPhi.HasValue
+                        ? (double)(x.KinhPhi.Value * 1_000_000)
+                        : (double?)null;
+                    cellKinhPhi.Style.NumberFormat.Format = "#,##0\" ₫\"";
+                }
+                
+                if (includeNoiThucTap)
+                    ws.Cell(r, columnMap["NoiThucTap"]).Value = x.NoiThucTap ?? "";
             }
 
             ws.Columns().AdjustToContents();
@@ -124,23 +217,135 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportChiTiet([FromQuery] DeTaiFilterVm filter)
+        public async Task<IActionResult> ExportChiTiet([FromQuery] DeTaiFilterVm filter,
+            bool includeMaDt = true, bool includeTenDt = true, bool includeGiangVien = true,
+            bool includeKhoa = true, bool includeHocKy = true, bool includeSoLuong = true,
+            bool includeKinhPhi = true, bool includeNoiThucTap = true,
+            bool includeSvMaSv = true, bool includeSvHoTen = true, bool includeSvTrangThai = true,
+            bool includeSvNgayDK = true, bool includeSvKetQua = true, bool includeSvGhiChu = true)
         {
             var rows = await _repo.GetChiTietForExportAsync(filter);
 
             using var wb = new XLWorkbook();
             var ws = wb.Worksheets.Add("DeTai_ChiTiet");
 
-            // Header
+            // Thêm thông tin file
+            var infoSheet = wb.Worksheets.Add("ThongTin");
+            infoSheet.Cell("A1").Value = "THÔNG TIN FILE EXPORT";
+            infoSheet.Cell("A1").Style.Font.Bold = true;
+            infoSheet.Cell("A1").Style.Font.FontSize = 14;
+
+            infoSheet.Cell("A3").Value = "Ngày xuất:";
+            infoSheet.Cell("B3").Value = DateTime.Now;
+            infoSheet.Cell("B3").Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+
+            infoSheet.Cell("A4").Value = "Bộ lọc áp dụng:";
+            infoSheet.Cell("A5").Value = "- Khoa:";
+            infoSheet.Cell("B5").Value = filter.MaKhoa ?? "Tất cả";
+            infoSheet.Cell("A6").Value = "- Giảng viên:";
+            infoSheet.Cell("B6").Value = filter.MaGv.HasValue ? filter.MaGv.ToString() : "Tất cả";
+            infoSheet.Cell("A7").Value = "- Học kỳ:";
+            infoSheet.Cell("B7").Value = filter.HocKy.HasValue ? filter.HocKy.ToString() : "Tất cả";
+            infoSheet.Cell("A8").Value = "- Năm học:";
+            infoSheet.Cell("B8").Value = filter.NamHoc ?? "Tất cả";
+            infoSheet.Cell("A9").Value = "- Tình trạng:";
+            infoSheet.Cell("B9").Value = filter.TinhTrang.ToString();
+            infoSheet.Cell("A10").Value = "- Từ khóa:";
+            infoSheet.Cell("B10").Value = filter.Keyword ?? "Không";
+
+            infoSheet.Columns().AdjustToContents();
+
+            // Sheet dữ liệu chính
             int r = 1;
-            string[] headers = {
-                "Tên đề tài","Mã GV","Giảng viên","Mã khoa","Mã ĐT","Tên khoa",
-                "Học kỳ","Năm học","Số lượng (Đã chấp nhận/Tối đa)",
-                "Đã đủ","Kinh phí (VNĐ)","Nơi thực tập",
-                "Mã SV","Họ tên SV","Trạng thái","Ngày đăng ký","Ngày chấp nhận","Kết quả","Ghi chú"
-            };
-            for (int c = 1; c <= headers.Length; c++) ws.Cell(r, c).Value = headers[c - 1];
+            var c = 1;
+            var columnMap = new Dictionary<string, int>();
+
+            // Header nhóm Đề tài
+            ws.Cell(r, c).Value = "THÔNG TIN ĐỀ TÀI";
+            var startCol = c;
+            c++;
+
+            if (includeMaDt) c++;
+            if (includeTenDt) c++;
+            if (includeGiangVien) c++;
+            if (includeKhoa) c++;
+            if (includeHocKy) c++;
+            if (includeSoLuong) c += 2;
+            if (includeKinhPhi) c++;
+            if (includeNoiThucTap) c++;
+
+            var endCol = c - 1;
+            if (endCol >= startCol)
+            {
+                ws.Range(r, startCol, r, endCol).Merge();
+                ws.Range(r, startCol, r, endCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+
+            // Header nhóm Sinh viên
+            if (includeSvMaSv || includeSvHoTen || includeSvTrangThai || includeSvNgayDK || includeSvKetQua || includeSvGhiChu)
+            {
+                startCol = c;
+                ws.Cell(r, c).Value = "THÔNG TIN SINH VIÊN";
+                c++;
+
+                if (includeSvMaSv) c++;
+                if (includeSvHoTen) c++;
+                if (includeSvTrangThai) c++;
+                if (includeSvNgayDK) c++;
+                if (includeSvKetQua) c++;
+                if (includeSvGhiChu) c++;
+
+                endCol = c - 1;
+                if (endCol >= startCol)
+                {
+                    ws.Range(r, startCol, r, endCol).Merge();
+                    ws.Range(r, startCol, r, endCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+            }
+
+            // Định dạng header nhóm
             ws.Row(r).Style.Font.Bold = true;
+            ws.Row(r).Style.Fill.BackgroundColor = XLColor.FromHtml("#E8F3FF");
+            r++;
+
+            // STT luôn là cột đầu tiên
+            c = 1;
+            ws.Cell(r, c).Value = "STT";
+            columnMap["STT"] = c++;
+
+            // Thêm header theo tùy chọn
+            void AddHeader(string key, string title, bool include)
+            {
+                if (!include) return;
+                ws.Cell(r, c).Value = title;
+                columnMap[key] = c++;
+            }
+
+            // Header đề tài
+            AddHeader("MaDt", "Mã đề tài", includeMaDt);
+            AddHeader("TenDt", "Tên đề tài", includeTenDt);
+            AddHeader("GiangVien", "Giảng viên", includeGiangVien);
+            AddHeader("Khoa", "Tên khoa", includeKhoa);
+            AddHeader("HocKy", "Học kỳ/Năm học", includeHocKy);
+            if (includeSoLuong)
+            {
+                AddHeader("SoLuong", "Số lượng (Đã chấp nhận/Tối đa)", true);
+                AddHeader("DaDu", "Đã đủ", true);
+            }
+            AddHeader("KinhPhi", "Kinh phí (VNĐ)", includeKinhPhi);
+            AddHeader("NoiThucTap", "Nơi thực tập", includeNoiThucTap);
+
+            // Header sinh viên
+            AddHeader("MaSv", "Mã SV", includeSvMaSv);
+            AddHeader("HoTenSv", "Họ tên SV", includeSvHoTen);
+            AddHeader("TrangThai", "Trạng thái", includeSvTrangThai);
+            AddHeader("NgayDK", "Ngày đăng ký", includeSvNgayDK);
+            AddHeader("KetQua", "Kết quả", includeSvKetQua);
+            AddHeader("GhiChu", "Ghi chú", includeSvGhiChu);
+
+            // Định dạng header
+            ws.Row(r).Style.Font.Bold = true;
+            ws.Row(r).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
 
             // Body
             string StatusVi(byte st) => st switch
@@ -151,68 +356,139 @@ namespace InternshipManagement.Controllers
                 _ => ""
             };
 
-            foreach (var x in rows)
+            // Gom nhóm dữ liệu theo đề tài
+            var groupedRows = rows.GroupBy(x => x.MaDt).ToList();
+            int stt = 1;
+
+            foreach (var group in groupedRows)
             {
-                r++;
-                ws.Cell(r, 1).Value = x.TenDt;
-                ws.Cell(r, 2).Value = x.MaGv;
-                ws.Cell(r, 3).Value = x.TenGv;
-                ws.Cell(r, 4).Value = x.MaKhoa;
-                ws.Cell(r, 5).Value = x.MaDt;
-                ws.Cell(r, 6).Value = x.TenKhoa;
-                ws.Cell(r, 7).Value = x.HocKy;
-                ws.Cell(r, 8).Value = x.NamHoc;
+                var firstRow = group.First();
+                var startRow = r + 1;
+                var rowCount = group.Count();
 
-                // Số lượng: "SoChapNhan/SoLuongToiDa"
-                ws.Cell(r, 9).Value = $"{x.SoChapNhan}/{x.SoLuongToiDa}";
-
-                // IsFull: "✓" căn giữa
-                var cIsFull = ws.Cell(r, 10);
-                cIsFull.Value = x.IsFull ? "✓" : "";
-                cIsFull.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                // Kinh phí: nhân 1_000_000 và format VND
-                var cMoney = ws.Cell(r, 11);
-                if (x.KinhPhi.HasValue)
+                // Thông tin đề tài (gộp ô theo số lượng sinh viên)
+                if (rowCount > 1)
                 {
-                    cMoney.Value = (double)(x.KinhPhi.Value * 1_000_000);
-                    cMoney.Style.NumberFormat.Format = "#,##0\" ₫\"";
-                }
-                else
-                {
-                    cMoney.Value = "";
+                    if (includeMaDt)
+                        ws.Range(startRow, columnMap["MaDt"], startRow + rowCount - 1, columnMap["MaDt"]).Merge();
+                    if (includeTenDt)
+                        ws.Range(startRow, columnMap["TenDt"], startRow + rowCount - 1, columnMap["TenDt"]).Merge();
+                    if (includeGiangVien)
+                        ws.Range(startRow, columnMap["GiangVien"], startRow + rowCount - 1, columnMap["GiangVien"]).Merge();
+                    if (includeKhoa)
+                        ws.Range(startRow, columnMap["Khoa"], startRow + rowCount - 1, columnMap["Khoa"]).Merge();
+                    if (includeHocKy)
+                        ws.Range(startRow, columnMap["HocKy"], startRow + rowCount - 1, columnMap["HocKy"]).Merge();
+                    if (includeSoLuong)
+                    {
+                        ws.Range(startRow, columnMap["SoLuong"], startRow + rowCount - 1, columnMap["SoLuong"]).Merge();
+                        ws.Range(startRow, columnMap["DaDu"], startRow + rowCount - 1, columnMap["DaDu"]).Merge();
+                    }
+                    if (includeKinhPhi)
+                        ws.Range(startRow, columnMap["KinhPhi"], startRow + rowCount - 1, columnMap["KinhPhi"]).Merge();
+                    if (includeNoiThucTap)
+                        ws.Range(startRow, columnMap["NoiThucTap"], startRow + rowCount - 1, columnMap["NoiThucTap"]).Merge();
                 }
 
-                ws.Cell(r, 12).Value = x.NoiThucTap ?? "";
-                ws.Cell(r, 13).Value = x.MaSv.HasValue ? x.MaSv.Value : 0;
-                ws.Cell(r, 14).Value = x.HoTenSv ?? "";
-
-                ws.Cell(r, 15).Value = StatusVi(x.TrangThai);
-
-                var cNgayDK = ws.Cell(r, 16);
-                if (x.NgayDangKy.HasValue)
+                // Thông tin đề tài
+                foreach (var x in group)
                 {
-                    cNgayDK.Value = x.NgayDangKy.Value;
-                    cNgayDK.Style.DateFormat.Format = "dd/MM/yyyy";
+                    r++;
+                    ws.Cell(r, columnMap["STT"]).Value = stt;
+
+                    if (includeMaDt)
+                        ws.Cell(r, columnMap["MaDt"]).Value = x.MaDt;
+                    
+                    if (includeTenDt)
+                        ws.Cell(r, columnMap["TenDt"]).Value = x.TenDt ?? "";
+                    
+                    if (includeGiangVien)
+                        ws.Cell(r, columnMap["GiangVien"]).Value = x.TenGv;
+                    
+                    if (includeKhoa)
+                        ws.Cell(r, columnMap["Khoa"]).Value = x.TenKhoa;
+                    
+                    if (includeHocKy)
+                        ws.Cell(r, columnMap["HocKy"]).Value = $"{x.HocKy}/{x.NamHoc}";
+                    
+                    if (includeSoLuong)
+                    {
+                        ws.Cell(r, columnMap["SoLuong"]).Value = $"{x.SoChapNhan}/{x.SoLuongToiDa}";
+                        var cDaDu = ws.Cell(r, columnMap["DaDu"]);
+                        cDaDu.Value = x.IsFull ? "✓" : "";
+                        cDaDu.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    
+                    if (includeKinhPhi)
+                    {
+                        var cKinhPhi = ws.Cell(r, columnMap["KinhPhi"]);
+                        if (x.KinhPhi.HasValue)
+                        {
+                            cKinhPhi.Value = (double)(x.KinhPhi.Value * 1_000_000);
+                            cKinhPhi.Style.NumberFormat.Format = "#,##0\" ₫\"";
+                        }
+                    }
+                    
+                    if (includeNoiThucTap)
+                        ws.Cell(r, columnMap["NoiThucTap"]).Value = x.NoiThucTap ?? "";
+
+                    // Thông tin sinh viên (không gộp ô)
+                    if (includeSvMaSv)
+                        ws.Cell(r, columnMap["MaSv"]).Value = x.MaSv.HasValue ? x.MaSv.Value : 0;
+                    
+                    if (includeSvHoTen)
+                        ws.Cell(r, columnMap["HoTenSv"]).Value = x.HoTenSv ?? "";
+                    
+                    if (includeSvTrangThai)
+                        ws.Cell(r, columnMap["TrangThai"]).Value = StatusVi(x.TrangThai);
+                    
+                    if (includeSvNgayDK && x.NgayDangKy.HasValue)
+                    {
+                        var cNgayDK = ws.Cell(r, columnMap["NgayDK"]);
+                        cNgayDK.Value = x.NgayDangKy.Value;
+                        cNgayDK.Style.DateFormat.Format = "dd/MM/yyyy";
+                    }
+                    
+                    if (includeSvKetQua && x.KetQua.HasValue)
+                        ws.Cell(r, columnMap["KetQua"]).Value = (double)x.KetQua.Value;
+                    
+                    if (includeSvGhiChu)
+                        ws.Cell(r, columnMap["GhiChu"]).Value = x.GhiChu ?? "";
                 }
 
-                var cNgayCN = ws.Cell(r, 17);
-                if (x.NgayChapNhan.HasValue)
+                // Gộp ô STT
+                if (rowCount > 1)
                 {
-                    cNgayCN.Value = x.NgayChapNhan.Value;
-                    cNgayCN.Style.DateFormat.Format = "dd/MM/yyyy";
+                    ws.Range(startRow, columnMap["STT"], startRow + rowCount - 1, columnMap["STT"]).Merge();
                 }
-
-                var cKetQua = ws.Cell(r, 18);
-                if (x.KetQua.HasValue) cKetQua.Value = (double)x.KetQua.Value;
-
-                ws.Cell(r, 19).Value = x.GhiChu ?? "";
+                stt++;
             }
 
-            // Định dạng chung
+            // Định dạng toàn bộ bảng
+            var table = ws.Range(1, 1, r, c - 1);
+            table.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            table.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            table.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            // Căn giữa và căn phải các cột
+            ws.Column(columnMap["STT"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            
+            // Căn phải cho cột số lượng và kinh phí
+            if (includeSoLuong)
+            {
+                ws.Column(columnMap["SoLuong"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                ws.Column(columnMap["DaDu"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            if (includeKinhPhi)
+                ws.Column(columnMap["KinhPhi"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            
+            // Căn giữa cho cột trạng thái
+            if (includeSvTrangThai)
+                ws.Column(columnMap["TrangThai"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            // Tự động điều chỉnh độ rộng cột
             ws.Columns().AdjustToContents();
-            ws.SheetView.FreezeRows(1);
-            ws.Column(10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // IsFull toàn cột
+            ws.SheetView.FreezeRows(2); // Đóng băng cả header nhóm và header chi tiết
 
             using var ms = new MemoryStream();
             wb.SaveAs(ms);

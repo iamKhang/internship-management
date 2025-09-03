@@ -14,7 +14,7 @@
 }
 @if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
 {
-    <div class="alert alert-danger shadow-sm">@err</div>
+    <div class="alert alert-danger shadow-sm">@Html.Raw(err)</div>
 }
 
 <form method="get" class="mb-3 p-3 bg-white rounded-3 shadow-sm">
@@ -55,6 +55,9 @@
             <a class="btn btn-success btn-sm text-white py-2" href="@Url.Action("Create")">
                 <i class="bi bi-person-fill-add me-1"></i> Thêm SV
             </a>
+            <button type="button" class="btn btn-primary btn-sm text-white py-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
+            </button>
         </div>
     </div>
 </form>
@@ -177,9 +180,80 @@ else
     </div>
 </div>
 
+@* ---- Import Modal ---- *@
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Sinh viên từ Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" asp-action="Import" id="importForm">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-4">
+                        <label class="form-label">File Excel mẫu</label>
+                        <p class="text-muted small mb-2">
+                            File Excel phải có các cột sau:
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-2">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Họ và tên</th>
+                                        <th>Năm sinh</th>
+                                        <th>Quê quán</th>
+                                        <th>Mã khoa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>Nguyễn Văn A</td>
+                                        <td>2000</td>
+                                        <td>Hà Nội</td>
+                                        <td>CNTT</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-muted small mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Lưu ý: Dòng đầu tiên sẽ được coi là tiêu đề và sẽ bị bỏ qua khi import
+                        </div>
+                        <div class="d-grid">
+                            <a href="@Url.Action("DownloadTemplate")" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-download me-1"></i> Tải biểu mẫu Excel
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label required">Chọn file Excel</label>
+                        <input type="file" class="form-control" name="ExcelFile" accept=".xlsx" required />
+                        <div class="invalid-feedback">Vui lòng chọn file Excel</div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Chỉ chấp nhận file Excel (.xlsx) và dung lượng tối đa 10MB
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="submit" form="importForm" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts{
     <script>
-        // Gán dữ liệu cho modal khi mở
+        // Gán dữ liệu cho modal xóa khi mở
         document.getElementById('deleteSvModal')
             ?.addEventListener('show.bs.modal', function (e) {
                 const btn = e.relatedTarget;
@@ -188,5 +262,16 @@ else
                 document.getElementById('delete-id').value = id || '';
                 document.getElementById('delete-name').textContent = name || '';
             });
+
+        // Xử lý form import
+        document.getElementById('importForm')?.addEventListener('submit', function(e) {
+            const fileInput = this.querySelector('input[type="file"]');
+            if (!fileInput.files.length) {
+                e.preventDefault();
+                fileInput.classList.add('is-invalid');
+            } else {
+                fileInput.classList.remove('is-invalid');
+            }
+        });
     </script>
 }
