@@ -1,7 +1,5 @@
-﻿// Program.cs (.NET 8) — ASP.NET Core MVC + EF Core (SQL Server)
-
-using InternshipManagement.Auth;
-using InternshipManagement.Data; // chứa AppDbContext của bạn
+﻿using InternshipManagement.Auth;
+using InternshipManagement.Data;
 using InternshipManagement.Models;
 using InternshipManagement.Repositories.Implementations;
 using InternshipManagement.Repositories.Interfaces;
@@ -14,8 +12,15 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
     using var scope = services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    // đảm bảo DB đã migrate
-    await db.Database.MigrateAsync();
+    // Ensure database exists and is up to date
+    if (db.Database.GetPendingMigrations().Any())
+    {
+        await db.Database.MigrateAsync();
+    }
+    else if (!await db.Database.CanConnectAsync())
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
 
     var hasher = new PasswordHasher<AppUser>();
 
@@ -27,7 +32,7 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
         db.AppUsers.Add(admin);
     }
 
-    // 2) Toàn bộ SinhVien (1001..1030)
+    // 2) All Students (1001..1030)
     for (int ma = 1001; ma <= 1030; ma++)
     {
         string code = ma.ToString();
@@ -39,7 +44,7 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
         }
     }
 
-    // 3) Toàn bộ GiangVien (1..10)
+    // 3) All Teachers (1..10)
     for (int ma = 1; ma <= 10; ma++)
     {
         string code = ma.ToString();
@@ -56,19 +61,37 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container
 builder.Services.AddControllersWithViews();
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// Repository duy nhất cho SinhVien
-builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.ISinhVienRepository,
-                           InternshipManagement.Repositories.Implementations.SinhVienRepository>();
-builder.Services.AddScoped<InternshipManagement.Repositories.Interfaces.IKhoaRepository,
-                           InternshipManagement.Repositories.Implementations.KhoaRepository>();
+// Configure EF Core
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("Default"), sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+        sqlOptions.CommandTimeout(30);
+    });
+    
+    // Enable sensitive data logging in development
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
+
+// Register repositories
+builder.Services.AddScoped<ISinhVienRepository, SinhVienRepository>();
+builder.Services.AddScoped<IKhoaRepository, KhoaRepository>();
 builder.Services.AddScoped<IGiangVienRepository, GiangVienRepository>();
 builder.Services.AddScoped<IDeTaiRepository, DeTaiRepository>();
 builder.Services.AddScoped<IThongKeRepository, ThongKeRepository>();
 
+// Configure authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
@@ -81,16 +104,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// Configure MVC
 var mvc = builder.Services.AddControllersWithViews();
 if (builder.Environment.IsDevelopment())
 {
     mvc.AddRazorRuntimeCompilation();
 }
 
-
-
 var app = builder.Build();
 
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -108,6 +131,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// Seed initial data
 await SeedUsersAtRuntimeAsync(app.Services);
 
 app.Run();

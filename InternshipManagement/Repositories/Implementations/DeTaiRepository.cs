@@ -7,7 +7,6 @@ using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
 
 public class GvRegistrationVm
 {
@@ -58,459 +57,568 @@ namespace InternshipManagement.Repositories.Implementations
     public class DeTaiRepository : IDeTaiRepository
     {
         private readonly AppDbContext _db;
-        private const string SP_FILTER = "dbo.sp_DeTai_FilterAdvanced";
-        private const string SP_EXPORT = "dbo.sp_DeTai_Export";
-        private const string SP_EXPORT_CHITIET = "dbo.sp_DeTai_ExportChiTiet";
-        private const string SP_DETAIL = "dbo.sp_DeTai_ChiTiet";
-        private const string SP_STUDENT_MYTOPICS = "dbo.sp_SV_DeTaiDaDangKy";
-
         private static string NormCode(string? s) => (s ?? "").Trim().ToUpperInvariant();
         public DeTaiRepository(AppDbContext db) => _db = db;
 
         public async Task<(List<DeTaiListItemVm> items, int totalRows)> FilterAsync(DeTaiFilterVm filter, PagingRequest page)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+            // Build base query
+            var query = _db.DeTais
+                .Include(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(d => d.HuongDans)
+                .AsNoTracking()
+                .AsQueryable();
 
-            await using var cmd = new SqlCommand(SP_FILTER, conn) { CommandType = CommandType.StoredProcedure };
-    //        var acceptedCsv = string.IsNullOrWhiteSpace(filter.AcceptedStatusesCsv)
-    //? "1,2,3"
-    //: filter.AcceptedStatusesCsv;
-            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", acceptedCsv);
-
-            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? "1,2,3");
-            cmd.Parameters.AddWithValue("@MaKhoa", (object?)filter.MaKhoa ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)filter.NamHoc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@TinhTrang", (byte)filter.TinhTrang);
-            cmd.Parameters.AddWithValue("@Keyword", (object?)filter.Keyword ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MinKinhPhi", (object?)filter.MinKinhPhi ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxKinhPhi", (object?)filter.MaxKinhPhi ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@PageIndex", page.PageIndex);
-            cmd.Parameters.AddWithValue("@PageSize", page.PageSize); // Index dùng paging bình thường
-
-            var list = new List<DeTaiListItemVm>();
-            int totalRows = 0;
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(filter.MaKhoa))
             {
-                var item = new DeTaiListItemVm
-                {
-                    MaDt = reader.GetString(reader.GetOrdinal("madt")),
-                    TenDt = reader.IsDBNull(reader.GetOrdinal("tendt")) ? null : reader.GetString(reader.GetOrdinal("tendt")),
-                    MaGv = reader.GetInt32(reader.GetOrdinal("magv")),
-                    HocKy = reader.GetByte(reader.GetOrdinal("hocky")),
-                    NamHoc = reader.GetInt16(reader.GetOrdinal("namhoc")),
-                    SoLuongToiDa = reader.GetInt32(reader.GetOrdinal("soluongtoida")),
-                    NoiThucTap = reader.IsDBNull(reader.GetOrdinal("NoiThucTap")) ? null : reader.GetString(reader.GetOrdinal("NoiThucTap")),
-                    KinhPhi = reader.IsDBNull(reader.GetOrdinal("kinhphi")) ? null : reader.GetInt32(reader.GetOrdinal("kinhphi")),
-                    KhoaOptionVm = new KhoaOptionVm
-                    {
-                        MaKhoa = reader.IsDBNull(reader.GetOrdinal("MaKhoa")) ? "" : reader.GetString(reader.GetOrdinal("MaKhoa")).TrimEnd(),
-                        TenKhoa = reader.IsDBNull(reader.GetOrdinal("TenKhoa")) ? "" : reader.GetString(reader.GetOrdinal("TenKhoa"))
-                    },
-                    SoDangKy = reader.IsDBNull(reader.GetOrdinal("SoDangKy")) ? 0 : reader.GetInt32(reader.GetOrdinal("SoDangKy")),
-                    SoChapNhan = reader.IsDBNull(reader.GetOrdinal("SoChapNhan")) ? 0 : reader.GetInt32(reader.GetOrdinal("SoChapNhan")),
-                    IsFull = reader.GetBoolean(reader.GetOrdinal("IsFull"))
-                };
-
-                if (totalRows == 0 && !reader.IsDBNull(reader.GetOrdinal("TotalRows")))
-                    totalRows = reader.GetInt32(reader.GetOrdinal("TotalRows"));
-
-                list.Add(item);
+                query = query.Where(d => d.GiangVien.MaKhoa == filter.MaKhoa);
             }
 
-            return (list, totalRows);
+            if (filter.MaGv.HasValue)
+            {
+                query = query.Where(d => d.MaGv == filter.MaGv.Value);
+            }
+
+            if (filter.HocKy.HasValue)
+            {
+                query = query.Where(d => d.HocKy == filter.HocKy.Value);
+            }
+
+            if (filter.NamHoc.HasValue)
+            {
+                query = query.Where(d => d.NamHoc == filter.NamHoc.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                var keyword = filter.Keyword.Trim().ToLower();
+                query = query.Where(d => 
+                    d.TenDt != null && d.TenDt.ToLower().Contains(keyword) ||
+                    d.NoiThucTap != null && d.NoiThucTap.ToLower().Contains(keyword));
+            }
+
+            if (filter.MinKinhPhi.HasValue)
+            {
+                query = query.Where(d => d.KinhPhi >= filter.MinKinhPhi.Value);
+            }
+
+            if (filter.MaxKinhPhi.HasValue)
+            {
+                query = query.Where(d => d.KinhPhi <= filter.MaxKinhPhi.Value);
+            }
+
+            // Get total count
+            var totalRows = await query.CountAsync();
+
+            // Apply paging and project to ViewModel
+            var items = await query
+                .OrderBy(d => d.MaDt)
+                .Skip(page.PageIndex * page.PageSize)
+                .Take(page.PageSize)
+                .Select(d => new DeTaiListItemVm
+                {
+                    MaDt = d.MaDt,
+                    TenDt = d.TenDt,
+                    MaGv = d.MaGv,
+                    HocKy = d.HocKy,
+                    NamHoc = d.NamHoc,
+                    SoLuongToiDa = d.SoLuongToiDa,
+                    NoiThucTap = d.NoiThucTap,
+                    KinhPhi = d.KinhPhi,
+                    KhoaOptionVm = new KhoaOptionVm
+                    {
+                        MaKhoa = d.GiangVien != null ? d.GiangVien.MaKhoa ?? "" : "",
+                        TenKhoa = d.GiangVien != null && d.GiangVien.Khoa != null ? d.GiangVien.Khoa.TenKhoa ?? "" : ""
+                    },
+                    SoDangKy = d.HuongDans.Count,
+                    SoChapNhan = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress),
+                    IsFull = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa
+                })
+                .ToListAsync();
+
+            return (items, totalRows);
         }
 
         /// <summary>
-        /// Lấy đầy đủ dữ liệu để export (không phân trang) từ sp_DeTai_Export
+        /// Get full data for export (no paging)
         /// </summary>
         public async Task<List<DeTaiExportRowVm>> GetForExportAsync(DeTaiFilterVm filter)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+            // Build base query
+            var query = _db.DeTais
+                .Include(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(d => d.HuongDans)
+                .AsNoTracking()
+                .AsQueryable();
 
-            await using var cmd = new SqlCommand(SP_EXPORT, conn) { CommandType = CommandType.StoredProcedure };
-
-            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaKhoa", (object?)filter.MaKhoa ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)filter.NamHoc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@TinhTrang", (byte)filter.TinhTrang);
-            cmd.Parameters.AddWithValue("@Keyword", (object?)filter.Keyword ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MinKinhPhi", (object?)filter.MinKinhPhi ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxKinhPhi", (object?)filter.MaxKinhPhi ?? DBNull.Value);
-
-            var rows = new List<DeTaiExportRowVm>();
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(filter.MaKhoa))
             {
-                rows.Add(new DeTaiExportRowVm
-                {
-                    MaDt = reader.GetString(reader.GetOrdinal("MaDt")),
-                    TenDt = reader.IsDBNull(reader.GetOrdinal("TenDt")) ? null : reader.GetString(reader.GetOrdinal("TenDt")),
-                    MaGv = reader.GetInt32(reader.GetOrdinal("MaGv")),
-                    TenGv = reader.IsDBNull(reader.GetOrdinal("TenGv")) ? "" : reader.GetString(reader.GetOrdinal("TenGv")),
-                    MaKhoa = reader.IsDBNull(reader.GetOrdinal("MaKhoa")) ? "" : reader.GetString(reader.GetOrdinal("MaKhoa")).TrimEnd(),
-                    TenKhoa = reader.IsDBNull(reader.GetOrdinal("TenKhoa")) ? "" : reader.GetString(reader.GetOrdinal("TenKhoa")),
-                    HocKy = reader.GetByte(reader.GetOrdinal("HocKy")),
-                    NamHoc = reader.GetInt16(reader.GetOrdinal("NamHoc")),
-                    SoLuongToiDa = reader.GetInt32(reader.GetOrdinal("SoLuongToiDa")),
-                    SoDangKy = reader.GetInt32(reader.GetOrdinal("SoDangKy")),
-                    SoChapNhan = reader.GetInt32(reader.GetOrdinal("SoChapNhan")),
-                    IsFull = reader.GetByte(reader.GetOrdinal("IsFull")) == 1, // proc export cast tinyint
-                    KinhPhi = reader.IsDBNull(reader.GetOrdinal("KinhPhi")) ? null : reader.GetInt32(reader.GetOrdinal("KinhPhi")),
-                    NoiThucTap = reader.IsDBNull(reader.GetOrdinal("NoiThucTap")) ? null : reader.GetString(reader.GetOrdinal("NoiThucTap")),
-                });
+                query = query.Where(d => d.GiangVien.MaKhoa == filter.MaKhoa);
             }
 
-            return rows;
+            if (filter.MaGv.HasValue)
+            {
+                query = query.Where(d => d.MaGv == filter.MaGv.Value);
+            }
+
+            if (filter.HocKy.HasValue)
+            {
+                query = query.Where(d => d.HocKy == filter.HocKy.Value);
+            }
+
+            if (filter.NamHoc.HasValue)
+            {
+                query = query.Where(d => d.NamHoc == filter.NamHoc.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                var keyword = filter.Keyword.Trim().ToLower();
+                query = query.Where(d => 
+                    d.TenDt != null && d.TenDt.ToLower().Contains(keyword) ||
+                    d.NoiThucTap != null && d.NoiThucTap.ToLower().Contains(keyword));
+            }
+
+            if (filter.MinKinhPhi.HasValue)
+            {
+                query = query.Where(d => d.KinhPhi >= filter.MinKinhPhi.Value);
+            }
+
+            if (filter.MaxKinhPhi.HasValue)
+            {
+                query = query.Where(d => d.KinhPhi <= filter.MaxKinhPhi.Value);
+            }
+
+            // Project to ViewModel
+            return await query
+                .OrderBy(d => d.MaDt)
+                .Select(d => new DeTaiExportRowVm
+                {
+                    MaDt = d.MaDt,
+                    TenDt = d.TenDt,
+                    MaGv = d.MaGv,
+                    TenGv = d.GiangVien != null ? d.GiangVien.HoTenGv ?? "" : "",
+                    MaKhoa = d.GiangVien != null ? d.GiangVien.MaKhoa ?? "" : "",
+                    TenKhoa = d.GiangVien != null && d.GiangVien.Khoa != null ? d.GiangVien.Khoa.TenKhoa ?? "" : "",
+                    HocKy = d.HocKy,
+                    NamHoc = d.NamHoc,
+                    SoLuongToiDa = d.SoLuongToiDa,
+                    SoDangKy = d.HuongDans.Count,
+                    SoChapNhan = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress),
+                    IsFull = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa,
+                    KinhPhi = d.KinhPhi,
+                    NoiThucTap = d.NoiThucTap
+                })
+                .ToListAsync();
         }
 
         public async Task<List<DeTaiExportChiTietRowVm>> GetChiTietForExportAsync(DeTaiFilterVm filter)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+            // Build base query
+            var query = _db.DeTais
+                .Include(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(d => d.HuongDans)
+                .ThenInclude(h => h.SinhVien)
+                .AsNoTracking()
+                .AsQueryable();
 
-            await using var cmd = new SqlCommand(SP_EXPORT_CHITIET, conn) { CommandType = CommandType.StoredProcedure };
-
-            //cmd.Parameters.AddWithValue("@AcceptedStatusesCsv", (object?)filter.AcceptedStatusesCsv ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaKhoa", (object?)filter.MaKhoa ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaGv", (object?)filter.MaGv ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)filter.HocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)filter.NamHoc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@TinhTrang", (byte)filter.TinhTrang);
-            cmd.Parameters.AddWithValue("@Keyword", (object?)filter.Keyword ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MinKinhPhi", (object?)filter.MinKinhPhi ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxKinhPhi", (object?)filter.MaxKinhPhi ?? DBNull.Value);
-
-            var rows = new List<DeTaiExportChiTietRowVm>();
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(filter.MaKhoa))
             {
-                rows.Add(new DeTaiExportChiTietRowVm
-                {
-                    // Cột từ store: b.MaDt, b.TenDt, b.MaGv, b.TenGv, b.MaKhoa, b.TenKhoa, b.HocKy, b.NamHoc,
-                    // b.SoLuongToiDa, b.SoDangKy, b.SoChapNhan, IsFull, b.KinhPhi, b.NoiThucTap,
-                    // sv.masv, sv.hoTenSv, hd.trangthai, hd.ngaydangky, hd.ngaychapnhan, hd.ketqua, hd.ghichu
-
-                    MaDt = reader.GetString(reader.GetOrdinal("MaDt")),
-                    TenDt = reader.IsDBNull(reader.GetOrdinal("TenDt")) ? "" : reader.GetString(reader.GetOrdinal("TenDt")),
-                    MaGv = reader.GetInt32(reader.GetOrdinal("MaGv")),
-                    TenGv = reader.IsDBNull(reader.GetOrdinal("TenGv")) ? "" : reader.GetString(reader.GetOrdinal("TenGv")),
-                    MaKhoa = reader.IsDBNull(reader.GetOrdinal("MaKhoa")) ? "" : reader.GetString(reader.GetOrdinal("MaKhoa")).TrimEnd(),
-                    TenKhoa = reader.IsDBNull(reader.GetOrdinal("TenKhoa")) ? "" : reader.GetString(reader.GetOrdinal("TenKhoa")),
-                    HocKy = reader.GetByte(reader.GetOrdinal("HocKy")),
-                    NamHoc = reader.GetInt16(reader.GetOrdinal("NamHoc")),
-                    SoLuongToiDa = reader.GetInt32(reader.GetOrdinal("SoLuongToiDa")),
-                    SoChapNhan = reader.GetInt32(reader.GetOrdinal("SoChapNhan")),
-                    IsFull = reader.GetByte(reader.GetOrdinal("IsFull")) == 1, // store cast TINYINT
-
-                    KinhPhi = reader.IsDBNull(reader.GetOrdinal("KinhPhi")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("KinhPhi")),
-                    NoiThucTap = reader.IsDBNull(reader.GetOrdinal("NoiThucTap")) ? null : reader.GetString(reader.GetOrdinal("NoiThucTap")),
-
-                    MaSv = reader.IsDBNull(reader.GetOrdinal("MaSv")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("MaSv")),
-                    HoTenSv = reader.IsDBNull(reader.GetOrdinal("HoTenSv")) ? null : reader.GetString(reader.GetOrdinal("HoTenSv")),
-                    TrangThai = reader.IsDBNull(reader.GetOrdinal("TrangThai")) ? (byte)0 : reader.GetByte(reader.GetOrdinal("TrangThai")),
-                    NgayDangKy = reader.IsDBNull(reader.GetOrdinal("NgayDangKy")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("NgayDangKy")),
-                    NgayChapNhan = reader.IsDBNull(reader.GetOrdinal("NgayChapNhan")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("NgayChapNhan")),
-                    KetQua = reader.IsDBNull(reader.GetOrdinal("KetQua")) ? (decimal?)null : reader.GetDecimal(reader.GetOrdinal("KetQua")),
-                    GhiChu = reader.IsDBNull(reader.GetOrdinal("GhiChu")) ? null : reader.GetString(reader.GetOrdinal("GhiChu")),
-                });
+                query = query.Where(d => d.GiangVien.MaKhoa == filter.MaKhoa);
             }
 
-            return rows;
+            if (filter.MaGv.HasValue)
+            {
+                query = query.Where(d => d.MaGv == filter.MaGv.Value);
+            }
+
+            if (filter.HocKy.HasValue)
+            {
+                query = query.Where(d => d.HocKy == filter.HocKy.Value);
+            }
+
+            if (filter.NamHoc.HasValue)
+            {
+                query = query.Where(d => d.NamHoc == filter.NamHoc.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                var keyword = filter.Keyword.Trim().ToLower();
+                query = query.Where(d => 
+                    d.TenDt != null && d.TenDt.ToLower().Contains(keyword) ||
+                    d.NoiThucTap != null && d.NoiThucTap.ToLower().Contains(keyword));
+            }
+
+            if (filter.MinKinhPhi.HasValue)
+            {
+                query = query.Where(d => d.KinhPhi >= filter.MinKinhPhi.Value);
+            }
+
+            if (filter.MaxKinhPhi.HasValue)
+            {
+                query = query.Where(d => d.KinhPhi <= filter.MaxKinhPhi.Value);
+            }
+
+            // Project to ViewModel with student details
+            return await query
+                .OrderBy(d => d.MaDt)
+                .SelectMany(d => d.HuongDans.DefaultIfEmpty(), (d, h) => new DeTaiExportChiTietRowVm
+                {
+                    MaDt = d.MaDt,
+                    TenDt = d.TenDt ?? "",
+                    MaGv = d.MaGv,
+                    TenGv = d.GiangVien.HoTenGv ?? "",
+                    MaKhoa = d.GiangVien.MaKhoa ?? "",
+                    TenKhoa = d.GiangVien.Khoa.TenKhoa ?? "",
+                    HocKy = d.HocKy,
+                    NamHoc = d.NamHoc,
+                    SoLuongToiDa = d.SoLuongToiDa,
+                    SoChapNhan = d.HuongDans.Count(hd => hd.TrangThai == HuongDanStatus.Accepted || hd.TrangThai == HuongDanStatus.InProgress),
+                    IsFull = d.HuongDans.Count(hd => hd.TrangThai == HuongDanStatus.Accepted || hd.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa,
+                    KinhPhi = d.KinhPhi,
+                    NoiThucTap = d.NoiThucTap,
+                    MaSv = h != null ? h.MaSv : (int?)null,
+                    HoTenSv = h != null && h.SinhVien != null ? h.SinhVien.HoTenSv : null,
+                    TrangThai = h != null ? (byte)h.TrangThai : (byte)0,
+                    NgayDangKy = h != null ? h.CreatedAt : null,
+                    NgayChapNhan = h != null ? h.AcceptedAt : null,
+                    KetQua = h != null ? h.KetQua : null,
+                    GhiChu = h != null ? h.GhiChu : null
+                })
+                .ToListAsync();
         }
 
 
         public async Task<DeTaiDetailVm?> GetDetailAsync(string maDt)
         {
-            var conn = (SqlConnection)_db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open)
-                await _db.Database.OpenConnectionAsync();
+            var code = NormCode(maDt);
+            
+            // Get the topic with all related data
+            var topic = await _db.DeTais
+                .Include(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(d => d.HuongDans)
+                .ThenInclude(h => h.SinhVien)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.MaDt == code);
 
-            await using var cmd = new SqlCommand(SP_DETAIL, conn) { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaDt", maDt);
+            if (topic == null) return null;
 
-            DeTaiDetailVm? vm = null;
+            // Calculate participation stats
+            var soThamGia = topic.HuongDans.Count(h => 
+                h.TrangThai == HuongDanStatus.Accepted || 
+                h.TrangThai == HuongDanStatus.InProgress || 
+                h.TrangThai == HuongDanStatus.Completed);
+            var soChoConLai = Math.Max(0, topic.SoLuongToiDa - soThamGia);
 
-            await using var rd = await cmd.ExecuteReaderAsync();
-            while (await rd.ReadAsync())
+            // Create view model
+            var vm = new DeTaiDetailVm
             {
-                // map header 1 lần từ dòng đầu
-                if (vm == null)
-                {
-                    vm = new DeTaiDetailVm
+                MaDt = topic.MaDt,
+                TenDt = topic.TenDt,
+                KinhPhi = topic.KinhPhi,
+                NoiThucTap = topic.NoiThucTap,
+                MaGv = topic.MaGv,
+                HocKy = topic.HocKy,
+                NamHoc = topic.NamHoc,
+                SoLuongToiDa = topic.SoLuongToiDa,
+
+                Gv_MaGv = topic.GiangVien.MaGv,
+                Gv_HoTenGv = topic.GiangVien.HoTenGv,
+                Gv_Luong = topic.GiangVien.Luong,
+                Gv_MaKhoa = topic.GiangVien.MaKhoa,
+
+                                    Khoa_MaKhoa = topic.GiangVien != null && topic.GiangVien.Khoa != null ? topic.GiangVien.Khoa.MaKhoa : null,
+                    Khoa_TenKhoa = topic.GiangVien != null && topic.GiangVien.Khoa != null ? topic.GiangVien.Khoa.TenKhoa : null,
+                    Khoa_DienThoai = topic.GiangVien != null && topic.GiangVien.Khoa != null ? topic.GiangVien.Khoa.DienThoai : null,
+
+                SoThamGia = soThamGia,
+                SoChoConLai = soChoConLai,
+
+                Students = topic.HuongDans
+                    .Select(h => new DeTaiDetailStudentVm
                     {
-                        MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-                        TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
-                        KinhPhi = rd.IsDBNull(rd.GetOrdinal("kinhphi")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("kinhphi")),
-                        NoiThucTap = rd.IsDBNull(rd.GetOrdinal("NoiThucTap")) ? null : rd.GetString(rd.GetOrdinal("NoiThucTap")),
-                        MaGv = rd.GetInt32(rd.GetOrdinal("magv")),
-                        HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
-                        NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
-                        SoLuongToiDa = rd.GetInt32(rd.GetOrdinal("soluongtoida")),
-
-                        Gv_MaGv = rd.GetInt32(rd.GetOrdinal("gv_magv")),
-                        Gv_HoTenGv = rd.IsDBNull(rd.GetOrdinal("gv_hotengv")) ? null : rd.GetString(rd.GetOrdinal("gv_hotengv")),
-                        Gv_Luong = rd.IsDBNull(rd.GetOrdinal("gv_luong")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("gv_luong")),
-                        Gv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("gv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("gv_makhoa")).TrimEnd(),
-
-                        Khoa_MaKhoa = rd.IsDBNull(rd.GetOrdinal("khoa_makhoa")) ? null : rd.GetString(rd.GetOrdinal("khoa_makhoa")).TrimEnd(),
-                        Khoa_TenKhoa = rd.IsDBNull(rd.GetOrdinal("khoa_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("khoa_tenkhoa")),
-                        Khoa_DienThoai = rd.IsDBNull(rd.GetOrdinal("khoa_dienthoai")) ? null : rd.GetString(rd.GetOrdinal("khoa_dienthoai")),
-
-                        SoThamGia = rd.IsDBNull(rd.GetOrdinal("SoThamGia")) ? 0 : rd.GetInt32(rd.GetOrdinal("SoThamGia")),
-                        SoChoConLai = rd.IsDBNull(rd.GetOrdinal("SoChoConLai")) ? 0 : rd.GetInt32(rd.GetOrdinal("SoChoConLai")),
-                    };
-                }
-
-                // map SV (có thể NULL nếu chưa ai tham gia)
-                var hasSv = !rd.IsDBNull(rd.GetOrdinal("masv"));
-                if (hasSv)
-                {
-                    vm!.Students.Add(new DeTaiDetailStudentVm
-                    {
-                        MaSv = rd.GetInt32(rd.GetOrdinal("masv")),
-                        HoTenSv = rd.IsDBNull(rd.GetOrdinal("hotensv")) ? null : rd.GetString(rd.GetOrdinal("hotensv")),
-                        NamSinh = rd.IsDBNull(rd.GetOrdinal("namsinh")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("namsinh")),
-                        QueQuan = rd.IsDBNull(rd.GetOrdinal("quequan")) ? null : rd.GetString(rd.GetOrdinal("quequan")),
-                        TrangThai = rd.IsDBNull(rd.GetOrdinal("trangthai")) ? (byte?)null : rd.GetByte(rd.GetOrdinal("trangthai")),
-                        NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
-                        NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
-                        KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
-                        GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
-                    });
-                }
-            }
+                        MaSv = h.MaSv,
+                        HoTenSv = h.SinhVien?.HoTenSv,
+                        NamSinh = h.SinhVien?.NamSinh,
+                        QueQuan = h.SinhVien?.QueQuan,
+                        TrangThai = (byte)h.TrangThai,
+                        NgayDangKy = h.CreatedAt,
+                        NgayChapNhan = h.AcceptedAt,
+                        KetQua = h.KetQua,
+                        GhiChu = h.GhiChu
+                    })
+                    .ToList()
+            };
 
             return vm;
         }
 
         public async Task<DeTaiRegistrationStatusVm> CheckRegistrationAsync(int maSv, string maDt)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+            var code = NormCode(maDt);
 
-            await using var cmd = new SqlCommand("dbo.sp_KiemTraDangKyDeTai", conn)
-            { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaSv", maSv);
-            cmd.Parameters.AddWithValue("@MaDt", maDt);
+            // Get current registration status for this topic
+            var currentRegistration = await _db.HuongDans
+                .Include(h => h.DeTai)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(h => h.MaSv == maSv && h.MaDt == code);
 
-            await using var rd = await cmd.ExecuteReaderAsync();
-            if (await rd.ReadAsync())
-            {
+            // Get other active registrations for this student
+            var otherRegistration = await _db.HuongDans
+                .Include(h => h.DeTai)
+                .AsNoTracking()
+                .Where(h => h.MaSv == maSv && h.MaDt != code &&
+                    (h.TrangThai == HuongDanStatus.Pending ||
+                     h.TrangThai == HuongDanStatus.Accepted ||
+                     h.TrangThai == HuongDanStatus.InProgress))
+                .OrderByDescending(h => h.CreatedAt)
+                .FirstOrDefaultAsync();
+
                 return new DeTaiRegistrationStatusVm
                 {
-                    MaSv = rd.GetInt32(rd.GetOrdinal("masv")),
-                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-
-                    // đọc int? vì có thể là -1
-                    ThisTrangThai = rd.IsDBNull(rd.GetOrdinal("this_trangthai"))
-                        ? (int?)null
-                        : rd.GetInt32(rd.GetOrdinal("this_trangthai")),
-
-                    HasOtherTopic123 = !rd.IsDBNull(rd.GetOrdinal("has_other_topic_123")) &&
-                                       (rd.GetInt32(rd.GetOrdinal("has_other_topic_123")) == 1),
-
-                    OtherMaDt = rd.IsDBNull(rd.GetOrdinal("other_madt"))
-                        ? null
-                        : rd.GetString(rd.GetOrdinal("other_madt")).TrimEnd(),
-
-                    OtherTenDt = rd.IsDBNull(rd.GetOrdinal("other_tendt"))
-                        ? null
-                        : rd.GetString(rd.GetOrdinal("other_tendt")),
-
-                    OtherTrangThai = rd.IsDBNull(rd.GetOrdinal("other_trangthai"))
-                        ? (int?)null
-                        : rd.GetInt32(rd.GetOrdinal("other_trangthai"))
-                };
-            }
-
-            // fallback (gần như không xảy ra vì proc luôn SELECT 1 hàng)
-            return new DeTaiRegistrationStatusVm { MaSv = maSv, MaDt = maDt };
+                MaSv = maSv,
+                MaDt = code,
+                ThisTrangThai = currentRegistration != null ? (int)currentRegistration.TrangThai : null,
+                HasOtherTopic123 = otherRegistration != null,
+                OtherMaDt = otherRegistration != null ? otherRegistration.MaDt : null,
+                                    OtherTenDt = otherRegistration != null && otherRegistration.DeTai != null ? otherRegistration.DeTai.TenDt : null,
+                OtherTrangThai = otherRegistration != null ? (int)otherRegistration.TrangThai : null
+            };
         }
 
 
         public async Task<List<GvTopicVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy, short? namHoc)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
+            // Build base query
+            var query = _db.DeTais
+                .Include(d => d.HuongDans)
+                .AsNoTracking()
+                .Where(d => d.MaGv == maGv);
 
-            await using var cmd = new SqlCommand("dbo.sp_GV_DeTai_List", conn)
-            { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaGv", maGv);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
-
-            var list = new List<GvTopicVm>();
-            await using var rd = await cmd.ExecuteReaderAsync();
-            while (await rd.ReadAsync())
+            // Apply filters
+            if (hocKy.HasValue)
             {
-                list.Add(new GvTopicVm
-                {
-                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-                    TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
-                    NoiThucTap = rd.IsDBNull(rd.GetOrdinal("NoiThucTap")) ? null : rd.GetString(rd.GetOrdinal("NoiThucTap")),
-                    KinhPhi = rd.IsDBNull(rd.GetOrdinal("kinhphi")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("kinhphi")),
-                    HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
-                    NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
-                    SoLuongToiDa = rd.GetInt32(rd.GetOrdinal("soluongtoida")),
-                    ThamGia = rd.GetInt32(rd.GetOrdinal("ThamGia")),
-                    ConLai = rd.GetInt32(rd.GetOrdinal("ConLai")),
-                });
+                query = query.Where(d => d.HocKy == hocKy.Value);
             }
-            return list;
+
+            if (namHoc.HasValue)
+            {
+                query = query.Where(d => d.NamHoc == namHoc.Value);
+            }
+
+            // Project to ViewModel
+            return await query
+                .OrderBy(d => d.MaDt)
+                .Select(d => new GvTopicVm
+                {
+                    MaDt = d.MaDt,
+                    TenDt = d.TenDt,
+                    NoiThucTap = d.NoiThucTap,
+                    KinhPhi = d.KinhPhi,
+                    HocKy = d.HocKy,
+                    NamHoc = d.NamHoc,
+                    SoLuongToiDa = d.SoLuongToiDa,
+                    ThamGia = d.HuongDans.Count(h => 
+                        h.TrangThai == HuongDanStatus.Accepted || 
+                        h.TrangThai == HuongDanStatus.InProgress || 
+                        h.TrangThai == HuongDanStatus.Completed),
+                    ConLai = d.SoLuongToiDa - d.HuongDans.Count(h => 
+                        h.TrangThai == HuongDanStatus.Accepted || 
+                        h.TrangThai == HuongDanStatus.InProgress || 
+                        h.TrangThai == HuongDanStatus.Completed)
+                })
+                .ToListAsync();
         }
 
         public async Task<List<GvStudentVm>> GetLecturerStudentsAsync(int maGv, byte? hocKy, short? namHoc, string? maDt, byte? trangThai)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
+            // Build base query
+            var query = _db.HuongDans
+                .Include(h => h.SinhVien)
+                .ThenInclude(s => s.Khoa)
+                .Include(h => h.DeTai)
+                .AsNoTracking()
+                .Where(h => h.MaGv == maGv);
 
-            await using var cmd = new SqlCommand("dbo.sp_GV_SinhVienHuongDan_List", conn)
-            { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaGv", maGv);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaDt", string.IsNullOrWhiteSpace(maDt) ? DBNull.Value : maDt);
-            cmd.Parameters.AddWithValue("@TrangThai", (object?)trangThai ?? DBNull.Value);
-
-            var list = new List<GvStudentVm>();
-            await using var rd = await cmd.ExecuteReaderAsync();
-            while (await rd.ReadAsync())
+            // Apply filters
+            if (hocKy.HasValue)
             {
-                list.Add(new GvStudentVm
-                {
-                    Masv = rd.GetInt32(rd.GetOrdinal("masv")),
-                    HotenSv = rd.IsDBNull(rd.GetOrdinal("hotensv")) ? null : rd.GetString(rd.GetOrdinal("hotensv")),
-                    NamSinh = rd.IsDBNull(rd.GetOrdinal("namsinh")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("namsinh")),
-                    QueQuan = rd.IsDBNull(rd.GetOrdinal("quequan")) ? null : rd.GetString(rd.GetOrdinal("quequan")),
-                    Sv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("sv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("sv_makhoa")),
-                    Sv_TenKhoa = rd.IsDBNull(rd.GetOrdinal("sv_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("sv_tenkhoa")),
-
-                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-                    TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
-                    HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
-                    NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
-
-                    TrangThai = rd.GetByte(rd.GetOrdinal("trangthai")),
-                    NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
-                    NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
-                    KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
-                    GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
-                });
+                query = query.Where(h => h.DeTai.HocKy == hocKy.Value);
             }
-            return list;
+
+            if (namHoc.HasValue)
+            {
+                query = query.Where(h => h.DeTai.NamHoc == namHoc.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(maDt))
+            {
+                var code = NormCode(maDt);
+                query = query.Where(h => h.MaDt == code);
+            }
+
+            if (trangThai.HasValue)
+            {
+                query = query.Where(h => (byte)h.TrangThai == trangThai.Value);
+            }
+
+            // Project to ViewModel
+            return await query
+                .OrderBy(h => h.MaSv)
+                .Select(h => new GvStudentVm
+                {
+                    Masv = h.MaSv,
+                    HotenSv = h.SinhVien != null ? h.SinhVien.HoTenSv : null,
+                    NamSinh = h.SinhVien != null ? h.SinhVien.NamSinh : null,
+                    QueQuan = h.SinhVien != null ? h.SinhVien.QueQuan : null,
+                    Sv_MaKhoa = h.SinhVien != null ? h.SinhVien.MaKhoa : null,
+                    Sv_TenKhoa = h.SinhVien != null && h.SinhVien.Khoa != null ? h.SinhVien.Khoa.TenKhoa : null,
+
+                    MaDt = h.MaDt,
+                    TenDt = h.DeTai.TenDt,
+                    HocKy = h.DeTai.HocKy,
+                    NamHoc = h.DeTai.NamHoc,
+
+                    TrangThai = (byte)h.TrangThai,
+                    NgayDangKy = h.CreatedAt,
+                    NgayChapNhan = h.AcceptedAt,
+                    KetQua = h.KetQua,
+                    GhiChu = h.GhiChu
+                })
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<SelectListItem>> GetLecturerTopicOptionsAsync(int maGv, byte? hocKy, short? namHoc)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
+            // Build base query
+            var query = _db.DeTais
+                .AsNoTracking()
+                .Where(d => d.MaGv == maGv);
 
-            await using var cmd = new SqlCommand("dbo.sp_GiangVien_SinhVienHuongDan", conn)
-            { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaGv", maGv);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
+            // Apply filters
+            if (hocKy.HasValue)
+            {
+                query = query.Where(d => d.HocKy == hocKy.Value);
+            }
+
+            if (namHoc.HasValue)
+            {
+                query = query.Where(d => d.NamHoc == namHoc.Value);
+            }
+
+            // Get topics and create select list items
+            var topics = await query
+                .OrderBy(d => d.MaDt)
+                .Select(d => new { d.MaDt, d.TenDt })
+                .ToListAsync();
 
             var items = new List<SelectListItem> { new("Tất cả đề tài", "") };
-            await using var rd = await cmd.ExecuteReaderAsync();
-            while (await rd.ReadAsync())
-            {
-                var madt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd();
-                var tendt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? "" : rd.GetString(rd.GetOrdinal("tendt"));
-                items.Add(new SelectListItem($"{madt} - {tendt}", madt));
-            }
+            items.AddRange(topics.Select(t => new SelectListItem($"{t.MaDt} - {t.TenDt ?? ""}", t.MaDt)));
+
             return items;
         }
 
 
         public async Task<List<GvRegistrationVm>> GetRegistrationsAsync(int maGv, byte? hocKy, short? namHoc, byte? trangThai, string? maDt)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
+            // Build base query
+            var query = _db.HuongDans
+                .Include(h => h.SinhVien)
+                .ThenInclude(s => s.Khoa)
+                .Include(h => h.DeTai)
+                .AsNoTracking()
+                .Where(h => h.MaGv == maGv);
 
-            await using var cmd = new SqlCommand("dbo.sp_GV_SinhVienDangKy_List", conn)
-            { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaGv", maGv);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@TrangThai", (object?)trangThai ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaDt", string.IsNullOrWhiteSpace(maDt) ? DBNull.Value : maDt);
-
-            var list = new List<GvRegistrationVm>();
-            await using var rd = await cmd.ExecuteReaderAsync();
-            while (await rd.ReadAsync())
+            // Apply filters
+            if (hocKy.HasValue)
             {
-                list.Add(new GvRegistrationVm
-                {
-                    Masv = rd.GetInt32(rd.GetOrdinal("masv")),
-                    HotenSv = rd.IsDBNull(rd.GetOrdinal("hotensv")) ? null : rd.GetString(rd.GetOrdinal("hotensv")),
-                    NamSinh = rd.IsDBNull(rd.GetOrdinal("namsinh")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("namsinh")),
-                    QueQuan = rd.IsDBNull(rd.GetOrdinal("quequan")) ? null : rd.GetString(rd.GetOrdinal("quequan")),
-                    Sv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("sv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("sv_makhoa")),
-                    Sv_TenKhoa = rd.IsDBNull(rd.GetOrdinal("sv_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("sv_tenkhoa")),
-
-                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-                    TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
-                    HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
-                    NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
-
-                    TrangThai = rd.GetByte(rd.GetOrdinal("trangthai")),
-                    NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
-                    NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
-                    KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
-                    GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
-                });
+                query = query.Where(h => h.DeTai.HocKy == hocKy.Value);
             }
-            return list;
+
+            if (namHoc.HasValue)
+            {
+                query = query.Where(h => h.DeTai.NamHoc == namHoc.Value);
+            }
+
+            if (trangThai.HasValue)
+            {
+                query = query.Where(h => (byte)h.TrangThai == trangThai.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(maDt))
+            {
+                var code = NormCode(maDt);
+                query = query.Where(h => h.MaDt == code);
+            }
+
+            // Project to ViewModel
+            return await query
+                .OrderBy(h => h.MaSv)
+                .Select(h => new GvRegistrationVm
+                {
+                    Masv = h.MaSv,
+                    HotenSv = h.SinhVien.HoTenSv,
+                    NamSinh = h.SinhVien.NamSinh,
+                    QueQuan = h.SinhVien.QueQuan,
+                    Sv_MaKhoa = h.SinhVien.MaKhoa,
+                    Sv_TenKhoa = h.SinhVien.Khoa.TenKhoa,
+
+                    MaDt = h.MaDt,
+                    TenDt = h.DeTai.TenDt,
+                    HocKy = h.DeTai.HocKy,
+                    NamHoc = h.DeTai.NamHoc,
+
+                    TrangThai = (byte)h.TrangThai,
+                    NgayDangKy = h.CreatedAt,
+                    NgayChapNhan = h.AcceptedAt,
+                    KetQua = h.KetQua,
+                    GhiChu = h.GhiChu
+                })
+                .ToListAsync();
         }
 
         public async Task<bool> UpdateHuongDanStatusAsync(int maGv, int maSv, string maDt, byte newStatus, string? ghiChu = null)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn);
+            var code = NormCode(maDt);
 
-            await using var cmd = new SqlCommand("dbo.sp_GV_HuongDan_UpdateStatus", conn)
-            { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaGv", maGv);
-            cmd.Parameters.AddWithValue("@MaSv", maSv);
-            cmd.Parameters.AddWithValue("@MaDt", maDt);
-            cmd.Parameters.AddWithValue("@NewStatus", newStatus);  // 1 or 4
-            cmd.Parameters.AddWithValue("@GhiChu", (object?)ghiChu ?? DBNull.Value);
+            // Find the guidance record
+            var huongDan = await _db.HuongDans
+                .FirstOrDefaultAsync(h => h.MaGv == maGv && h.MaSv == maSv && h.MaDt == code);
 
-            var rows = 0;
-            await using (var rd = await cmd.ExecuteReaderAsync())
+            if (huongDan == null)
+                return false;
+
+            // Update status and notes
+            huongDan.TrangThai = (HuongDanStatus)newStatus;
+            if (newStatus == (byte)HuongDanStatus.Accepted)
             {
-                if (await rd.ReadAsync())
-                {
-                    rows = rd.GetInt32(rd.GetOrdinal("RowsAffected"));
-                }
+                huongDan.AcceptedAt = DateTime.UtcNow;
             }
-            return rows > 0;
-        }
-
-        private async Task EnsureOpenAsync(SqlConnection conn)
-        {
-            if (string.IsNullOrWhiteSpace(conn.ConnectionString))
+            if (!string.IsNullOrWhiteSpace(ghiChu))
             {
-                var cs = _db.Database.GetConnectionString();
-                if (string.IsNullOrWhiteSpace(cs))
-                    throw new InvalidOperationException("Connection string is empty. Check Program.cs/appsettings.");
-                conn.ConnectionString = cs;
+                huongDan.GhiChu = ghiChu;
             }
 
-            if (conn.State != ConnectionState.Open)
-                await conn.OpenAsync();
+            try
+            {
+                await _db.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
+
+
 
 
         public async Task<DeTai?> GetAsync(string maDt)
@@ -613,15 +721,17 @@ namespace InternshipManagement.Repositories.Implementations
                 var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
                 if (e == null) return (false, "Không tìm thấy đề tài.");
 
-                var toRemove = await _db.Set<HuongDan>()
-    .Where(h => h.MaDt == code &&
-        (h.TrangThai == HuongDanStatus.Pending
-      || h.TrangThai == HuongDanStatus.Rejected
-      || h.TrangThai == HuongDanStatus.Withdrawn))
-    .ToListAsync();
-                if (toRemove.Count > 0) _db.RemoveRange(toRemove);
+                // Xóa các hướng dẫn có trạng thái cho phép xóa
+                var toRemove = await _db.HuongDans
+                    .Where(h => h.MaDt == code &&
+                        (h.TrangThai == HuongDanStatus.Pending
+                      || h.TrangThai == HuongDanStatus.Rejected
+                      || h.TrangThai == HuongDanStatus.Withdrawn))
+                    .ToListAsync();
+                if (toRemove.Count > 0) _db.HuongDans.RemoveRange(toRemove);
 
-                _db.Remove(e);
+                // Xóa đề tài
+                _db.DeTais.Remove(e);
                 await _db.SaveChangesAsync();
                 await tx.CommitAsync();
                 return (true, null);
@@ -728,79 +838,101 @@ namespace InternshipManagement.Repositories.Implementations
             catch (DbUpdateException ex) { return (false, $"Lỗi thu hồi: {ex.GetBaseException().Message}"); }
         }
         public async Task<List<StudentMyTopicItemVm>> GetStudentMyTopicsAsync(
-            int maSv, byte? hocKy, short? namHoc, byte? trangThai /*hoặc string? trangThaiCsv*/)
+            int maSv, byte? hocKy, short? namHoc, byte? trangThai)
         {
-            await using var conn = (SqlConnection)_db.Database.GetDbConnection();
-            await EnsureOpenAsync(conn); // Bạn đã có hàm này trong repo:contentReference[oaicite:1]{index=1}
+            // Build base query
+            var query = _db.HuongDans
+                .Include(h => h.DeTai)
+                .ThenInclude(d => d.GiangVien)
+                .ThenInclude(g => g.Khoa)
+                .Include(h => h.SinhVien)
+                .AsNoTracking()
+                .Where(h => h.MaSv == maSv);
 
-            await using var cmd = new SqlCommand(SP_STUDENT_MYTOPICS, conn) { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaSv", maSv);
-            cmd.Parameters.AddWithValue("@HocKy", (object?)hocKy ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@NamHoc", (object?)namHoc ?? DBNull.Value);
-
-            // Nếu dùng CSV: cmd.Parameters.AddWithValue("@TrangThaiCsv", (object?)trangThaiCsv ?? DBNull.Value);
-            // Ở đây ta giả định proc cho phép lọc 1 trạng thái đơn lẻ bằng CSV "x"
-            cmd.Parameters.AddWithValue("@TrangThaiCsv", trangThai.HasValue ? trangThai.Value.ToString() : (object)DBNull.Value);
-
-            var list = new List<StudentMyTopicItemVm>();
-            await using var rd = await cmd.ExecuteReaderAsync();
-            while (await rd.ReadAsync())
+            // Apply filters
+            if (hocKy.HasValue)
             {
-                var item = new StudentMyTopicItemVm
-                {
-                    MaSv = rd.GetInt32(rd.GetOrdinal("masv")),
-                    HoTenSv = rd.IsDBNull(rd.GetOrdinal("hotensv")) ? null : rd.GetString(rd.GetOrdinal("hotensv")),
-
-                    MaDt = rd.GetString(rd.GetOrdinal("madt")).TrimEnd(),
-                    TenDt = rd.IsDBNull(rd.GetOrdinal("tendt")) ? null : rd.GetString(rd.GetOrdinal("tendt")),
-                    HocKy = rd.GetByte(rd.GetOrdinal("hocky")),
-                    NamHoc = rd.GetInt16(rd.GetOrdinal("namhoc")),
-                    KinhPhi = rd.IsDBNull(rd.GetOrdinal("kinhphi")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("kinhphi")),
-                    NoiThucTap = rd.IsDBNull(rd.GetOrdinal("NoiThucTap")) ? null : rd.GetString(rd.GetOrdinal("NoiThucTap")),
-                    SoLuongToiDa = rd.GetInt32(rd.GetOrdinal("soluongtoida")),
-
-                    Gv_MaGv = rd.IsDBNull(rd.GetOrdinal("gv_magv")) ? (int?)null : rd.GetInt32(rd.GetOrdinal("gv_magv")),
-                    Gv_HoTenGv = rd.IsDBNull(rd.GetOrdinal("gv_hotengv")) ? null : rd.GetString(rd.GetOrdinal("gv_hotengv")),
-                    Gv_MaKhoa = rd.IsDBNull(rd.GetOrdinal("gv_makhoa")) ? null : rd.GetString(rd.GetOrdinal("gv_makhoa")).TrimEnd(),
-                    Gv_TenKhoa = rd.IsDBNull(rd.GetOrdinal("gv_tenkhoa")) ? null : rd.GetString(rd.GetOrdinal("gv_tenkhoa")),
-
-                    TrangThai = rd.GetByte(rd.GetOrdinal("trangthai")),
-                    NgayDangKy = rd.IsDBNull(rd.GetOrdinal("ngaydangky")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaydangky")),
-                    NgayChapNhan = rd.IsDBNull(rd.GetOrdinal("ngaychapnhan")) ? (DateTime?)null : rd.GetDateTime(rd.GetOrdinal("ngaychapnhan")),
-                    KetQua = rd.IsDBNull(rd.GetOrdinal("ketqua")) ? (decimal?)null : rd.GetDecimal(rd.GetOrdinal("ketqua")),
-                    GhiChu = rd.IsDBNull(rd.GetOrdinal("ghichu")) ? null : rd.GetString(rd.GetOrdinal("ghichu")),
-                };
-                list.Add(item);
+                query = query.Where(h => h.DeTai.HocKy == hocKy.Value);
             }
 
-            return list;
+            if (namHoc.HasValue)
+            {
+                query = query.Where(h => h.DeTai.NamHoc == namHoc.Value);
+            }
+
+            if (trangThai.HasValue)
+            {
+                query = query.Where(h => (byte)h.TrangThai == trangThai.Value);
+            }
+
+            // Project to ViewModel
+            return await query
+                .OrderByDescending(h => h.CreatedAt)
+                .Select(h => new StudentMyTopicItemVm
+                {
+                    MaSv = h.MaSv,
+                    HoTenSv = h.SinhVien.HoTenSv,
+
+                    MaDt = h.MaDt,
+                    TenDt = h.DeTai.TenDt,
+                    HocKy = h.DeTai.HocKy,
+                    NamHoc = h.DeTai.NamHoc,
+                    KinhPhi = h.DeTai.KinhPhi,
+                    NoiThucTap = h.DeTai.NoiThucTap,
+                    SoLuongToiDa = h.DeTai.SoLuongToiDa,
+
+                    Gv_MaGv = h.DeTai.MaGv,
+                    Gv_HoTenGv = h.DeTai.GiangVien != null ? h.DeTai.GiangVien.HoTenGv : null,
+                    Gv_MaKhoa = h.DeTai.GiangVien != null ? h.DeTai.GiangVien.MaKhoa : null,
+                    Gv_TenKhoa = h.DeTai.GiangVien != null && h.DeTai.GiangVien.Khoa != null ? h.DeTai.GiangVien.Khoa.TenKhoa : null,
+
+                    TrangThai = (byte)h.TrangThai,
+                    NgayDangKy = h.CreatedAt,
+                    NgayChapNhan = h.AcceptedAt,
+                    KetQua = h.KetQua,
+                    GhiChu = h.GhiChu
+                })
+                .ToListAsync();
         }
 
 
         public async Task<(bool ok, string? error)> CompleteHuongDanAsync(
         int maGv, int maSv, string maDt, decimal ketQua, string? ghiChu)
         {
-            // Validate điểm theo thang bạn dùng (ví dụ 0..10)
+            // Validate score (0-10 scale)
             if (ketQua < 0m || ketQua > 10m)
                 return (false, "Điểm kết quả không hợp lệ (0–10).");
 
-            var hd = await _db.Set<HuongDan>()
-                .Where(x => x.MaSv == maSv && x.MaDt == maDt && x.MaGv == maGv)
-                .FirstOrDefaultAsync();
+            var code = NormCode(maDt);
 
-            if (hd == null)
+            // Find the guidance record
+            var huongDan = await _db.HuongDans
+                .FirstOrDefaultAsync(h => h.MaGv == maGv && h.MaSv == maSv && h.MaDt == code);
+
+            if (huongDan == null)
                 return (false, "Không tìm thấy hướng dẫn hoặc bạn không có quyền.");
 
-            // Chỉ hoàn thành từ Accepted (1) hoặc InProgress (2)
-            if (hd.TrangThai != HuongDanStatus.Accepted && hd.TrangThai != HuongDanStatus.InProgress)
+            // Can only complete from Accepted or InProgress status
+            if (huongDan.TrangThai != HuongDanStatus.Accepted && huongDan.TrangThai != HuongDanStatus.InProgress)
                 return (false, "Chỉ có thể hoàn thành từ trạng thái 'Đã chấp nhận' hoặc 'Đang thực hiện'.");
 
-            hd.TrangThai = HuongDanStatus.Completed;
-            hd.KetQua = ketQua;
-            if (!string.IsNullOrWhiteSpace(ghiChu)) hd.GhiChu = ghiChu;
+            // Update status and score
+            huongDan.TrangThai = HuongDanStatus.Completed;
+            huongDan.KetQua = ketQua;
+            if (!string.IsNullOrWhiteSpace(ghiChu))
+            {
+                huongDan.GhiChu = ghiChu;
+            }
 
+            try
+            {
             await _db.SaveChangesAsync();
             return (true, null);
+            }
+            catch (DbUpdateException ex)
+            {
+                return (false, $"Lỗi cập nhật: {ex.GetBaseException().Message}");
+            }
         }
     }
 
