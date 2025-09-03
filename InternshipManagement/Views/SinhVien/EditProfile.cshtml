@@ -1,0 +1,77 @@
+@model InternshipManagement.Models.ViewModels.SinhVienProfileVm
+@{
+    ViewData["Title"] = "Cập nhật thông tin cá nhân";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Cập nhật thông tin cá nhân</h4>
+
+                    @if (TempData["Success"] is string ok)
+                    {
+                        <div class="alert alert-success">@ok</div>
+                    }
+
+                    <form method="post" asp-action="EditProfile">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="MaSvDisplay" class="form-label"></label>
+                                <input class="form-control" value="@Model.MaSvDisplay" readonly />
+                                <input type="hidden" asp-for="MaSv" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="MaKhoa" class="form-label required"></label>
+                                @if (Model.CanChangeKhoa)
+                                {
+                                    <select asp-for="MaKhoa" class="form-select"
+                                            asp-items="@(new SelectList(Model.DanhSachKhoa, "MaKhoa", "TenKhoa"))">
+                                    </select>
+                                }
+                                else
+                                {
+                                    var tenKhoa = Model.DanhSachKhoa.FirstOrDefault(k => k.MaKhoa == Model.MaKhoa)?.TenKhoa;
+                                    <input class="form-control" value="@tenKhoa" readonly />
+                                    <input type="hidden" asp-for="MaKhoa" />
+                                }
+                                <span asp-validation-for="MaKhoa" class="text-danger"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="HoTenSv" class="form-label required"></label>
+                                <input asp-for="HoTenSv" class="form-control" />
+                                <span asp-validation-for="HoTenSv" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="NamSinh" class="form-label required"></label>
+                                <input asp-for="NamSinh" class="form-control" type="number" />
+                                <span asp-validation-for="NamSinh" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="QueQuan" class="form-label required"></label>
+                                <input asp-for="QueQuan" class="form-control" />
+                                <span asp-validation-for="QueQuan" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Cập nhật
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Quay lại
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

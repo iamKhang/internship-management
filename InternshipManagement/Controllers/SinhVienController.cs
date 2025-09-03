@@ -1,4 +1,6 @@
 ﻿using InternshipManagement.Models;
+using Microsoft.EntityFrameworkCore;
+using InternshipManagement.Data;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +8,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
+using System.Security.Claims;
+using System.Linq;
+using InternshipManagement.Models.Enums;
+using Microsoft.AspNetCore.Authentication;
 
 namespace InternshipManagement.Controllers
 {
@@ -13,10 +19,12 @@ namespace InternshipManagement.Controllers
     {
         private readonly ISinhVienRepository _repo;
         private readonly IKhoaRepository _khoaRepo;
-        public SinhVienController(ISinhVienRepository repo, IKhoaRepository khoaRepo)
+        private readonly AppDbContext _db;
+        public SinhVienController(ISinhVienRepository repo, IKhoaRepository khoaRepo, AppDbContext db)
         {
             _repo = repo;
             _khoaRepo = khoaRepo;
+            _db = db;
         }
 
         [Authorize(Roles = "Admin")]
@@ -199,12 +207,12 @@ namespace InternshipManagement.Controllers
         {
             // Lấy danh sách khoa để thêm vào sheet hướng dẫn
             var khoaList = await _khoaRepo.GetOptionsAsync();
-            
+
             using (var package = new ExcelPackage())
             {
                 // Sheet dữ liệu chính
                 var worksheet = package.Workbook.Worksheets.Add("DanhSachSinhVien");
-                
+
                 // Định dạng header
                 string[] headers = { "STT", "Họ và tên", "Năm sinh", "Quê quán", "Mã khoa" };
                 for (int i = 0; i < headers.Length; i++)
@@ -276,7 +284,7 @@ namespace InternshipManagement.Controllers
 
             var errors = new List<string>();
             var importedRows = new List<SinhVienImportRow>();
-            
+
             try
             {
                 if (model.ExcelFile == null || model.ExcelFile.Length <= 0)
@@ -331,9 +339,9 @@ namespace InternshipManagement.Controllers
                             };
 
                             // Skip empty rows
-                            if (string.IsNullOrWhiteSpace(importRow.HoTen) && 
-                                !importRow.NamSinh.HasValue && 
-                                string.IsNullOrWhiteSpace(importRow.QueQuan) && 
+                            if (string.IsNullOrWhiteSpace(importRow.HoTen) &&
+                                !importRow.NamSinh.HasValue &&
+                                string.IsNullOrWhiteSpace(importRow.QueQuan) &&
                                 string.IsNullOrWhiteSpace(importRow.MaKhoa))
                                 continue;
 
@@ -383,6 +391,110 @@ namespace InternshipManagement.Controllers
             {
                 TempData["Error"] = $"Lỗi khi import: {ex.Message}";
                 return RedirectToAction(nameof(Index));
+            }
+        }
+    [HttpGet]
+        [Authorize(Roles = "SinhVien")]
+        public async Task<IActionResult> EditProfile()
+        {
+            // Lấy MaSv từ claim
+            var maSvStr = User.FindFirst("MaSv")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(maSvStr) || !int.TryParse(maSvStr, out var maSv))
+                return NotFound();
+
+            // Lấy thông tin sinh viên
+            var sv = await _repo.GetByIdAsync(maSv);
+            if (sv == null) return NotFound();
+
+            // Kiểm tra xem sinh viên có đề tài đang thực hiện không
+            var canChangeKhoa = !await _db.HuongDans
+                .AnyAsync(hd => hd.MaSv == maSv && new[] { HuongDanStatus.Accepted, HuongDanStatus.InProgress, HuongDanStatus.Completed }.Contains((HuongDanStatus)hd.TrangThai));
+
+            // Lấy danh sách khoa
+            var danhSachKhoa = await _khoaRepo.GetOptionsAsync();
+
+            // Map sang ViewModel
+            var vm = new SinhVienProfileVm
+            {
+                MaSv = sv.Masv,
+                HoTenSv = sv.Hotensv ?? "",
+                NamSinh = sv.NamSinh ?? DateTime.Now.Year,
+                QueQuan = sv.QueQuan ?? "",
+                MaKhoa = sv.MaKhoa,
+                CanChangeKhoa = canChangeKhoa,
+                DanhSachKhoa = danhSachKhoa
+            };
+
+            return View(vm);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "SinhVien")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditProfile(SinhVienProfileVm model)
+        {
+            // Lấy danh sách khoa để trả về view nếu có lỗi
+            model.DanhSachKhoa = await _khoaRepo.GetOptionsAsync();
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // Lấy MaSv từ claim để đảm bảo sinh viên chỉ sửa thông tin của mình
+            var maSvStr = User.FindFirst("MaSv")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(maSvStr) || !int.TryParse(maSvStr, out var maSv) || maSv != model.MaSv)
+                return NotFound();
+
+            try
+            {
+                // Lấy sinh viên từ DB
+                var sv = await _repo.GetEntityAsync(maSv);
+                if (sv == null) return NotFound();
+
+                // Kiểm tra xem có được phép đổi khoa không
+                var canChangeKhoa = !await _db.HuongDans
+                    .AnyAsync(hd => hd.MaSv == maSv && new[] { HuongDanStatus.Accepted, HuongDanStatus.InProgress, HuongDanStatus.Completed }.Contains((HuongDanStatus)hd.TrangThai));
+
+                // Cập nhật thông tin được phép sửa
+                sv.HoTenSv = model.HoTenSv;
+                sv.NamSinh = model.NamSinh;
+                sv.QueQuan = model.QueQuan;
+
+                // Chỉ cập nhật khoa nếu được phép và có thay đổi
+                if (canChangeKhoa && sv.MaKhoa != model.MaKhoa)
+                {
+                    // Kiểm tra khoa mới có tồn tại không
+                    var khoaMoiTonTai = await _db.Khoas.AnyAsync(k => k.MaKhoa == model.MaKhoa);
+                    if (!khoaMoiTonTai)
+                    {
+                        ModelState.AddModelError("MaKhoa", "Khoa không tồn tại");
+                        return View(model);
+                    }
+                    sv.MaKhoa = model.MaKhoa;
+                }
+
+                // Lưu thay đổi
+                await _repo.UpdateAsync(sv);
+
+                // Cập nhật claim full_name
+                var identity = User.Identity as ClaimsIdentity;
+                if (identity != null)
+                {
+                    var fullNameClaim = identity.FindFirst("full_name");
+                    if (fullNameClaim != null)
+                    {
+                        identity.RemoveClaim(fullNameClaim);
+                        identity.AddClaim(new Claim("full_name", sv.HoTenSv ?? ""));
+                        await HttpContext.SignInAsync(new ClaimsPrincipal(identity));
+                    }
+                }
+
+                TempData["Success"] = "Cập nhật thông tin thành công";
+                return RedirectToAction(nameof(EditProfile));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                return View(model);
             }
         }
     }

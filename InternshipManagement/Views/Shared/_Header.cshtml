@@ -17,10 +17,18 @@
                     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User";
 
                     <li class="nav-item d-flex align-items-center">
-                        <span class="nav-link d-flex align-items-center">
+                        @{
+                            var profileUrl = role switch
+                            {
+                                "SinhVien" => Url.Action("EditProfile", "SinhVien"),
+                                "GiangVien" => Url.Action("EditProfile", "GiangVien"),
+                                _ => "#"
+                            };
+                        }
+                        <a href="@profileUrl" class="nav-link d-flex align-items-center">
                             <i class="bi bi-person-circle me-2"></i>
                             Xin chào, @fullName (@role)
-                        </span>
+                        </a>
                     </li>
                     <li class="nav-item">
                         <form asp-controller="Auth" asp-action="Logout" method="post"
