@@ -156,5 +156,54 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<List<SinhVienExportRowVm>> GetForExportAsync(SinhVienFilterVm filter)
+        {
+            // Build query
+            var query = _db.SinhViens
+                .Include(s => s.Khoa)
+                .AsNoTracking()
+                .AsQueryable();
+
+            // Apply filters (same logic as SearchAsync)
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                var keyword = filter.Keyword.Trim().ToLower();
+                query = query.Where(s => 
+                    s.HoTenSv.ToLower().Contains(keyword) ||
+                    s.QueQuan != null && s.QueQuan.ToLower().Contains(keyword));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.MaKhoa))
+            {
+                query = query.Where(s => s.MaKhoa == filter.MaKhoa);
+            }
+
+            if (filter.NamSinhMin.HasValue)
+            {
+                query = query.Where(s => s.NamSinh >= filter.NamSinhMin.Value);
+            }
+
+            if (filter.NamSinhMax.HasValue)
+            {
+                query = query.Where(s => s.NamSinh <= filter.NamSinhMax.Value);
+            }
+
+            // Get all results (no paging for export)
+            var items = await query
+                .OrderBy(s => s.MaSv)
+                .Select(s => new SinhVienExportRowVm
+                {
+                    Masv = s.MaSv,
+                    Hotensv = s.HoTenSv,
+                    MaKhoa = s.MaKhoa,
+                    TenKhoa = s.Khoa.TenKhoa,
+                    NamSinh = s.NamSinh,
+                    QueQuan = s.QueQuan
+                })
+                .ToListAsync();
+
+            return items;
+        }
     }
 }

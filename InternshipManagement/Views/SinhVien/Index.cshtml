@@ -19,13 +19,13 @@
 
 <form method="get" class="mb-3 p-3 bg-white rounded-3 shadow-sm">
     <div class="row g-3 align-items-end">
-        <div class="col-12 col-md-6 col-lg-2">
+        <div class="col-12 col-md-6 col-lg-4">
             <label class="form-label fw-bold text-primary">Từ khóa</label>
             <input class="form-control form-control-sm" name="Keyword"
                    value="@Model?.Filter?.Keyword"
                    placeholder="Tên, quê quán hoặc mã SV" />
         </div>
-        <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
             <label class="form-label fw-bold text-primary">Khoa</label>
             <select class="form-select form-select-sm" name="MaKhoa">
                 <option value="">-- Chọn khoa --</option>
@@ -45,20 +45,24 @@
             <input class="form-control form-control-sm" type="number" name="NamSinhMax"
                    value="@(Model?.Filter?.NamSinhMax?.ToString())" />
         </div>
-        <div class="col-12 col-lg-auto d-flex gap-2">
-            <button type="submit" class="btn btn-primary btn-sm text-white py-2">
-                <i class="bi bi-funnel-fill me-1"></i> Lọc
-            </button>
-            <a class="btn btn-secondary btn-sm text-white py-2" href="@Url.Action("Index")">
-                <i class="bi bi-arrow-clockwise me-1"></i> Xóa lọc
-            </a>
-            <a class="btn btn-success btn-sm text-white py-2" href="@Url.Action("Create")">
-                <i class="bi bi-person-fill-add me-1"></i> Thêm SV
-            </a>
-            <button type="button" class="btn btn-primary btn-sm text-white py-2" data-bs-toggle="modal" data-bs-target="#importModal">
-                <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
-            </button>
-        </div>
+        <div class="col-12 d-flex justify-content-end gap-2">
+    <button type="submit" class="btn btn-primary btn-sm text-white py-2">
+        <i class="bi bi-funnel-fill me-1"></i> Lọc
+    </button>
+    <a class="btn btn-secondary btn-sm text-white py-2" href="@Url.Action("Index")">
+        <i class="bi bi-arrow-clockwise me-1"></i> Xóa lọc
+    </a>
+    <a class="btn btn-success btn-sm text-white py-2" href="@Url.Action("Create")">
+        <i class="bi bi-person-fill-add me-1"></i> Thêm SV
+    </a>
+    <button type="button" class="btn btn-primary btn-sm text-white py-2" data-bs-toggle="modal" data-bs-target="#importModal">
+        <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
+    </button>
+    <button type="button" class="btn btn-success btn-sm text-white py-2" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
+    </button>
+</div>
+
     </div>
 </form>
 
@@ -251,6 +255,126 @@ else
     </div>
 </div>
 
+@* ---- Export Modal ---- *@
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+                    Export danh sách sinh viên
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" asp-action="Export" id="exportForm">
+                    @Html.AntiForgeryToken()
+
+                    @* Hidden inputs để truyền filter hiện tại *@
+                    <input type="hidden" name="Filter.Keyword" value="@Model?.Filter?.Keyword" />
+                    <input type="hidden" name="Filter.MaKhoa" value="@Model?.Filter?.MaKhoa" />
+                    <input type="hidden" name="Filter.NamSinhMin" value="@Model?.Filter?.NamSinhMin" />
+                    <input type="hidden" name="Filter.NamSinhMax" value="@Model?.Filter?.NamSinhMax" />
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Thông tin export:</strong><br/>
+                                File Excel sẽ được tạo với các điều kiện lọc hiện tại và các trường được chọn bên dưới.
+                                <div id="filterInfo">
+                                    <!-- Filter info sẽ được hiển thị bằng JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Chọn các trường cần export:</label>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="ExportMaSv" value="true" id="exportMaSv" checked>
+                                <input type="hidden" name="ExportMaSv" value="false">
+                                <label class="form-check-label" for="exportMaSv">
+                                    <i class="bi bi-person-badge me-1"></i> Mã sinh viên
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="ExportHoTenSv" value="true" id="exportHoTenSv" checked>
+                                <input type="hidden" name="ExportHoTenSv" value="false">
+                                <label class="form-check-label" for="exportHoTenSv">
+                                    <i class="bi bi-person me-1"></i> Họ và tên
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
+                                <input type="hidden" name="ExportMaKhoa" value="false">
+                                <label class="form-check-label" for="exportMaKhoa">
+                                    <i class="bi bi-building me-1"></i> Mã khoa
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
+                                <input type="hidden" name="ExportTenKhoa" value="false">
+                                <label class="form-check-label" for="exportTenKhoa">
+                                    <i class="bi bi-buildings me-1"></i> Tên khoa
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="ExportNamSinh" value="true" id="exportNamSinh" checked>
+                                <input type="hidden" name="ExportNamSinh" value="false">
+                                <label class="form-check-label" for="exportNamSinh">
+                                    <i class="bi bi-calendar-event me-1"></i> Năm sinh
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="ExportQueQuan" value="true" id="exportQueQuan" checked>
+                                <input type="hidden" name="ExportQueQuan" value="false">
+                                <label class="form-check-label" for="exportQueQuan">
+                                    <i class="bi bi-geo-alt me-1"></i> Quê quán
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllFields">
+                                        <i class="bi bi-check-all me-1"></i> Chọn tất cả
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clearAllFields">
+                                        <i class="bi bi-x-square me-1"></i> Bỏ chọn tất cả
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="submit" form="exportForm" class="btn btn-info text-white">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts{
     <script>
         // Gán dữ liệu cho modal xóa khi mở
@@ -272,6 +396,67 @@ else
             } else {
                 fileInput.classList.remove('is-invalid');
             }
+        });
+
+        // Xử lý export modal
+        document.getElementById('selectAllFields')?.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        });
+
+        document.getElementById('clearAllFields')?.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        });
+
+        // Validation cho export form
+        document.getElementById('exportForm')?.addEventListener('submit', function(e) {
+            const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Vui lòng chọn ít nhất một trường để export!');
+            }
+        });
+
+        // Hiển thị thông tin filter trong export modal
+        document.getElementById('exportModal')?.addEventListener('show.bs.modal', function() {
+            const filterInfo = document.getElementById('filterInfo');
+            if (!filterInfo) return;
+
+            const keyword = document.querySelector('input[name="Keyword"]')?.value;
+            const maKhoa = document.querySelector('select[name="MaKhoa"]')?.value;
+            const namSinhMin = document.querySelector('input[name="NamSinhMin"]')?.value;
+            const namSinhMax = document.querySelector('input[name="NamSinhMax"]')?.value;
+            
+            const selectedKhoaText = maKhoa ? document.querySelector(`select[name="MaKhoa"] option[value="${maKhoa}"]`)?.textContent : '';
+
+            let filterText = '';
+            if (keyword || maKhoa || namSinhMin || namSinhMax) {
+                filterText = '<br/><strong>Điều kiện lọc hiện tại:</strong>';
+                
+                if (keyword) {
+                    filterText += '<br/>- Từ khóa: ' + keyword;
+                }
+                
+                if (maKhoa && selectedKhoaText) {
+                    filterText += '<br/>- Khoa: ' + selectedKhoaText;
+                }
+                
+                if (namSinhMin || namSinhMax) {
+                    filterText += '<br/>- Năm sinh: ';
+                    if (namSinhMin && namSinhMax) {
+                        filterText += 'từ ' + namSinhMin + ' đến ' + namSinhMax;
+                    } else if (namSinhMin) {
+                        filterText += 'từ ' + namSinhMin + ' trở lên';
+                    } else if (namSinhMax) {
+                        filterText += 'đến ' + namSinhMax + ' trở xuống';
+                    }
+                }
+            } else {
+                filterText = '<br/>Không có điều kiện lọc - sẽ export toàn bộ sinh viên.';
+            }
+            
+            filterInfo.innerHTML = filterText;
         });
     </script>
 }

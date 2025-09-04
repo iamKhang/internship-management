@@ -497,5 +497,209 @@ namespace InternshipManagement.Controllers
                 return View(model);
             }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Export(SinhVienExportVm model)
+        {
+            try
+            {
+                // Lấy dữ liệu sinh viên theo filter
+                var sinhVienData = await _repo.GetForExportAsync(model.Filter);
+                
+                if (!sinhVienData.Any())
+                {
+                    TempData["Error"] = "Không có dữ liệu để export với điều kiện lọc hiện tại.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Lấy thông tin khoa để hiển thị tên khoa trong filter info
+                var khoaInfo = "";
+                if (!string.IsNullOrWhiteSpace(model.Filter.MaKhoa))
+                {
+                    var khoa = await _khoaRepo.GetEntityAsync(model.Filter.MaKhoa);
+                    khoaInfo = khoa?.TenKhoa ?? model.Filter.MaKhoa;
+                }
+
+                using (var package = new ExcelPackage())
+                {
+                    var worksheet = package.Workbook.Worksheets.Add("DanhSachSinhVien");
+
+                    // Thiết lập tiêu đề và thông tin
+                    var currentRow = 1;
+                    
+                    // Tiêu đề chính
+                    worksheet.Cells[currentRow, 1].Value = "DANH SÁCH SINH VIÊN";
+                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[currentRow, 1].Style.Font.Size = 16;
+                    worksheet.Cells[currentRow, 1, currentRow, 6].Merge = true;
+                    worksheet.Cells[currentRow, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                    currentRow += 2;
+
+                    // Thông tin xuất file
+                    worksheet.Cells[currentRow, 1].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+                    currentRow++;
+
+                    worksheet.Cells[currentRow, 1].Value = $"Tổng số sinh viên: {sinhVienData.Count}";
+                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+                    currentRow++;
+
+                    // Thông tin filter
+                    if (!string.IsNullOrWhiteSpace(model.Filter.Keyword) || 
+                        !string.IsNullOrWhiteSpace(model.Filter.MaKhoa) ||
+                        model.Filter.NamSinhMin.HasValue || 
+                        model.Filter.NamSinhMax.HasValue)
+                    {
+                        currentRow++;
+                        worksheet.Cells[currentRow, 1].Value = "Điều kiện lọc:";
+                        worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+                        currentRow++;
+
+                        if (!string.IsNullOrWhiteSpace(model.Filter.Keyword))
+                        {
+                            worksheet.Cells[currentRow, 1].Value = $"- Từ khóa: {model.Filter.Keyword}";
+                            currentRow++;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(model.Filter.MaKhoa))
+                        {
+                            worksheet.Cells[currentRow, 1].Value = $"- Khoa: {khoaInfo} ({model.Filter.MaKhoa})";
+                            currentRow++;
+                        }
+
+                        if (model.Filter.NamSinhMin.HasValue || model.Filter.NamSinhMax.HasValue)
+                        {
+                            var namSinhFilter = "- Năm sinh: ";
+                            if (model.Filter.NamSinhMin.HasValue && model.Filter.NamSinhMax.HasValue)
+                                namSinhFilter += $"từ {model.Filter.NamSinhMin} đến {model.Filter.NamSinhMax}";
+                            else if (model.Filter.NamSinhMin.HasValue)
+                                namSinhFilter += $"từ {model.Filter.NamSinhMin} trở lên";
+                            else if (model.Filter.NamSinhMax.HasValue)
+                                namSinhFilter += $"đến {model.Filter.NamSinhMax} trở xuống";
+
+                            worksheet.Cells[currentRow, 1].Value = namSinhFilter;
+                            currentRow++;
+                        }
+                    }
+
+                    currentRow += 2; // Khoảng cách trước bảng dữ liệu
+
+                    // Tạo header cho bảng dữ liệu
+                    var headers = new List<string>();
+                    var columnIndex = 1;
+
+                    if (model.ExportMaSv)
+                    {
+                        headers.Add("Mã SV");
+                        worksheet.Cells[currentRow, columnIndex].Value = "Mã SV";
+                        columnIndex++;
+                    }
+
+                    if (model.ExportHoTenSv)
+                    {
+                        headers.Add("Họ và tên");
+                        worksheet.Cells[currentRow, columnIndex].Value = "Họ và tên";
+                        columnIndex++;
+                    }
+
+                    if (model.ExportMaKhoa)
+                    {
+                        headers.Add("Mã khoa");
+                        worksheet.Cells[currentRow, columnIndex].Value = "Mã khoa";
+                        columnIndex++;
+                    }
+
+                    if (model.ExportTenKhoa)
+                    {
+                        headers.Add("Tên khoa");
+                        worksheet.Cells[currentRow, columnIndex].Value = "Tên khoa";
+                        columnIndex++;
+                    }
+
+                    if (model.ExportNamSinh)
+                    {
+                        headers.Add("Năm sinh");
+                        worksheet.Cells[currentRow, columnIndex].Value = "Năm sinh";
+                        columnIndex++;
+                    }
+
+                    if (model.ExportQueQuan)
+                    {
+                        headers.Add("Quê quán");
+                        worksheet.Cells[currentRow, columnIndex].Value = "Quê quán";
+                        columnIndex++;
+                    }
+
+                    // Định dạng header
+                    var headerRange = worksheet.Cells[currentRow, 1, currentRow, columnIndex - 1];
+                    headerRange.Style.Font.Bold = true;
+                    headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                    headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                    currentRow++;
+
+                    // Thêm dữ liệu
+                    foreach (var sv in sinhVienData)
+                    {
+                        columnIndex = 1;
+
+                        if (model.ExportMaSv)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = sv.Masv;
+                            columnIndex++;
+                        }
+
+                        if (model.ExportHoTenSv)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = sv.Hotensv;
+                            columnIndex++;
+                        }
+
+                        if (model.ExportMaKhoa)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = sv.MaKhoa;
+                            columnIndex++;
+                        }
+
+                        if (model.ExportTenKhoa)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = sv.TenKhoa;
+                            columnIndex++;
+                        }
+
+                        if (model.ExportNamSinh)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = sv.NamSinh;
+                            columnIndex++;
+                        }
+
+                        if (model.ExportQueQuan)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = sv.QueQuan;
+                            columnIndex++;
+                        }
+
+                        currentRow++;
+                    }
+
+                    // Tự động điều chỉnh độ rộng cột
+                    worksheet.Cells.AutoFitColumns();
+
+                    // Tạo file và trả về
+                    var content = package.GetAsByteArray();
+                    var fileName = $"DanhSach_SinhVien_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                    
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi xuất file: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }
