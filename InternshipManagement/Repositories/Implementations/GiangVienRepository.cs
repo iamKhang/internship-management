@@ -145,5 +145,52 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .ToListAsync();
         }
+
+        public async Task<List<GiangVienExportRowVm>> GetForExportAsync(GiangVienFilterVm filter)
+        {
+            // Build query
+            var query = _db.GiangViens
+                .Include(g => g.Khoa)
+                .AsNoTracking()
+                .AsQueryable();
+
+            // Apply filters (same logic as SearchAsync)
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                var keyword = filter.Keyword.Trim().ToLower();
+                query = query.Where(g => 
+                    g.HoTenGv != null && g.HoTenGv.ToLower().Contains(keyword));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.MaKhoa))
+            {
+                query = query.Where(g => g.MaKhoa == filter.MaKhoa);
+            }
+
+            if (filter.LuongMin.HasValue)
+            {
+                query = query.Where(g => g.Luong >= filter.LuongMin.Value);
+            }
+
+            if (filter.LuongMax.HasValue)
+            {
+                query = query.Where(g => g.Luong <= filter.LuongMax.Value);
+            }
+
+            // Get all results (no paging for export)
+            var items = await query
+                .OrderBy(g => g.MaGv)
+                .Select(g => new GiangVienExportRowVm
+                {
+                    MaGv = g.MaGv,
+                    HoTenGv = g.HoTenGv ?? "",
+                    MaKhoa = g.MaKhoa,
+                    TenKhoa = g.Khoa != null ? g.Khoa.TenKhoa : null,
+                    Luong = g.Luong
+                })
+                .ToListAsync();
+
+            return items;
+        }
     }
 }

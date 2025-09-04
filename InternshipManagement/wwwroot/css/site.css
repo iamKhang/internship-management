@@ -85,6 +85,19 @@ a {
     }
 }
 
+/* Đảm bảo filter actions không bị overflow */
+@media (max-width: 991px) {
+    .filter-grid {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-actions {
+        margin-top: 12px;
+        justify-content: center;
+    }
+}
+
 .fcol {
     min-width: 180px;
 }
@@ -121,8 +134,10 @@ a {
 
 .filter-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
-    white-space: nowrap;
+    align-items: center;
+    justify-content: flex-start;
 }
 
     .filter-actions .btn {
@@ -131,7 +146,30 @@ a {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+        min-width: fit-content;
     }
+
+/* Responsive cho filter actions */
+@media (max-width: 768px) {
+    .filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    
+    .filter-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 991px) {
+    .filter-actions {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+}
 
 /* ============ TABLES ============ */
 .table-wrap {
@@ -148,6 +186,37 @@ a {
 
 .table tbody tr:hover {
     background: #FAFBFF;
+}
+
+/* ============ UTILITY CLASSES ============ */
+.btn-group-responsive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-group-responsive .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+    .btn-group-responsive {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group-responsive .btn {
+        width: 100%;
+    }
+}
+
+/* Overflow handling */
+.overflow-wrap {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
 }
 
 /* ============ HERO (tùy chọn) ============ */

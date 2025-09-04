@@ -18,5 +18,7 @@ namespace InternshipManagement.Repositories.Interfaces
         /// Lấy danh sách GV (option) theo khoa (có thể null để lấy tất cả).
         /// </summary>
         Task<List<GiangVienOptionVm>> GetOptionsAsync(string? maKhoa = null);
+        
+        Task<List<GiangVienExportRowVm>> GetForExportAsync(GiangVienFilterVm filter);
     }
 }
