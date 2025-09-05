@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using InternshipManagement.Data;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
+using InternshipManagement.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -20,11 +21,13 @@ namespace InternshipManagement.Controllers
         private readonly ISinhVienRepository _repo;
         private readonly IKhoaRepository _khoaRepo;
         private readonly AppDbContext _db;
-        public SinhVienController(ISinhVienRepository repo, IKhoaRepository khoaRepo, AppDbContext db)
+        private readonly UserAccountService _userAccountService;
+        public SinhVienController(ISinhVienRepository repo, IKhoaRepository khoaRepo, AppDbContext db, UserAccountService userAccountService)
         {
             _repo = repo;
             _khoaRepo = khoaRepo;
             _db = db;
+            _userAccountService = userAccountService;
         }
 
         [Authorize(Roles = "Admin")]
@@ -125,6 +128,10 @@ namespace InternshipManagement.Controllers
             try
             {
                 await _repo.CreateAsync(model);
+
+                // Tạo tài khoản đăng nhập cho sinh viên (sử dụng MaSv từ model)
+                await _userAccountService.CreateStudentAccountAsync(model.MaSv);
+
                 TempData["Success"] = "Thêm sinh viên thành công.";
                 return RedirectToAction(nameof(Index));
             }
@@ -380,6 +387,9 @@ namespace InternshipManagement.Controllers
                             };
 
                             await _repo.CreateAsync(sinhVien);
+
+                            // Tạo tài khoản đăng nhập cho sinh viên
+                            await _userAccountService.CreateStudentAccountAsync(sinhVien.MaSv);
                         }
 
                         TempData["Success"] = $"Đã import thành công {importedRows.Count} sinh viên.";

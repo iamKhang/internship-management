@@ -31,7 +31,7 @@ namespace InternshipManagement.Data
             { "KHCNMT", (1086, 1090, 86, 90) }
         };
 
-        private static readonly Random Random = new Random(42); // Fixed seed for reproducible results
+        // Removed Random to ensure deterministic seeding for EF Core migrations
 
         private static List<(string maDt, string maKhoa, int maGv, byte hocKy, string namHoc, int soLuongToiDa)> GetAllTopicsData()
         {
@@ -56,17 +56,15 @@ namespace InternshipManagement.Data
 
         private static (byte hocKy, string namHoc, int soLuongToiDa) GetTopicDetailsFromSeedData(string maDt)
         {
-            // Vì chúng ta không thể truy cập vào DB context ở đây, 
-            // chúng ta sẽ tạo một mapping đơn giản dựa trên pattern của seed data
+            // Deterministic values based on topic ID to ensure EF Core migration stability
             var topicIndex = int.Parse(maDt.Substring(2));
-            
-            // Random nhưng deterministic based on topic ID
-            var localRandom = new Random(topicIndex);
-            var hocKy = (byte)localRandom.Next(1, 4);
+
+            // Use deterministic calculations instead of random
+            var hocKy = (byte)((topicIndex % 3) + 1); // Cycles through 1, 2, 3
             var namHocs = new[] { "2018-2019", "2019-2020", "2020-2021", "2021-2022", "2022-2023", "2023-2024", "2024-2025" };
-            var namHoc = namHocs[localRandom.Next(namHocs.Length)];
-            var soLuongToiDa = localRandom.Next(2, 5); // 2-4 sinh viên
-            
+            var namHoc = namHocs[topicIndex % namHocs.Length];
+            var soLuongToiDa = 2 + (topicIndex % 3); // Cycles through 2, 3, 4
+
             return (hocKy, namHoc, soLuongToiDa);
         }
 
@@ -96,9 +94,9 @@ namespace InternshipManagement.Data
 
                 for (int maSv = startSv; maSv <= endSv; maSv++)
                 {
-                    // Mỗi sinh viên sẽ đăng ký 3-8 đề tài random
-                    var numRegistrations = Random.Next(3, 9);
-                    var selectedTopics = khoaTopics.OrderBy(x => Random.Next()).Take(numRegistrations).ToList();
+                    // Mỗi sinh viên sẽ đăng ký số đề tài deterministic dựa trên maSv
+                    var numRegistrations = 3 + (maSv % 5); // Cycles through 3, 4, 5, 6, 7
+                    var selectedTopics = khoaTopics.OrderBy(x => x.maDt.GetHashCode()).Take(numRegistrations).ToList();
 
                     foreach (var topic in selectedTopics)
                     {
@@ -117,10 +115,10 @@ namespace InternshipManagement.Data
                             availableStates.AddRange(new[] { HuongDanStatus.Accepted, HuongDanStatus.InProgress, HuongDanStatus.Completed });
                         }
 
-                        var trangThai = availableStates[Random.Next(availableStates.Count)];
+                        var trangThai = availableStates[maSv % availableStates.Count];
 
                         // Tạo thời gian phù hợp với học kỳ/năm học
-                        var (createdAt, acceptedAt) = GenerateTimestamps(hocKy, namHoc, trangThai);
+                        var (createdAt, acceptedAt) = GenerateTimestamps(hocKy, namHoc, trangThai, maSv);
 
                         var huongDan = new HuongDan
                         {
@@ -136,7 +134,9 @@ namespace InternshipManagement.Data
                         // Nếu completed thì có điểm
                         if (trangThai == HuongDanStatus.Completed)
                         {
-                            huongDan.KetQua = (decimal)(Random.NextDouble() * 4 + 6); // 6.0 - 10.0
+                            // Deterministic score based on maSv and maDt
+                            var scoreHash = (maSv + maDt.GetHashCode()) % 41; // 0-40 range
+                            huongDan.KetQua = 6.0m + (scoreHash * 0.1m); // 6.0 - 10.0 range
                         }
 
                         // Cập nhật tracking
@@ -161,7 +161,7 @@ namespace InternshipManagement.Data
                    status == HuongDanStatus.Completed;
         }
 
-        private static (DateTime createdAt, DateTime? acceptedAt) GenerateTimestamps(byte hocKy, string namHoc, HuongDanStatus trangThai)
+        private static (DateTime createdAt, DateTime? acceptedAt) GenerateTimestamps(byte hocKy, string namHoc, HuongDanStatus trangThai, int maSv)
         {
             var parts = namHoc.Split('-');
             var startYear = int.Parse(parts[0]);
@@ -192,7 +192,7 @@ namespace InternshipManagement.Data
             // CreatedAt trong khoảng đầu học kỳ (tháng đầu)
             var createdStart = semesterStart;
             var createdEnd = semesterStart.AddDays(30);
-            var createdAt = GenerateRandomDate(createdStart, createdEnd);
+            var createdAt = GenerateDeterministicDate(createdStart, createdEnd, maSv * 100 + (int)hocKy);
 
             DateTime? acceptedAt = null;
             if (trangThai == HuongDanStatus.Accepted || trangThai == HuongDanStatus.InProgress || trangThai == HuongDanStatus.Completed)
@@ -201,17 +201,20 @@ namespace InternshipManagement.Data
                 var acceptStart = createdAt.AddDays(1);
                 var acceptEnd = createdAt.AddDays(14);
                 if (acceptEnd > semesterEnd) acceptEnd = semesterEnd;
-                acceptedAt = GenerateRandomDate(acceptStart, acceptEnd);
+                acceptedAt = GenerateDeterministicDate(acceptStart, acceptEnd, maSv * 1000 + (int)hocKy * 10 + (int)trangThai);
             }
 
             return (createdAt, acceptedAt);
         }
 
-        private static DateTime GenerateRandomDate(DateTime start, DateTime end)
+        private static DateTime GenerateDeterministicDate(DateTime start, DateTime end, int seed)
         {
             var range = end - start;
-            var randomTicks = (long)(Random.NextDouble() * range.Ticks);
-            return start.AddTicks(randomTicks);
+            // Use deterministic calculation based on seed instead of random
+            var normalizedSeed = seed % 100; // 0-99 range
+            var fraction = normalizedSeed / 100.0;
+            var ticks = (long)(fraction * range.Ticks);
+            return start.AddTicks(ticks);
         }
 
         private static string GenerateGhiChu(HuongDanStatus trangThai)
@@ -387,18 +390,18 @@ namespace InternshipManagement.Data
 
             mb.Entity<SinhVien>().HasData(
                 // ===== Khoa CNCK =====
-                new SinhVien { MaSv = 1001, HoTenSv = "Nguyễn Văn Hùng", MaKhoa = "CNCK", NamSinh = 2002, QueQuan = "Hà Nội" },
-                new SinhVien { MaSv = 1002, HoTenSv = "Trần Thị Mai", MaKhoa = "CNCK", NamSinh = 2001, QueQuan = "Nam Định" },
-                new SinhVien { MaSv = 1003, HoTenSv = "Phạm Văn Nam", MaKhoa = "CNCK", NamSinh = 2003, QueQuan = "Hải Phòng" },
-                new SinhVien { MaSv = 1004, HoTenSv = "Đỗ Thị Hoa", MaKhoa = "CNCK", NamSinh = 2002, QueQuan = "Thái Bình" },
-                new SinhVien { MaSv = 1005, HoTenSv = "Lê Quang Vinh", MaKhoa = "CNCK", NamSinh = 2001, QueQuan = "Thanh Hóa" },
+                new SinhVien { MaSv = 1006, HoTenSv = "Nguyễn Văn Hùng", MaKhoa = "CNCK", NamSinh = 2002, QueQuan = "Hà Nội" },
+                new SinhVien { MaSv = 1007, HoTenSv = "Trần Thị Mai", MaKhoa = "CNCK", NamSinh = 2001, QueQuan = "Nam Định" },
+                new SinhVien { MaSv = 1008, HoTenSv = "Phạm Văn Nam", MaKhoa = "CNCK", NamSinh = 2003, QueQuan = "Hải Phòng" },
+                new SinhVien { MaSv = 1009, HoTenSv = "Đỗ Thị Hoa", MaKhoa = "CNCK", NamSinh = 2002, QueQuan = "Thái Bình" },
+                new SinhVien { MaSv = 1010, HoTenSv = "Lê Quang Vinh", MaKhoa = "CNCK", NamSinh = 2001, QueQuan = "Thanh Hóa" },
 
                 // ===== Khoa CNTT =====
-                new SinhVien { MaSv = 1006, HoTenSv = "Nguyễn Thị Ngọc Lan", MaKhoa = "CNTT", NamSinh = 2002, QueQuan = "TP.HCM" },
-                new SinhVien { MaSv = 1007, HoTenSv = "Trần Văn Minh", MaKhoa = "CNTT", NamSinh = 2001, QueQuan = "Đà Nẵng" },
-                new SinhVien { MaSv = 1008, HoTenSv = "Phạm Thị Hồng Nhung", MaKhoa = "CNTT", NamSinh = 2003, QueQuan = "Nghệ An" },
-                new SinhVien { MaSv = 1009, HoTenSv = "Đinh Văn Lâm", MaKhoa = "CNTT", NamSinh = 2002, QueQuan = "Quảng Ninh" },
-                new SinhVien { MaSv = 1010, HoTenSv = "Hoàng Thị Thu Hà", MaKhoa = "CNTT", NamSinh = 2001, QueQuan = "Huế" },
+                new SinhVien { MaSv = 1001, HoTenSv = "Lê Hoàng Khang", MaKhoa = "CNTT", NamSinh = 2002, QueQuan = "TP.HCM" },
+                new SinhVien { MaSv = 1002, HoTenSv = "Trần Văn Minh", MaKhoa = "CNTT", NamSinh = 2001, QueQuan = "Đà Nẵng" },
+                new SinhVien { MaSv = 1003, HoTenSv = "Phạm Thị Hồng Nhung", MaKhoa = "CNTT", NamSinh = 2003, QueQuan = "Nghệ An" },
+                new SinhVien { MaSv = 1004, HoTenSv = "Đinh Văn Lâm", MaKhoa = "CNTT", NamSinh = 2002, QueQuan = "Quảng Ninh" },
+                new SinhVien { MaSv = 1005, HoTenSv = "Hoàng Thị Thu Hà", MaKhoa = "CNTT", NamSinh = 2001, QueQuan = "Huế" },
 
                 // ===== Khoa CNDIEN =====
                 new SinhVien { MaSv = 1011, HoTenSv = "Nguyễn Văn Phúc", MaKhoa = "CNDIEN", NamSinh = 2002, QueQuan = "Bắc Giang" },
@@ -1145,7 +1148,19 @@ namespace InternshipManagement.Data
                 new DeTai { MaDt = "DT447", TenDt = "Giám sát đa dạng sinh học bằng bẫy ảnh", KinhPhi = 14, NoiThucTap = "Khu bảo tồn thiên nhiên Bình Châu", MaGv = 90, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 2 },
                 new DeTai { MaDt = "DT448", TenDt = "Mô hình sinh cảnh phù hợp cho chim nước bằng MaxEnt", KinhPhi = 17, NoiThucTap = "Viện Sinh thái & Tài nguyên", MaGv = 90, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
                 new DeTai { MaDt = "DT449", TenDt = "Đánh giá tác động xâm lấn của loài ngoại lai", KinhPhi = 12, NoiThucTap = "Sở NN&PTNT", MaGv = 90, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 2 },
-                new DeTai { MaDt = "DT450", TenDt = "Ứng dụng DNA barcoding trong giám định loài", KinhPhi = 20, NoiThucTap = "Trung tâm PTN Sinh học", MaGv = 90, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 4 }
+                new DeTai { MaDt = "DT450", TenDt = "Ứng dụng DNA barcoding trong giám định loài", KinhPhi = 20, NoiThucTap = "Trung tâm PTN Sinh học", MaGv = 90, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+
+                new DeTai { MaDt = "DT451", TenDt = "Nền tảng quản lý khóa học microservices (.NET + React)", KinhPhi = 22, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT452", TenDt = "Trợ lý học tập dùng LLM (RAG + Azure OpenAI)", KinhPhi = 24, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT453", TenDt = "Hệ thống chấm bài lập trình tự động (Online Judge)", KinhPhi = 18, NoiThucTap = "NashTech VN", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT454", TenDt = "Dashboard IoT giám sát phòng lab (MQTT + Timeseries DB)", KinhPhi = 17, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT455", TenDt = "Phân tích dữ liệu sinh viên và dự báo rủi ro học tập (BI/ML)", KinhPhi = 20, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT456", TenDt = "Cổng tuyển sinh số đa kênh (Next.js + Keycloak SSO)", KinhPhi = 19, NoiThucTap = "Axon Active", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT457", TenDt = "Chatbot hỗ trợ sinh viên (RAG + Vector DB + LangChain)", KinhPhi = 21, NoiThucTap = "Zalo AI", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT458", TenDt = "Nền tảng kết nối thực tập & việc làm (Matching + Recommender)", KinhPhi = 18, NoiThucTap = "TopCV", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT459", TenDt = "Đăng ký học phần chịu tải cao (CQRS + Event Sourcing)", KinhPhi = 23, NoiThucTap = "CMC Global", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT460", TenDt = "Điểm danh nhận diện khuôn mặt (Edge AI + ONNX)", KinhPhi = 16, NoiThucTap = "VinAI", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 }
+
 
             );
 

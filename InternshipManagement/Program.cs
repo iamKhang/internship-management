@@ -12,6 +12,7 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
 {
     using var scope = services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userAccountService = scope.ServiceProvider.GetRequiredService<InternshipManagement.Services.UserAccountService>();
 
     // Ensure database exists and is up to date
     if (db.Database.GetPendingMigrations().Any())
@@ -36,25 +37,13 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
     // 2) All Students (1001..1030)
     for (int ma = 1001; ma <= 1030; ma++)
     {
-        string code = ma.ToString();
-        if (!await db.AppUsers.AnyAsync(u => u.Code == code && u.Role == AppRole.SinhVien))
-        {
-            var u = new AppUser { Code = code, Role = AppRole.SinhVien, PasswordHash = "" };
-            u.PasswordHash = hasher.HashPassword(u, "123456");
-            db.AppUsers.Add(u);
-        }
+        await userAccountService.CreateStudentAccountAsync(ma);
     }
 
     // 3) All Teachers (1..10)
     for (int ma = 1; ma <= 10; ma++)
     {
-        string code = ma.ToString();
-        if (!await db.AppUsers.AnyAsync(u => u.Code == code && u.Role == AppRole.GiangVien))
-        {
-            var u = new AppUser { Code = code, Role = AppRole.GiangVien, PasswordHash = "" };
-            u.PasswordHash = hasher.HashPassword(u, "123456");
-            db.AppUsers.Add(u);
-        }
+        await userAccountService.CreateTeacherAccountAsync(ma);
     }
 
     await db.SaveChangesAsync();
@@ -94,6 +83,9 @@ builder.Services.AddScoped<IKhoaRepository, KhoaRepository>();
 builder.Services.AddScoped<IGiangVienRepository, GiangVienRepository>();
 builder.Services.AddScoped<IDeTaiRepository, DeTaiRepository>();
 builder.Services.AddScoped<IThongKeRepository, ThongKeRepository>();
+
+// Register services
+builder.Services.AddScoped<InternshipManagement.Services.UserAccountService>();
 
 // Configure authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

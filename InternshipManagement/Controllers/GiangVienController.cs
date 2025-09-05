@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using InternshipManagement.Data;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
+using InternshipManagement.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -19,12 +20,14 @@ namespace InternshipManagement.Controllers
         private readonly IGiangVienRepository _repo;
         private readonly IKhoaRepository _khoaRepo;
         private readonly AppDbContext _db;
+        private readonly UserAccountService _userAccountService;
 
-        public GiangVienController(IGiangVienRepository repo, IKhoaRepository khoaRepo, AppDbContext db)
+        public GiangVienController(IGiangVienRepository repo, IKhoaRepository khoaRepo, AppDbContext db, UserAccountService userAccountService)
         {
             _repo = repo;
             _khoaRepo = khoaRepo;
             _db = db;
+            _userAccountService = userAccountService;
         }
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index([FromQuery] GiangVienFilterVm filter, [FromQuery] PagingRequest paging)
@@ -97,6 +100,10 @@ namespace InternshipManagement.Controllers
                 model.HoTenGv = model.HoTenGv?.Trim();
 
                 await _repo.CreateAsync(model);
+
+                // Tạo tài khoản đăng nhập cho giảng viên
+                await _userAccountService.CreateTeacherAccountAsync(model.MaGv);
+
                 TempData["Success"] = "Thêm giảng viên thành công.";
                 return RedirectToAction(nameof(Index));
             }
@@ -451,6 +458,9 @@ namespace InternshipManagement.Controllers
                             };
 
                             await _repo.CreateAsync(giangVien);
+
+                            // Tạo tài khoản đăng nhập cho giảng viên
+                            await _userAccountService.CreateTeacherAccountAsync(giangVien.MaGv);
                         }
 
                         TempData["Success"] = $"Đã import thành công {importedRows.Count} giảng viên.";
