@@ -32,10 +32,10 @@
                           <div class="col-md-4">
                     <label asp-for="Filter.TinhTrang" class="form-label">Tình trạng</label>
                     <select asp-for="Filter.TinhTrang" class="form-select">
-                        <option value="All">-- Tất cả --</option>
-                        <option value="OnlyNoStudent">Chưa có sinh viên đăng ký</option>
-                        <option value="OnlyFull">Đã đủ số lượng</option>
-                        <option value="OnlyNotEnough">Còn trống</option>
+                        <option value="0">-- Tất cả --</option>
+                        <option value="2">Chưa có sinh viên đăng ký</option>
+                        <option value="3">Đã đủ số lượng</option>
+                        <option value="4">Còn trống</option>
                     </select>
                 </div>
 
@@ -402,6 +402,54 @@
 
   const urlExport = '@Url.Action("Export","DeTai")';
   const urlExportDetail = '@Url.Action("ExportChiTiet","DeTai")';
+  const urlGetLecturers = '@Url.Action("GetLecturersByDepartment","DeTai")';
+
+  // Lấy các dropdown
+  const khoaSelect = document.getElementById('Filter_MaKhoa');
+  const giangVienSelect = document.getElementById('Filter_MaGv');
+
+  // Hàm cập nhật danh sách giảng viên theo khoa
+  function updateLecturers(maKhoa) {
+    fetch(`${urlGetLecturers}?maKhoa=${encodeURIComponent(maKhoa || '')}`)
+      .then(response => response.json())
+      .then(data => {
+        // Xóa tất cả options hiện tại
+        giangVienSelect.innerHTML = '';
+
+        // Thêm option mặc định
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.text = '-- Tất cả --';
+        giangVienSelect.appendChild(defaultOption);
+
+        // Thêm các options mới
+        data.options.forEach(option => {
+          const opt = document.createElement('option');
+          opt.value = option.value;
+          opt.text = option.text;
+          giangVienSelect.appendChild(opt);
+        });
+      })
+      .catch(error => {
+        console.error('Error updating lecturers:', error);
+      });
+  }
+
+  // Xử lý khi thay đổi khoa
+  khoaSelect.addEventListener('change', function() {
+    const selectedMaKhoa = this.value;
+    updateLecturers(selectedMaKhoa);
+    // Reset giảng viên về "tất cả" khi thay đổi khoa để tránh conflict
+    giangVienSelect.value = '';
+  });
+
+  // Khởi tạo danh sách giảng viên khi trang load
+  // Chỉ update nếu có khoa được chọn nhưng không có giảng viên được chọn
+  const initialMaKhoa = khoaSelect.value;
+  const initialMaGv = giangVienSelect.value;
+  if (initialMaKhoa && !initialMaGv) {
+    updateLecturers(initialMaKhoa);
+  }
 
   // Tạo URL với query string từ form và các checkbox
   function exportWith(url) {

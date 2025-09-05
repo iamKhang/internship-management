@@ -24,7 +24,7 @@
         // Sinh viên + hướng dẫn
         public int? MaSv { get; set; }
         public string? HoTenSv { get; set; }
-        public byte TrangThai { get; set; }    // 1/2/3
+        public byte? TrangThai { get; set; }    // 1/2/3
         public DateTime? NgayDangKy { get; set; }
         public DateTime? NgayChapNhan { get; set; }
         public decimal? KetQua { get; set; }

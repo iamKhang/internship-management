@@ -29,7 +29,9 @@ namespace InternshipManagement.Controllers
                 .Select(k => new SelectListItem { Value = k.MaKhoa, Text = k.TenKhoa, Selected = (filter.MaKhoa == k.MaKhoa) })
                 .ToList();
 
-            var gvOptions = (await _gvRepo.GetOptionsAsync(filter.MaKhoa))
+            // Nếu có MaGv được chọn, lấy tất cả giảng viên để đảm bảo giảng viên được chọn vẫn hiển thị
+            // Nếu không có MaGv được chọn, chỉ lấy giảng viên của khoa được chọn (nếu có)
+            var gvOptions = (await _gvRepo.GetOptionsAsync(filter.MaGv.HasValue ? null : filter.MaKhoa))
                 .Select(g => new SelectListItem { Value = g.MaGv.ToString(), Text = g.TenGv, Selected = (filter.MaGv == g.MaGv) })
                 .ToList();
 
@@ -63,6 +65,17 @@ namespace InternshipManagement.Controllers
             };
 
             return View(vm);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetLecturersByDepartment(string? maKhoa)
+        {
+            var lecturers = await _gvRepo.GetOptionsAsync(maKhoa);
+            var options = lecturers
+                .Select(g => new { Value = g.MaGv.ToString(), Text = g.TenGv })
+                .ToList();
+
+            return Json(new { options });
         }
 
         [HttpGet]
@@ -350,12 +363,16 @@ namespace InternshipManagement.Controllers
             ws.Row(r).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
 
             // Body
-            string StatusVi(byte st) => st switch
+            string StatusVi(byte? st) => st switch
             {
+                0 => "Chờ duyệt",
                 1 => "Đã chấp nhận",
                 2 => "Đang thực hiện",
                 3 => "Đã hoàn thành",
-                _ => ""
+                4 => "Từ chối",
+                5 => "Rút",
+                null => "",  // Để trống khi không có sinh viên
+                _ => "Không xác định"
             };
 
             // Gom nhóm dữ liệu theo đề tài
@@ -436,7 +453,7 @@ namespace InternshipManagement.Controllers
 
                     // Thông tin sinh viên (không gộp ô)
                     if (includeSvMaSv)
-                        ws.Cell(r, columnMap["MaSv"]).Value = x.MaSv.HasValue ? x.MaSv.Value : 0;
+                        ws.Cell(r, columnMap["MaSv"]).Value = x.MaSv.HasValue ? x.MaSv.Value.ToString() : "";
                     
                     if (includeSvHoTen)
                         ws.Cell(r, columnMap["HoTenSv"]).Value = x.HoTenSv ?? "";

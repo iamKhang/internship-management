@@ -109,6 +109,42 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.KinhPhi <= filter.MaxKinhPhi.Value);
             }
 
+            // Apply TinhTrang filter
+            if (filter.TinhTrang != TinhTrangFilter.All)
+            {
+                switch (filter.TinhTrang)
+                {
+                    case TinhTrangFilter.OnlyNoStudent:
+                        // Chưa có sinh viên đăng ký
+                        query = query.Where(d => !d.HuongDans.Any());
+                        break;
+
+                    case TinhTrangFilter.OnlyFull:
+                        // Đã đủ số lượng (Accepted + InProgress >= SoLuongToiDa)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
+                        break;
+
+                    case TinhTrangFilter.OnlyNotEnough:
+                        // Còn trống (Accepted + InProgress < SoLuongToiDa)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) < d.SoLuongToiDa);
+                        break;
+
+                    case TinhTrangFilter.IsFull:
+                        // Chỉ đầy chỗ (có thể là duplicate với OnlyFull)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
+                        break;
+                }
+            }
+
             // Get total count
             var totalRows = await query.CountAsync();
 
@@ -193,6 +229,42 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.KinhPhi <= filter.MaxKinhPhi.Value);
             }
 
+            // Apply TinhTrang filter
+            if (filter.TinhTrang != TinhTrangFilter.All)
+            {
+                switch (filter.TinhTrang)
+                {
+                    case TinhTrangFilter.OnlyNoStudent:
+                        // Chưa có sinh viên đăng ký
+                        query = query.Where(d => !d.HuongDans.Any());
+                        break;
+
+                    case TinhTrangFilter.OnlyFull:
+                        // Đã đủ số lượng (Accepted + InProgress >= SoLuongToiDa)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
+                        break;
+
+                    case TinhTrangFilter.OnlyNotEnough:
+                        // Còn trống (Accepted + InProgress < SoLuongToiDa)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) < d.SoLuongToiDa);
+                        break;
+
+                    case TinhTrangFilter.IsFull:
+                        // Chỉ đầy chỗ (có thể là duplicate với OnlyFull)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
+                        break;
+                }
+            }
+
             // Project to ViewModel
             return await query
                 .OrderBy(d => d.MaDt)
@@ -266,10 +338,51 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(d => d.KinhPhi <= filter.MaxKinhPhi.Value);
             }
 
+            // Apply TinhTrang filter
+            if (filter.TinhTrang != TinhTrangFilter.All)
+            {
+                switch (filter.TinhTrang)
+                {
+                    case TinhTrangFilter.OnlyNoStudent:
+                        // Chưa có sinh viên đăng ký
+                        query = query.Where(d => !d.HuongDans.Any());
+                        break;
+
+                    case TinhTrangFilter.OnlyFull:
+                        // Đã đủ số lượng (Accepted + InProgress >= SoLuongToiDa)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
+                        break;
+
+                    case TinhTrangFilter.OnlyNotEnough:
+                        // Còn trống (Accepted + InProgress < SoLuongToiDa)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) < d.SoLuongToiDa);
+                        break;
+
+                    case TinhTrangFilter.IsFull:
+                        // Chỉ đầy chỗ (có thể là duplicate với OnlyFull)
+                        query = query.Where(d =>
+                            d.HuongDans.Count(h =>
+                                h.TrangThai == HuongDanStatus.Accepted ||
+                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
+                        break;
+                }
+            }
+
             // Project to ViewModel with student details
+            // Chỉ export sinh viên có trạng thái 1, 2, 3 (Đã chấp nhận, Đang thực hiện, Đã hoàn thành)
             return await query
                 .OrderBy(d => d.MaDt)
-                .SelectMany(d => d.HuongDans.DefaultIfEmpty(), (d, h) => new DeTaiExportChiTietRowVm
+                .SelectMany(d => d.HuongDans
+                    .Where(h => h.TrangThai == HuongDanStatus.Accepted ||
+                               h.TrangThai == HuongDanStatus.InProgress ||
+                               h.TrangThai == HuongDanStatus.Completed)
+                    .DefaultIfEmpty(), (d, h) => new DeTaiExportChiTietRowVm
                 {
                     MaDt = d.MaDt,
                     TenDt = d.TenDt ?? "",
@@ -286,7 +399,7 @@ namespace InternshipManagement.Repositories.Implementations
                     NoiThucTap = d.NoiThucTap,
                     MaSv = h != null ? h.MaSv : (int?)null,
                     HoTenSv = h != null && h.SinhVien != null ? h.SinhVien.HoTenSv : null,
-                    TrangThai = h != null ? (byte)h.TrangThai : (byte)0,
+                    TrangThai = h != null ? (byte)h.TrangThai : (byte?)null,
                     NgayDangKy = h != null ? h.CreatedAt : null,
                     NgayChapNhan = h != null ? h.AcceptedAt : null,
                     KetQua = h != null ? h.KetQua : null,
