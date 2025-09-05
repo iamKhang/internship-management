@@ -655,56 +655,62 @@ namespace InternshipManagement.Repositories.Implementations
             if (countThisTerm >= 15)
                 return (false, "Bạn đã đạt số lượng đề tài tối đa của kỳ này.", null);
 
-            using var tx = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-            try
+            // Sử dụng execution strategy để hỗ trợ user-initiated transactions
+            var strategy = _db.Database.CreateExecutionStrategy();
+            var result = await strategy.ExecuteAsync(async () =>
             {
-                // Lấy tất cả mã bắt đầu 'DT'
-                var allCodes = await _db.Set<DeTai>()
-                    .Select(d => d.MaDt)
-                    .Where(code => code != null && code.StartsWith("DT"))
-                    .ToListAsync();
-
-                int maxNum = 0;
-                int width = 3;
-                foreach (var c in allCodes)
+                using var tx = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                try
                 {
-                    var s = (c ?? "").Trim().ToUpperInvariant();
-                    if (s.Length >= 3 && s.StartsWith("DT"))
+                    // Lấy tất cả mã bắt đầu 'DT'
+                    var allCodes = await _db.Set<DeTai>()
+                        .Select(d => d.MaDt)
+                        .Where(code => code != null && code.StartsWith("DT"))
+                        .ToListAsync();
+
+                    int maxNum = 0;
+                    int width = 3;
+                    foreach (var c in allCodes)
                     {
-                        var digits = s[2..].Trim();          // Substring(2)
-                        if (int.TryParse(digits, out var n))
+                        var s = (c ?? "").Trim().ToUpperInvariant();
+                        if (s.Length >= 3 && s.StartsWith("DT"))
                         {
-                            if (n > maxNum) { maxNum = n; width = Math.Max(width, digits.Length); }
+                            var digits = s[2..].Trim();          // Substring(2)
+                            if (int.TryParse(digits, out var n))
+                            {
+                                if (n > maxNum) { maxNum = n; width = Math.Max(width, digits.Length); }
+                            }
                         }
                     }
+                    var nextNum = maxNum + 1;
+                    if (nextNum >= Math.Pow(10, width)) width++;
+
+                    var newCode = "DT" + nextNum.ToString(new string('0', width));
+
+                    var entity = new DeTai
+                    {
+                        MaDt = newCode,
+                        TenDt = dto.TenDt,
+                        NoiThucTap = dto.NoiThucTap,
+                        MaGv = dto.Magv,
+                        KinhPhi = dto.KinhPhi ?? 0,
+                        HocKy = dto.HocKy,
+                        NamHoc = dto.NamHoc,
+                        SoLuongToiDa = dto.SoLuongToiDa
+                    };
+
+                    _db.Add(entity);
+                    await _db.SaveChangesAsync();
+                    await tx.CommitAsync();
+                    return Task.FromResult<(bool, string?, string?)>((true, null, newCode));
                 }
-                var nextNum = maxNum + 1;
-                if (nextNum >= Math.Pow(10, width)) width++;
-
-                var newCode = "DT" + nextNum.ToString(new string('0', width));
-
-                var entity = new DeTai
+                catch (Exception ex)
                 {
-                    MaDt = newCode,
-                    TenDt = dto.TenDt,
-                    NoiThucTap = dto.NoiThucTap,
-                    MaGv = dto.Magv,
-                    KinhPhi = dto.KinhPhi ?? 0,
-                    HocKy = dto.HocKy,
-                    NamHoc = dto.NamHoc,
-                    SoLuongToiDa = dto.SoLuongToiDa
-                };
-
-                _db.Add(entity);
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
-                return (true, null, newCode);
-            }
-            catch (Exception ex)
-            {
-                await tx.RollbackAsync();
-                return (false, $"Không thể tạo đề tài: {ex.GetBaseException().Message}", null);
-            }
+                    await tx.RollbackAsync();
+                    return Task.FromResult<(bool, string?, string?)>((false, $"Không thể tạo đề tài: {ex.GetBaseException().Message}", null));
+                }
+            });
+            return await result;
         }
 
 
