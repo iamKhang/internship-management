@@ -26,8 +26,9 @@ namespace InternshipManagement.Repositories.Implementations
             if (fromDate.HasValue)
                 baseQuery = baseQuery.Where(h => h.CreatedAt >= fromDate.Value);
             if (toDate.HasValue)
-                baseQuery = baseQuery.Where(h => h.CreatedAt <= toDate.Value);
-            if (hocKy.HasValue)
+                baseQuery = baseQuery.Where(h => h.CreatedAt <= toDate.Value.Date.AddDays(1).AddTicks(-1)); // Include entire day
+            // Only filter by hocKy if it's provided and > 0 (not "all")
+            if (hocKy.HasValue && hocKy.Value > 0)
                 baseQuery = baseQuery.Where(h => h.DeTai.HocKy == hocKy.Value);
             if (!string.IsNullOrWhiteSpace(namHoc))
                 baseQuery = baseQuery.Where(h => h.DeTai.NamHoc == namHoc);
@@ -38,7 +39,7 @@ namespace InternshipManagement.Repositories.Implementations
             var totalTopics = await _db.DeTais
                 .AsNoTracking()
                 .Where(d => d.MaGv == maGv &&
-                    (!hocKy.HasValue || d.HocKy == hocKy.Value) &&
+                    (!hocKy.HasValue || hocKy.Value == 0 || d.HocKy == hocKy.Value) &&
                     (string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc))
                 .CountAsync();
 
@@ -63,9 +64,8 @@ namespace InternshipManagement.Repositories.Implementations
                 ? acceptedRecords.Average(h => (h.AcceptedAt!.Value - h.CreatedAt).TotalDays)
                 : null;
 
-            // Trend data - registrations by month (last 12 months)
+            // Trend data - registrations by month (use filtered data)
             var trend = guidanceRecords
-                .Where(h => h.CreatedAt >= DateTime.Now.AddMonths(-12))
                 .GroupBy(h => new { h.CreatedAt.Year, h.CreatedAt.Month })
                 .Select(g => new TrendPointVm
                 {
@@ -88,7 +88,7 @@ namespace InternshipManagement.Repositories.Implementations
                 .Include(d => d.HuongDans)
                 .AsNoTracking()
                 .Where(d => d.MaGv == maGv &&
-                    (!hocKy.HasValue || d.HocKy == hocKy.Value) &&
+                    (!hocKy.HasValue || hocKy.Value == 0 || d.HocKy == hocKy.Value) &&
                     (string.IsNullOrWhiteSpace(namHoc) || d.NamHoc == namHoc))
                 .Select(d => new DeTaiFillVm
                 {
@@ -168,13 +168,15 @@ namespace InternshipManagement.Repositories.Implementations
             if (fromDate.HasValue)
                 baseQuery = baseQuery.Where(h => h.CreatedAt >= fromDate.Value);
             if (toDate.HasValue)
-                baseQuery = baseQuery.Where(h => h.CreatedAt <= toDate.Value);
-            if (hocKy.HasValue)
+                baseQuery = baseQuery.Where(h => h.CreatedAt <= toDate.Value.Date.AddDays(1).AddTicks(-1)); // Include entire day
+            // Only filter by hocKy if it's provided and > 0 (not "all")
+            if (hocKy.HasValue && hocKy.Value > 0)
                 baseQuery = baseQuery.Where(h => h.DeTai.HocKy == hocKy.Value);
             if (!string.IsNullOrWhiteSpace(namHoc))
                 baseQuery = baseQuery.Where(h => h.DeTai.NamHoc == namHoc);
 
             var guidanceRecords = await baseQuery.ToListAsync();
+
 
             // Build topic query with same filters
             var topicQuery = _db.DeTais
@@ -188,7 +190,8 @@ namespace InternshipManagement.Repositories.Implementations
                 topicQuery = topicQuery.Where(d => d.GiangVien.MaKhoa == maKhoa);
             if (maGv.HasValue)
                 topicQuery = topicQuery.Where(d => d.MaGv == maGv.Value);
-            if (hocKy.HasValue)
+            // Only filter by hocKy if it's provided and > 0 (not "all")
+            if (hocKy.HasValue && hocKy.Value > 0)
                 topicQuery = topicQuery.Where(d => d.HocKy == hocKy.Value);
             if (!string.IsNullOrWhiteSpace(namHoc))
                 topicQuery = topicQuery.Where(d => d.NamHoc == namHoc);
@@ -219,9 +222,8 @@ namespace InternshipManagement.Repositories.Implementations
 
             var uniqueStudents = guidanceRecords.Select(h => h.MaSv).Distinct().Count();
 
-            // Enhanced trend data - registrations by month (last 18 months for better context)
+            // Enhanced trend data - registrations by month (use all filtered data)
             var trend = guidanceRecords
-                .Where(h => h.CreatedAt >= DateTime.Now.AddMonths(-18))
                 .GroupBy(h => new { h.CreatedAt.Year, h.CreatedAt.Month })
                 .Select(g => new TrendPointVm
                 {
@@ -293,19 +295,19 @@ namespace InternshipManagement.Repositories.Implementations
                     HoTenGv = $"{g.HoTenGv} ({(g.Khoa != null ? g.Khoa.TenKhoa : "")})",
                     Completed = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed &&
                         (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
-                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                        (!hocKy.HasValue || hocKy.Value == 0 || h.DeTai.HocKy == hocKy.Value)),
                     DangThucHien = g.HuongDans.Count(h => (h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress) &&
                         (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
-                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                        (!hocKy.HasValue || hocKy.Value == 0 || h.DeTai.HocKy == hocKy.Value)),
                     Pending = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Pending &&
                         (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
-                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                        (!hocKy.HasValue || hocKy.Value == 0 || h.DeTai.HocKy == hocKy.Value)),
                     Rejected = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Rejected &&
                         (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
-                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value)),
+                        (!hocKy.HasValue || hocKy.Value == 0 || h.DeTai.HocKy == hocKy.Value)),
                     Withdrawn = g.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Withdrawn &&
                         (string.IsNullOrWhiteSpace(namHoc) || h.DeTai.NamHoc == namHoc) &&
-                        (!hocKy.HasValue || h.DeTai.HocKy == hocKy.Value))
+                        (!hocKy.HasValue || hocKy.Value == 0 || h.DeTai.HocKy == hocKy.Value))
                 })
                 .Where(g => g.Completed + g.DangThucHien + g.Pending + g.Rejected + g.Withdrawn > 0)
                 .OrderByDescending(g => g.Completed)

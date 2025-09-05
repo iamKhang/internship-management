@@ -10,67 +10,164 @@
     var byKhoaJson = JsonSerializer.Serialize(Model.ByKhoa);
     var topGvJson = JsonSerializer.Serialize(Model.TopGv);
     var termJson = JsonSerializer.Serialize(Model.ByTerm);
-
-    // Tính học kỳ và năm học mặc định
-    var now = DateTime.Now;
-    var currentYear = now.Year;
-    var nextYear = currentYear + 1;
-    var currentMonth = now.Month;
-    
-    // Xác định học kỳ dựa vào tháng hiện tại
-    var currentTerm = currentMonth switch
-    {
-        >= 9 and <= 12 => 1,  // HK1: 9-12
-        >= 1 and <= 4 => 2,   // HK2: 1-4
-        _ => 3                 // HK3: 5-8
-    };
-
-    // Xác định năm học
-    var academicYear = currentTerm == 1 
-        ? $"{currentYear}-{nextYear}"      // HK1 bắt đầu năm học mới
-        : $"{currentYear-1}-{currentYear}"; // HK2,3 thuộc năm học cũ
 }
 
-<div class="container py-3">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="mb-0">Thống kê toàn hệ thống</h4>
+<!-- FontAwesome CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        <form method="get" class="row g-2 align-items-center">
-            <div class="col-auto"><input type="text" name="maKhoa" class="form-control form-control-sm" placeholder="Mã khoa" /></div>
-            <div class="col-auto"><input type="number" name="maGv" class="form-control form-control-sm" placeholder="Mã GV" /></div>
-            <div class="col-auto"><input type="date" name="from" class="form-control form-control-sm" /></div>
-            <div class="col-auto"><input type="date" name="to" class="form-control form-control-sm" /></div>
-            <div class="col-auto">
-                <select name="namHoc" class="form-control form-control-sm">
-                    <option value="">-- Năm học --</option>
-                    @{
-                        for (int y = currentYear - 3; y <= currentYear + 2; y++)
-                        {
-                            var yearStr = $"{y}-{y+1}";
-                            <option value="@yearStr" selected="@(yearStr == academicYear)">@yearStr</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-auto">
-                <select name="hocKy" class="form-control form-control-sm">
-                    <option value="">-- Học kỳ --</option>
-                    <option value="1" selected="@(currentTerm == 1)">Học kỳ 1</option>
-                    <option value="2" selected="@(currentTerm == 2)">Học kỳ 2</option>
-                    <option value="3" selected="@(currentTerm == 3)">Học kỳ 3</option>
-                </select>
-            </div>
-            <div class="col-auto"><button class="btn btn-sm btn-primary" type="submit">Lọc</button></div>
-        </form>
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="mb-0 text-primary">
+            <i class="fas fa-chart-bar me-2"></i>Thống kê toàn hệ thống
+        </h4>
+        <div class="text-muted small">
+            Kỳ hiện tại: HK @ViewBag.CurrentTerm (@ViewBag.AcademicYear)
+        </div>
     </div>
 
-    <div class="row g-3">
-        <div class="col-md-2"><div class="card p-3">Đề tài: <b>@Model.Kpi.TongDeTai</b></div></div>
-        <div class="col-md-2"><div class="card p-3">Giảng viên: <b>@Model.Kpi.TongGiangVien</b></div></div>
-        <div class="col-md-2"><div class="card p-3">Sinh viên: <b>@Model.Kpi.TongSinhVien</b></div></div>
-        <div class="col-md-2"><div class="card p-3">Pending: <b>@Model.Kpi.Pending</b></div></div>
-        <div class="col-md-2"><div class="card p-3">Accepted: <b>@Model.Kpi.Accepted</b></div></div>
-        <div class="col-md-2"><div class="card p-3">Completed: <b>@Model.Kpi.Completed</b></div></div>
+    <!-- Filter Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0 d-flex align-items-center">
+                <i class="fas fa-filter me-2 text-primary"></i>
+                Bộ lọc thống kê
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Khoa</label>
+                    <select name="maKhoa" id="khoaSelect" class="form-select form-select-sm">
+                        <option value="">-- Tất cả khoa --</option>
+                        @if (ViewBag.KhoaOptions != null)
+                        {
+                            foreach (var khoa in ViewBag.KhoaOptions)
+                            {
+                                <option value="@khoa.MaKhoa" selected="@(Context.Request.Query["maKhoa"].ToString() == khoa.MaKhoa)">
+                                    @khoa.TenKhoa (@khoa.MaKhoa)
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Giảng viên</label>
+                    <select name="maGv" id="giangVienSelect" class="form-select form-select-sm">
+                        <option value="">-- Tất cả giảng viên --</option>
+                        @if (ViewBag.GiangVienOptions != null)
+                        {
+                            foreach (var gv in ViewBag.GiangVienOptions)
+                            {
+                                <option value="@gv.MaGv"
+                                        data-khoa="@gv.MaKhoa"
+                                        selected="@(Context.Request.Query["maGv"].ToString() == gv.MaGv.ToString())">
+                                    @gv.TenGv
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Từ ngày</label>
+                    <input type="date" name="from" class="form-control form-control-sm"
+                           value="@(ViewBag.AutoFrom?.ToString("yyyy-MM-dd") ?? Context.Request.Query["from"].ToString())" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Đến ngày</label>
+                    <input type="date" name="to" class="form-control form-control-sm"
+                           value="@(ViewBag.AutoTo?.ToString("yyyy-MM-dd") ?? Context.Request.Query["to"].ToString())" />
+                </div>
+                <div class="col-md-12 d-flex justify-content-end gap-2">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm px-3 py-2" type="submit">
+                            <i class="bi bi-funnel me-1"></i>Lọc
+                        </button>
+                        <a href="@Url.Action("Index", "ThongKe")" class="btn btn-outline-secondary btn-sm px-3 py-2">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Xóa lọc
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Quick Term Selection -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <label class="form-label small fw-semibold">Chọn nhanh theo kỳ:</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-primary btn-sm quick-term-btn"
+                                data-term="1" data-year="@(ViewBag.AcademicYear)">
+                            <i class="fas fa-calendar-alt me-1"></i>HK1 (@ViewBag.AcademicYear)
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm quick-term-btn"
+                                data-term="2" data-year="@(ViewBag.AcademicYear)">
+                            <i class="fas fa-calendar-alt me-1"></i>HK2 (@ViewBag.AcademicYear)
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm quick-term-btn"
+                                data-term="3" data-year="@(ViewBag.AcademicYear)">
+                            <i class="fas fa-calendar-alt me-1"></i>HK3 (@ViewBag.AcademicYear)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card border-primary text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-file-alt fa-2x text-primary mb-2"></i>
+                    <h5 class="card-title">@Model.Kpi.TongDeTai</h5>
+                    <p class="card-text text-muted small">Đề tài</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-success text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-user-tie fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">@Model.Kpi.TongGiangVien</h5>
+                    <p class="card-text text-muted small">Giảng viên</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-info text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-user-graduate fa-2x text-info mb-2"></i>
+                    <h5 class="card-title">@Model.Kpi.TongSinhVien</h5>
+                    <p class="card-text text-muted small">Sinh viên</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-warning text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                    <h5 class="card-title">@Model.Kpi.Pending</h5>
+                    <p class="card-text text-muted small">Chờ duyệt</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-primary text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
+                    <h5 class="card-title">@Model.Kpi.Accepted</h5>
+                    <p class="card-text text-muted small">Đã duyệt</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-success text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-trophy fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">@Model.Kpi.Completed</h5>
+                    <p class="card-text text-muted small">Hoàn thành</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <hr class="my-4" />
@@ -159,6 +256,84 @@
 @section Scripts {
     <script src="~/lib/echarts/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        // Quick term selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const quickTermBtns = document.querySelectorAll('.quick-term-btn');
+
+            quickTermBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const term = this.getAttribute('data-term');
+                    const year = this.getAttribute('data-year');
+                    const [startYear, endYear] = year.split('-').map(y => parseInt(y));
+
+                    let fromDate, toDate;
+
+                    switch(term) {
+                        case '1': // HK1: Sep - Dec
+                            fromDate = new Date(startYear, 8, 1); // Sep 1
+                            toDate = new Date(startYear, 11, 31); // Dec 31
+                            break;
+                        case '2': // HK2: Jan - Apr
+                            fromDate = new Date(endYear, 0, 1); // Jan 1
+                            toDate = new Date(endYear, 3, 30); // Apr 30
+                            break;
+                        case '3': // HK3: May - Aug
+                            fromDate = new Date(endYear, 4, 1); // May 1
+                            toDate = new Date(endYear, 7, 31); // Aug 31
+                            break;
+                    }
+
+                    // Update form inputs
+                    const fromInput = document.querySelector('input[name="from"]');
+                    const toInput = document.querySelector('input[name="to"]');
+
+                    if (fromInput && toInput) {
+                        fromInput.value = fromDate.toISOString().split('T')[0];
+                        toInput.value = toDate.toISOString().split('T')[0];
+
+                        // Clear other filters
+                        document.querySelector('select[name="maKhoa"]').value = '';
+                        document.querySelector('select[name="maGv"]').value = '';
+                    }
+                });
+            });
+        });
+
+        // Filter giảng viên theo khoa
+        const khoaSelect = document.getElementById('khoaSelect');
+        const giangVienSelect = document.getElementById('giangVienSelect');
+        const allGiangVienOptions = Array.from(giangVienSelect.options);
+
+        khoaSelect.addEventListener('change', function() {
+            const selectedKhoa = this.value;
+            const currentSelectedGv = giangVienSelect.value;
+
+            // Clear current options except the "Tất cả giảng viên" option
+            giangVienSelect.innerHTML = '<option value="">-- Tất cả giảng viên --</option>';
+
+            // Filter and add matching giảng viên options
+            allGiangVienOptions.forEach(option => {
+                if (option.value === '') return; // Skip the "Tất cả" option
+
+                const khoa = option.getAttribute('data-khoa');
+                if (!selectedKhoa || khoa === selectedKhoa) {
+                    const newOption = option.cloneNode(true);
+                    giangVienSelect.appendChild(newOption);
+
+                    // Restore selection if it was selected before
+                    if (option.value === currentSelectedGv) {
+                        newOption.selected = true;
+                    }
+                }
+            });
+        });
+
+        // Trigger filter on page load if khoa is already selected
+        if (khoaSelect.value) {
+            khoaSelect.dispatchEvent(new Event('change'));
+        }
+    </script>
     <script>
         const trendData  = @Html.Raw(trendJson);
         const statusData = @Html.Raw(statusJson);

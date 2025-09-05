@@ -166,6 +166,8 @@ InternshipManagement/
 
 ### 📈 Thống kê Admin
 ![Thống kê Admin](docs/images/ThongKeAdmin.png)
+![Thống kê Admin](docs/images/ThongKeAdmin2.png)
+![Thống kê Admin](docs/images/ThongKeAdmin3.png)
 
 ### 📊 Thống kê theo giảng viên
 ![Thống kê GV](docs/images/ThongKeGV.png)
