@@ -181,14 +181,15 @@ namespace InternshipManagement.Controllers
                     ws.Cell(r, columnMap["Khoa"]).Value = x.TenKhoa;
                 
                 if (includeHocKy)
+                {
                     ws.Cell(r, columnMap["HocKy"]).Value = $"{x.HocKy}/{x.NamHoc}";
                     ws.Cell(r, columnMap["HocKy"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                }
                 
                 if (includeSoLuong)
                 {
                     ws.Cell(r, columnMap["SoLuong"]).Value = x.SoLuongToiDa;
                     ws.Cell(r, columnMap["DaDu"]).Value = x.IsFull ? "✓" : "";
-                    ws.Column(columnMap["DaDu"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 }
                 
                 if (includeKinhPhi)
@@ -473,18 +474,18 @@ namespace InternshipManagement.Controllers
 
             // Căn giữa và căn phải các cột
             ws.Column(columnMap["STT"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-            
+
             // Căn phải cho cột số lượng và kinh phí
             if (includeSoLuong)
             {
                 ws.Column(columnMap["SoLuong"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
                 ws.Column(columnMap["DaDu"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             }
-            if (includeKinhPhi)
+            if (includeKinhPhi && columnMap.ContainsKey("KinhPhi"))
                 ws.Column(columnMap["KinhPhi"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
             
             // Căn giữa cho cột trạng thái
-            if (includeSvTrangThai)
+            if (includeSvTrangThai && columnMap.ContainsKey("TrangThai"))
                 ws.Column(columnMap["TrangThai"]).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
             // Tự động điều chỉnh độ rộng cột

@@ -15,14 +15,39 @@
         <div class="card-body">
             <form method="get" id="filterForm" class="row g-3">
 
-                <!-- Hàng 1 -->
+                 <div class="col-md-4">
+                    <label class="form-label">Từ khóa</label>
+                    <input class="form-control" asp-for="Filter.Keyword" placeholder="Tên đề tài..." />
+                </div>
+               
                 <div class="col-md-2">
+                    <label class="form-label">Kinh phí từ</label>
+                    <input class="form-control" asp-for="Filter.MinKinhPhi" type="number" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">đến</label>
+                    <input class="form-control" asp-for="Filter.MaxKinhPhi" type="number" />
+                </div>
+
+                          <div class="col-md-4">
+                    <label asp-for="Filter.TinhTrang" class="form-label">Tình trạng</label>
+                    <select asp-for="Filter.TinhTrang" class="form-select">
+                        <option value="All">-- Tất cả --</option>
+                        <option value="OnlyNoStudent">Chưa có sinh viên đăng ký</option>
+                        <option value="OnlyFull">Đã đủ số lượng</option>
+                        <option value="OnlyNotEnough">Còn trống</option>
+                    </select>
+                </div>
+
+
+                <!-- Hàng 1 -->
+                <div class="col-md-4">
                     <label class="form-label">Khoa</label>
                     <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
                         <option value="">-- Tất cả --</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <label class="form-label">Giảng viên</label>
                     <select class="form-select" asp-for="Filter.MaGv" asp-items="Model.GiangVienOptions">
                         <option value="">-- Tất cả --</option>
@@ -41,17 +66,8 @@
                     </select>
                 </div>
 
-                <div class="col-auto d-flex align-items-end">
-                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
-                        <i class="bi bi-funnel me-1"></i> Lọc
-                    </button>
-                </div>
-                <div class="col-auto d-flex align-items-end">
-                    <a asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center px-3  py-2">
-                        <i class="bi-arrow-clockwise me-1"></i> Hủy
-                    </a>
-                </div>
-                @if (User.Identity?.IsAuthenticated == true
+                <div class="col-md-12 d-flex justify-content-end gap-2">
+                      @if (User.Identity?.IsAuthenticated == true
                     && (User.IsInRole("GiangVien") || User.IsInRole("Admin")))
                 {
                     <div class="col-auto d-flex align-items-end">
@@ -61,31 +77,24 @@
                     </div>
                 }
 
-
-
-
+                        <div class="col-auto d-flex align-items-end">
+                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                </div>
+                <div class="col-auto d-flex align-items-end">
+                    <a asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center px-3  py-2">
+                        <i class="bi-arrow-clockwise me-1"></i> Hủy
+                    </a>
+                </div>
+                </div>
+        
+       
                 <!-- Hàng 2 -->
-                <div class="col-md-2">
-                    <label class="form-label">Kinh phí từ</label>
-                    <input class="form-control" asp-for="Filter.MinKinhPhi" type="number" />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">đến</label>
-                    <input class="form-control" asp-for="Filter.MaxKinhPhi" type="number" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Từ khóa</label>
-                    <input class="form-control" asp-for="Filter.Keyword" placeholder="Tên đề tài..." />
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="Filter.TinhTrang" class="form-label">Tình trạng</label>
-                    <select asp-for="Filter.TinhTrang" class="form-select">
-                        <option value="All">-- Tất cả --</option>
-                        <option value="OnlyNoStudent">Chưa có sinh viên đăng ký</option>
-                        <option value="OnlyFull">Đã đủ số lượng</option>
-                        <option value="OnlyNotEnough">Còn trống</option>
-                    </select>
-                </div>
+               
+               
+                  
+
 
             </form>
         </div>
@@ -212,94 +221,170 @@
 </div>
 
 <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0">
             <div class="modal-header">
-                <h6 class="modal-title">Tùy chọn xuất dữ liệu</h6>
+                <h5 class="modal-title">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+                    Export danh sách đề tài
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Thông tin đề tài</label>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkMaDt" checked>
-                                <label class="form-check-label" for="chkMaDt">Mã đề tài</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkTenDt" checked>
-                                <label class="form-check-label" for="chkTenDt">Tên đề tài</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkGiangVien" checked>
-                                <label class="form-check-label" for="chkGiangVien">Giảng viên</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkKhoa" checked>
-                                <label class="form-check-label" for="chkKhoa">Khoa</label>
-                            </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Thông tin export:</strong><br/>
+                            File Excel sẽ được tạo với các điều kiện lọc hiện tại và các trường được chọn bên dưới.
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkHocKy" checked>
-                                <label class="form-check-label" for="chkHocKy">Học kỳ/Năm học</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkSoLuong" checked>
-                                <label class="form-check-label" for="chkSoLuong">Số lượng</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkKinhPhi" checked>
-                                <label class="form-check-label" for="chkKinhPhi">Kinh phí</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="chkNoiThucTap" checked>
-                                <label class="form-check-label" for="chkNoiThucTap">Nơi thực tập</label>
-                            </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Chọn các trường cần export:</label>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeMaDt" value="true" id="chkMaDt" checked>
+                            <input type="hidden" name="includeMaDt" value="false">
+                            <label class="form-check-label" for="chkMaDt">
+                                <i class="bi bi-tag me-1"></i> Mã đề tài
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeTenDt" value="true" id="chkTenDt" checked>
+                            <input type="hidden" name="includeTenDt" value="false">
+                            <label class="form-check-label" for="chkTenDt">
+                                <i class="bi bi-file-text me-1"></i> Tên đề tài
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeGiangVien" value="true" id="chkGiangVien" checked>
+                            <input type="hidden" name="includeGiangVien" value="false">
+                            <label class="form-check-label" for="chkGiangVien">
+                                <i class="bi bi-person me-1"></i> Giảng viên
+                            </label>
+                        </div>
+                            <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeKhoa" value="true" id="chkKhoa" checked>
+                            <input type="hidden" name="includeKhoa" value="false">
+                            <label class="form-check-label" for="chkKhoa">
+                                <i class="bi bi-building me-1"></i> Khoa
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                    
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeHocKy" value="true" id="chkHocKy" checked>
+                            <input type="hidden" name="includeHocKy" value="false">
+                            <label class="form-check-label" for="chkHocKy">
+                                <i class="bi bi-calendar me-1"></i> Học kỳ/Năm học
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSoLuong" value="true" id="chkSoLuong" checked>
+                            <input type="hidden" name="includeSoLuong" value="false">
+                            <label class="form-check-label" for="chkSoLuong">
+                                <i class="bi bi-hash me-1"></i> Số lượng
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeKinhPhi" value="true" id="chkKinhPhi" checked>
+                            <input type="hidden" name="includeKinhPhi" value="false">
+                            <label class="form-check-label" for="chkKinhPhi">
+                                <i class="bi bi-currency-dollar me-1"></i> Kinh phí
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeNoiThucTap" value="true" id="chkNoiThucTap" checked>
+                            <input type="hidden" name="includeNoiThucTap" value="false">
+                            <label class="form-check-label" for="chkNoiThucTap">
+                                <i class="bi bi-geo-alt me-1"></i> Nơi thực tập
+                            </label>
                         </div>
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="chkSinhVien">
+                        <input class="form-check-input" type="checkbox" name="includeSinhVien" value="true" id="chkSinhVien">
+                        <input type="hidden" name="includeSinhVien" value="false">
                         <label class="form-check-label fw-bold" for="chkSinhVien">
-                            Kèm thông tin sinh viên
+                            <i class="bi bi-people me-1"></i> Kèm thông tin sinh viên
                         </label>
                     </div>
                     <div class="ps-4 mt-2" id="sinhVienOptions" style="display: none;">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkSvHoTen" checked disabled>
-                            <label class="form-check-label" for="chkSvHoTen">Họ tên sinh viên</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSvHoTen" value="true" id="chkSvHoTen" checked disabled>
+                            <input type="hidden" name="includeSvHoTen" value="false">
+                            <label class="form-check-label" for="chkSvHoTen">
+                                <i class="bi bi-person me-1"></i> Họ tên sinh viên
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkSvMaSv" checked disabled>
-                            <label class="form-check-label" for="chkSvMaSv">Mã sinh viên</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSvMaSv" value="true" id="chkSvMaSv" checked disabled>
+                            <input type="hidden" name="includeSvMaSv" value="false">
+                            <label class="form-check-label" for="chkSvMaSv">
+                                <i class="bi bi-person-badge me-1"></i> Mã sinh viên
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkSvTrangThai" checked disabled>
-                            <label class="form-check-label" for="chkSvTrangThai">Trạng thái</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSvTrangThai" value="true" id="chkSvTrangThai" checked disabled>
+                            <input type="hidden" name="includeSvTrangThai" value="false">
+                            <label class="form-check-label" for="chkSvTrangThai">
+                                <i class="bi bi-info-circle me-1"></i> Trạng thái
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkSvNgayDK" checked disabled>
-                            <label class="form-check-label" for="chkSvNgayDK">Ngày đăng ký</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSvNgayDK" value="true" id="chkSvNgayDK" checked disabled>
+                            <input type="hidden" name="includeSvNgayDK" value="false">
+                            <label class="form-check-label" for="chkSvNgayDK">
+                                <i class="bi bi-calendar-check me-1"></i> Ngày đăng ký
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkSvKetQua" checked disabled>
-                            <label class="form-check-label" for="chkSvKetQua">Kết quả</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSvKetQua" value="true" id="chkSvKetQua" checked disabled>
+                            <input type="hidden" name="includeSvKetQua" value="false">
+                            <label class="form-check-label" for="chkSvKetQua">
+                                <i class="bi bi-trophy me-1"></i> Kết quả
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkSvGhiChu" checked disabled>
-                            <label class="form-check-label" for="chkSvGhiChu">Ghi chú</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="includeSvGhiChu" value="true" id="chkSvGhiChu" checked disabled>
+                            <input type="hidden" name="includeSvGhiChu" value="false">
+                            <label class="form-check-label" for="chkSvGhiChu">
+                                <i class="bi bi-chat-text me-1"></i> Ghi chú
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllFields">
+                                    <i class="bi bi-check-all me-1"></i> Chọn tất cả
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clearAllFields">
+                                    <i class="bi bi-x-square me-1"></i> Bỏ chọn tất cả
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" id="btnExport" class="btn btn-success">
-                    <i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" id="btnExport" class="btn btn-success text-white">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
                 </button>
             </div>
         </div>
@@ -322,26 +407,6 @@
   function exportWith(url) {
     // Lấy các tham số từ form filter
     const params = new URLSearchParams(new FormData(form));
-    
-    // Thêm các tùy chọn cột vào query string
-    params.append('includeMaDt', document.getElementById('chkMaDt').checked);
-    params.append('includeTenDt', document.getElementById('chkTenDt').checked);
-    params.append('includeGiangVien', document.getElementById('chkGiangVien').checked);
-    params.append('includeKhoa', document.getElementById('chkKhoa').checked);
-    params.append('includeHocKy', document.getElementById('chkHocKy').checked);
-    params.append('includeSoLuong', document.getElementById('chkSoLuong').checked);
-    params.append('includeKinhPhi', document.getElementById('chkKinhPhi').checked);
-    params.append('includeNoiThucTap', document.getElementById('chkNoiThucTap').checked);
-
-    if (chkSinhVien.checked) {
-      params.append('includeSinhVien', true);
-      params.append('includeSvHoTen', document.getElementById('chkSvHoTen').checked);
-      params.append('includeSvMaSv', document.getElementById('chkSvMaSv').checked);
-      params.append('includeSvTrangThai', document.getElementById('chkSvTrangThai').checked);
-      params.append('includeSvNgayDK', document.getElementById('chkSvNgayDK').checked);
-      params.append('includeSvKetQua', document.getElementById('chkSvKetQua').checked);
-      params.append('includeSvGhiChu', document.getElementById('chkSvGhiChu').checked);
-    }
 
     window.location.href = url + '?' + params.toString();
   }
@@ -371,17 +436,37 @@
     });
   });
 
-  // Click nút Export trong modal
-  btnExport.addEventListener('click', function() {
-    // Ẩn modal và xóa backdrop
+  // Xử lý nút chọn tất cả
+  document.getElementById('selectAllFields')?.addEventListener('click', function() {
+    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
+    checkboxes.forEach(cb => cb.checked = true);
+  });
+
+  // Xử lý nút bỏ chọn tất cả
+  document.getElementById('clearAllFields')?.addEventListener('click', function() {
+    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
+    checkboxes.forEach(cb => cb.checked = false);
+  });
+
+  // Validation cho export
+  document.getElementById('btnExport')?.addEventListener('click', function(e) {
+    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:checked:not([disabled])');
+    if (checkboxes.length === 0) {
+      e.preventDefault();
+      alert('Vui lòng chọn ít nhất một trường để export!');
+      return;
+    }
+
+    // Đóng modal trước khi export
     modal.hide();
     document.querySelector('.modal-backdrop')?.remove();
     document.body.classList.remove('modal-open');
     document.body.style.removeProperty('padding-right');
-    
+
     // Export dữ liệu
     exportWith(chkSinhVien.checked ? urlExportDetail : urlExport);
   });
+
 })();
     </script>
 }
