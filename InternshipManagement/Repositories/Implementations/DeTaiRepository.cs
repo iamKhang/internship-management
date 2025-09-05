@@ -796,7 +796,7 @@ namespace InternshipManagement.Repositories.Implementations
                 var topic = await _db.Set<DeTai>().AsNoTracking().FirstOrDefaultAsync(d => d.MaDt == code);
                 if (topic == null) return (false, "Không tìm thấy đề tài.");
 
-                // Trùng đăng ký (0/1/2)
+                // Trùng đăng ký (chỉ Pending/Accepted/InProgress, không bao gồm Rejected để cho phép đăng ký lại)
                 bool dup = await _db.Set<HuongDan>().AnyAsync(h =>
                     h.MaSv == maSv && h.MaDt == code &&
                    (h.TrangThai == HuongDanStatus.Pending
@@ -810,20 +810,35 @@ namespace InternshipManagement.Repositories.Implementations
                 if (active >= topic.SoLuongToiDa) return (false, "Đề tài đã đủ số lượng sinh viên.");
             }
 
-            // Tạo Pending
+            // Tạo Pending hoặc cập nhật từ Rejected
             var dt = await _db.Set<DeTai>().AsNoTracking().FirstOrDefaultAsync(d => d.MaDt == code);
             if (dt == null) return (false, "Không tìm thấy đề tài."); // phòng hờ
 
-            var hd = new HuongDan
-            {
-                MaSv = maSv,
-                MaDt = code,
-                MaGv = dt.MaGv,
-                TrangThai = HuongDanStatus.Pending,
-                CreatedAt = DateTime.UtcNow
-            };
+            // Kiểm tra xem đã có HuongDan record nào với trạng thái Rejected chưa
+            var existingHd = await _db.Set<HuongDan>()
+                .FirstOrDefaultAsync(h => h.MaSv == maSv && h.MaDt == code && h.TrangThai == HuongDanStatus.Rejected);
 
-            _db.Add(hd);
+            if (existingHd != null)
+            {
+                // Đã có record Rejected, cập nhật thành Pending
+                existingHd.TrangThai = HuongDanStatus.Pending;
+                existingHd.CreatedAt = DateTime.UtcNow; // Reset thời gian tạo
+                existingHd.AcceptedAt = null; // Reset thời gian chấp nhận
+            }
+            else
+            {
+                // Chưa có record, tạo mới
+                var hd = new HuongDan
+                {
+                    MaSv = maSv,
+                    MaDt = code,
+                    MaGv = dt.MaGv,
+                    TrangThai = HuongDanStatus.Pending,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _db.Add(hd);
+            }
+
             try { await _db.SaveChangesAsync(); return (true, null); }
             catch (DbUpdateException ex) { return (false, $"Lỗi lưu đăng ký: {ex.GetBaseException().Message}"); }
         }

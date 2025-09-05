@@ -29,7 +29,7 @@
                     <option value="">Chọn năm học</option>
                 </select>
             </div>
-            <div class="col-12 col-sm-4">
+            <div class="col-12 col-sm-3">
                 <label class="form-label">Đề tài</label>
                 <select class="form-select" asp-items="Model.DeTaiOptions" name="maDt">
                     <option value="">Chọn đề tài</option>
@@ -41,9 +41,9 @@
                     <option value="">Chọn trạng thái</option>
                 </select>
             </div>
-            <div class="col-12 col-sm-2 d-flex gap-2">
-                <button class="btn btn-primary btn-sm py-2" type="submit"><i class="bi bi-funnel me-1"></i>Lọc</button>
-                <a class="btn btn-outline-secondary btn-sm py-2" href="@Url.Action("Manage","DeTai")"><i class="bi bi-trash me-1"></i>Xóa lọc</a>
+            <div class="col-12 col-sm-3 d-flex gap-2">
+                <button class="btn btn-primary d-flex align-items-center justify-content-center py-2" type="submit"><i class="bi bi-funnel me-1"></i>Lọc</button>
+                <a class="btn btn-outline-secondary d-flex align-items-center justify-content-center py-2" href="@Url.Action("Manage","DeTai")"><i class="bi bi-trash me-1"></i>Xóa lọc</a>
             </div>
         </div>
     </div>

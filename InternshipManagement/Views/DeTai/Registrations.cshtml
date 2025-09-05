@@ -12,7 +12,7 @@
 
     <div class="card-body">
 
-        <form method="get" class="row g-2 align-items-end mb-3" id="filterForm">
+        <form method="get" class="row g-3 align-items-end mb-3" id="filterForm">
             <div class="col-md-3">
                 <label class="form-label">Học kỳ - Năm học</label>
                 <select class="form-select py-2" id="hkNamSelect">
@@ -47,7 +47,7 @@
                     }
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Trạng thái</label>
                 <select class="form-select py-2" name="trangThai">
                     <option value="" selected="@(Model.Filter.TrangThai == null ? "selected" : null)">-- Tất cả --</option>
@@ -58,22 +58,23 @@
                     <option value="4" selected="@(Model.Filter.TrangThai == 4 ? "selected" : null)">Đã từ chối</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex gap-2 align-items-end">
-                <button class="btn btn-primary btn-sm py-2 flex-fill" type="submit" id="btnFilter">
-                    <i class="bi bi-funnel me-1"></i>Lọc
-                </button>
-                <a class="btn btn-outline-secondary btn-sm py-2 flex-fill" asp-action="Registrations">
-                    <i class="bi bi-trash me-1"></i>Xóa lọc
-                </a>
-                <a class="btn btn-success btn-sm py-2 flex-fill"
-                   asp-action="ExportRegistrationsExcel"
-                   asp-route-hocKy="@(Model.Filter.HocKy)"
-                   asp-route-namHoc="@(Model.Filter.NamHoc)"
-                   asp-route-trangThai="@(Model.Filter.TrangThai)"
-                   asp-route-maDt="@(Model.Filter.MaDt)">
-                    <i class="bi bi-file-earmark-excel me-1"></i> Excel
-                </a>
-
+            <div class="col-md-4">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary py-2" type="submit" id="btnFilter">
+                        <i class="bi bi-funnel me-1"></i>Lọc
+                    </button>
+                    <a class="btn btn-outline-secondary py-2" asp-action="Registrations">
+                        <i class="bi bi-trash me-1"></i>Xóa lọc
+                    </a>
+                    <a class="btn btn-success py-2"
+                       asp-action="ExportRegistrationsExcel"
+                       asp-route-hocKy="@(Model.Filter.HocKy)"
+                       asp-route-namHoc="@(Model.Filter.NamHoc)"
+                       asp-route-trangThai="@(Model.Filter.TrangThai)"
+                       asp-route-maDt="@(Model.Filter.MaDt)">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                    </a>
+                </div>
             </div>
         </form>
 
