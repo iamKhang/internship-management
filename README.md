@@ -1,415 +1,225 @@
-# InternshipManagement — Mini Project (ASP.NET MVC + SQL Server)
+# 🎓 Internship Management System
 
-Một mini-project quản lý đề tài/đồ án thực tập với 3 vai trò **Sinh viên**, **Giảng viên**, **Admin**. Stack chính: **.NET 8 (ASP.NET MVC + EF Core)**, **SQL Server**.
+## 📋 Giới thiệu dự án
+
+**Internship Managements** Mini Project phục vụ cho mục đích review kiến thức ASP.NET MVC và Entity Framework Core. Hệ thống hỗ trợ 3 vai trò chính: **Sinh viên**, **Giảng viên** và **Admin**.
+
+### ✨ Tính năng nổi bật
+- 🔐 **Xác thực đa vai trò** với ASP.NET Identity
+- 📊 **Dashboard thống kê** với biểu đồ (Đang update)
+- 🔍 **Tìm kiếm và lọc** với nhiều trường dữ liệu
+- 📤 **Export dữ liệu** Excel có thể kết hợp với filter để export dữ liệu mà người dùng mong muốn
+- 📤 **Import dữ liệu** Excel
+- 🎨 **Giao diện responsive** với Bootstrap 5
+- ⚡ **Performance tối ưu** sử dụng Entity Framework kết hợp với LINQ để thao tác truy vấn, xử lý dữ liệu
 
 ---
 
-## 🧰 Yêu cầu hệ thống (Prerequisites)
+## 🧰 Yêu cầu hệ thống
 
-* .NET SDK **8.x** (hoặc cao hơn)
-* SQL Server (LocalDB/Express hoặc Docker) + SSMS / Azure Data Studio
-* EF Core CLI
+- **Framework:** .NET 8.0 hoặc cao hơn
+- **Database:** SQL Server
+- **IDE:** Visual Studio 2022, VS Code, hoặc Rider
+- **Công cụ:** SQL Server Management Studio/Azure Data Studio
+
 ---
 
-## ⚡️ Khởi động nhanh (TL;DR)
+## 🚀 Cài đặt và chạy
 
+### 1. Clone và thiết lập
 ```bash
-# 1) Clone & vào thư mục
-git clone <YOUR_REPO_URL> InternshipManagement
-cd InternshipManagement
-
-# 2) Cập nhật chuỗi kết nối trong appsettings.json
-#    (ví dụ cho SQL Server local)
-# "Default": "Server=localhost,1433;Database=ThucTap;User Id=sa;Password=sapassword;TrustServerCertificate=True;"
-
-# 3) Tạo/migrate database
-dotnet ef database update
-
-# 4) Chạy lần đầu để khởi tạo dữ liệu đăng nhập (Identity)
-dotnet run
-
-# 5) Import các Stored Procedure
-#    Mở file /Database/StoredProcedures/thuctap_stored_procs.sql trong SSMS/Azure Data Studio và Execute
-
-# 6) Đăng nhập theo tài khoản mặc định (xem bên dưới)
-```
----
-## 🗃️ Migrate Database
-
-> Project đã cấu hình seeding dữ liệu tĩnh bằng `HasData` trong `SeedData.Seed(ModelBuilder mb)`. Vì vậy chỉ cần chạy **migrate** là dữ liệu danh mục cơ bản sẽ có.
-
-Chạy lệnh migrate & update DB:
-
-```bash
-# Tạo DB và áp dụng các migration hiện có
-dotnet ef database update
+git clone https://github.com/iamKhang/internship-management.git
+cd internship-management/InternshipManagement
 ```
 
-> Nếu bạn mới sửa model và muốn tạo migration mới:
->
-> ```bash
-> dotnet ef migrations add Init
-> dotnet ef database update
-> ```
-
----
-
-## 🌱 Seed data
-
-Project đang seeding danh mục qua `HasData` (ví dụ `Khoa`, …) trong `InternshipManagement.Data.SeedData`:
-
-```csharp
-public static class SeedData
-{
-    public static void Seed(ModelBuilder mb)
-    {
-        mb.Entity<Khoa>().HasData(
-            new Khoa { MaKhoa = "CNTT", TenKhoa = "Khoa Công nghệ Thông tin", DienThoai = "0901234567" },
-            new Khoa { MaKhoa = "CNHH", TenKhoa = "Khoa Công nghệ Hóa học", DienThoai = "0901234572" },
-            new Khoa { MaKhoa = "TCKT", TenKhoa = "Khoa Tài chính - Kế toán", DienThoai = "0901234576" },
-            new Khoa { MaKhoa = "COKHI", TenKhoa = "Khoa Cơ khí", DienThoai = "0901234570" },
-            new Khoa { MaKhoa = "VCNMT", TenKhoa = "Viện Công nghệ & Môi trường", DienThoai = "0901234582" },
-            new Khoa { MaKhoa = "DTVT", TenKhoa = "Khoa Điện tử - Viễn thông", DienThoai = "0901234568" },
-            new Khoa { MaKhoa = "DIEN", TenKhoa = "Khoa Điện - Điện tử", DienThoai = "0901234569" }
-            // ... (các seed khác nếu có)
-        );
-    }
-}
-```
-
-* **Bước chạy:**
-
-  * `dotnet ef database update` (áp dụng migration + seed danh mục)
-  * `dotnet run` lần đầu để tạo **tài khoản đăng nhập** (Identity) nếu code khởi tạo người dùng mặc định chạy ở `Program.cs`/`ApplicationDbInitializer`.
-
-### 🔑 Tài khoản mặc định
-
-* **Sinh viên:** *username* = **Mã SV** (ID), *password* = **123456**
-* **Giảng viên:** *username* = **Mã GV** (ID), *password* = **123456**
-* **Admin:** *username* = **admin**, *password* = **admin123**
-
-> *Lưu ý:* Tạo đúng dữ liệu người dùng mẫu (seed Identity) theo logic dự án (ví dụ đọc từ file seed hoặc tạo cứng). Nếu bạn không thấy tài khoản xuất hiện, kiểm tra code khởi tạo trong `Program.cs`/`DbInitializer` và chạy lại `dotnet run`.
-
----
-
-## 🧩 Thêm Stored Procedures
-
-* Mở file: **`/Database/StoredProcedures/thuctap_stored_procs.sql`**
-* Chạy toàn bộ script trong SSMS/Azure Data Studio để tạo/cập nhật các **Stored Procedure** cần thiết.
-
-> Ví dụ: các SP phục vụ danh sách đề tài, đăng ký, thống kê,… (chi tiết trong file SQL).
-
----
-
-## ▶️ Chạy dự án
-
-```bash
-dotnet run
-# hoặc F5 trong Visual Studio / VS Code
-```
-
-Ứng dụng lắng nghe ở `https://localhost:xxxx` (xem console khi chạy lần đầu).
-
----
-
-## 👤👨‍🏫🛠️ Chức năng theo vai trò
-
-### 1) Sinh viên
-
-* Xem **danh sách đề tài** (filter theo nhiều thuộc tính: khoa, giảng viên, học kỳ, trạng thái, …)
-* **Đăng ký** đề tài
-* **Thu hồi** khi đã đăng ký
-* Xem **danh sách đề tài đã đăng ký** của bản thân
-
-### 2) Giảng viên
-
-* Xem **danh sách đề tài của bản thân**
-* Xem **danh sách sinh viên đang hướng dẫn**
-* Xem **danh sách sinh viên đã đăng ký đề tài**
-* Thao tác **Chấp nhận / Từ chối** đăng ký
-* Cập nhật **Trạng thái: Đang làm / Hoàn thành**
-* **Nhập điểm kết quả** cho đồ án
-* Xem **thống kê tình trạng** các đề tài của bản thân
-
-### 3) Admin
-
-* CRUD **Sinh viên**
-* CRUD **Giảng viên**
-* Xem **thống kê đăng ký đề tài** toàn hệ thống
-* Xem **danh sách đề tài** toàn hệ thống
-* **Export** danh sách theo bộ lọc (tuỳ chọn **xuất kèm danh sách đề tài** hay không)
-
----
-
-## 🖼️ Khu vực ảnh minh hoạ (điền ảnh vào README)
-
-> Bạn chụp màn hình theo gợi ý dưới đây rồi thay các liên kết ảnh:
-
-* Trang chủ/Đăng nhập: `![Login](docs/images/login.png)`
-* Danh sách đề tài (Sinh viên) + thanh filter: `![SV - Danh sách đề tài](docs/images/sv-detai-list.png)`
-* Đăng ký/Thu hồi đề tài: `![SV - Đăng ký đề tài](docs/images/sv-dangky.png)`
-* Danh sách đề tài đã đăng ký (SV): `![SV - Đề tài của tôi](docs/images/sv-my-topics.png)`
-* Danh sách đề tài của tôi (GV): `![GV - Đề tài của tôi](docs/images/gv-my-topics.png)`
-* Duyệt đăng ký (GV): `![GV - Duyệt đăng ký](docs/images/gv-approve.png)`
-* Cập nhật trạng thái & nhập điểm (GV): `![GV - Cập nhật trạng thái/Điểm](docs/images/gv-status-score.png)`
-* Thống kê đề tài (GV): `![GV - Thống kê](docs/images/gv-stats.png)`
-* Quản trị CRUD SV: `![Admin - Quản lý SV](docs/images/admin-students.png)`
-* Quản trị CRUD GV: `![Admin - Quản lý GV](docs/images/admin-lecturers.png)`
-* Thống kê toàn hệ thống (Admin): `![Admin - Thống kê](docs/images/admin-stats.png)`
-* Export theo filter (Admin): `![Admin - Export](docs/images/admin-export.png)`
-
-> **Lưu ý:** Tạo thư mục `docs/images/` trong repo để quản lý ảnh.
-
----
-
-## 🧪 Lệnh hữu ích (Cheat Sheet)
-
-```bash
-# Tạo migration mới
-dotnet ef migrations add <Name>
-
-# Áp dụng migration
-dotnet ef database update
-
-# Huỷ migration cuối (khi chưa update DB)
-dotnet ef migrations remove
-
-# Recreate DB từ đầu (cẩn thận xoá dữ liệu!)
-dotnet ef database drop -f && dotnet ef database update
-```
-
----
-
-## 🛟 Troubleshooting
-
-* **Không kết nối được DB:** kiểm tra firewall/port, `TrustServerCertificate=True` cho môi trường dev, User/Pass đúng.
-* **Seed Identity không chạy:** đảm bảo khối **khởi tạo người dùng mặc định** được gọi khi `dotnet run` lần đầu (ví dụ `using var scope = app.Services.CreateScope(); await DbInitializer.SeedAsync(scope.ServiceProvider);`).
-* **Lỗi migration:** xoá DB dev và chạy lại `dotnet ef database update`.
-* **Không thấy Stored Procedures:** chắc chắn đã mở và **Execute** file `thuctap_stored_procs.sql` đúng database `ThucTap`.
-
----
-
-# InternshipManagement — Mini Project (ASP.NET MVC + SQL Server)
-
-Một mini-project quản lý đề tài/đồ án thực tập với 3 vai trò **Sinh viên**, **Giảng viên**, **Admin**. Stack chính: **.NET 8 (ASP.NET MVC + EF Core)**, **SQL Server**.
-
----
-
-## 🧰 Yêu cầu hệ thống (Prerequisites)
-
-* .NET SDK **8.x** (hoặc cao hơn)
-* SQL Server (LocalDB/Express hoặc Docker) + SSMS / Azure Data Studio
-* EF Core CLI
-
-  ```bash
-  dotnet tool update --global dotnet-ef
-  ```
----
-
-## ⚡️ Khởi động nhanh (TL;DR)
-
-```bash
-# 1) Clone & vào thư mục
-git clone <YOUR_REPO_URL> InternshipManagement
-cd InternshipManagement
-
-# 2) Cập nhật chuỗi kết nối trong appsettings.json
-#    (ví dụ cho SQL Server local)
-# "DefaultConnection": "Server=localhost,1433;Database=ThucTap;User Id=sa;Password=sapassword;TrustServerCertificate=True;"
-
-# 3) Tạo/migrate database
-dotnet ef database update
-
-# 4) Chạy lần đầu để khởi tạo dữ liệu đăng nhập (Identity)
-dotnet run
-
-# 5) Import các Stored Procedure
-#    Mở file /Database/StoredProcedures/thuctap_stored_procs.sql trong SSMS/Azure Data Studio và Execute
-
-# 6) Đăng nhập theo tài khoản mặc định (xem bên dưới)
-```
-
----
-
-## 🔧 Cấu hình chuỗi kết nối
-
-File `appsettings.json` (ví dụ):
-
+### 2. Cấu hình Database
+Cập nhật chuỗi kết nối trong `appsettings.json`:
 ```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=localhost,1433;Database=ThucTap;User Id=sa;Password=sapassword;TrustServerCertificate=True;"
-  },
-  "Logging": { "LogLevel": { "Default": "Information", "Microsoft.AspNetCore": "Warning" } },
-  "AllowedHosts": "*"
+  }
 }
 ```
 
-> Nếu dùng **LocalDB** trên Windows: `Server=(localdb)\\MSSQLLocalDB;Database=ThucTap;Trusted_Connection=True;MultipleActiveResultSets=true`
-
----
-
-## 🗃️ Migrate Database
-
-> Project đã cấu hình seeding dữ liệu tĩnh bằng `HasData` trong `SeedData.Seed(ModelBuilder mb)`. Vì vậy chỉ cần chạy **migrate** là dữ liệu danh mục cơ bản sẽ có.
-
-Chạy lệnh migrate & update DB:
-
+### 3. Khởi tạo Database
 ```bash
-# Tạo DB và áp dụng các migration hiện có
+# Tải depedencies
+dotnet restore
+# Áp dụng migrations và seed data
 dotnet ef database update
+# Chạy ứng dụng lần đầu để tạo tài khoản
+dotnet run -- --seed
 ```
 
-> Nếu bạn mới sửa model và muốn tạo migration mới:
->
-> ```bash
-> dotnet ef migrations add Init
-> dotnet ef database update
-> ```
+### 4. Import Stored Procedures
+Mở file `Database/StoredProcedures/thuctap_stored_procs.sql` và execute trong SSMS/Azure Data Studio. (Update: Không cần nữa vì đã thay thế bằng cách sử dụng EF)
 
----
-
-## 🌱 Seed data
-
-Project đang seeding danh mục qua `HasData` (ví dụ `Khoa`, …) trong `InternshipManagement.Data.SeedData`:
-
-```csharp
-public static class SeedData
-{
-    public static void Seed(ModelBuilder mb)
-    {
-        mb.Entity<Khoa>().HasData(
-            new Khoa { MaKhoa = "CNTT", TenKhoa = "Khoa Công nghệ Thông tin", DienThoai = "0901234567" },
-            new Khoa { MaKhoa = "CNHH", TenKhoa = "Khoa Công nghệ Hóa học", DienThoai = "0901234572" },
-            new Khoa { MaKhoa = "TCKT", TenKhoa = "Khoa Tài chính - Kế toán", DienThoai = "0901234576" },
-            new Khoa { MaKhoa = "COKHI", TenKhoa = "Khoa Cơ khí", DienThoai = "0901234570" },
-            new Khoa { MaKhoa = "VCNMT", TenKhoa = "Viện Công nghệ & Môi trường", DienThoai = "0901234582" },
-            new Khoa { MaKhoa = "DTVT", TenKhoa = "Khoa Điện tử - Viễn thông", DienThoai = "0901234568" },
-            new Khoa { MaKhoa = "DIEN", TenKhoa = "Khoa Điện - Điện tử", DienThoai = "0901234569" }
-            // ... (các seed khác nếu có)
-        );
-    }
-}
+### 5. Truy cập ứng dụng
+```
+URL: http://localhost:5084/
 ```
 
-* **Bước chạy:**
+---
 
-  * `dotnet ef database update` (áp dụng migration + seed)
-  * `dotnet run` lần đầu để tạo **tài khoản đăng nhập** (Identity) 
+## 👥 Tài khoản đăng nhập
 
-### 🔑 Tài khoản mặc định
-
-* **Sinh viên:** *username* = **Mã SV** (ID), *password* = **123456**
-* **Giảng viên:** *username* = **Mã GV** (ID), *password* = **123456**
-* **Admin:** *username* = **admin**, *password* = **admin123**
-
-> *Lưu ý:* Tạo đúng dữ liệu người dùng mẫu (seed Identity) theo logic dự án (ví dụ đọc từ file seed hoặc tạo cứng). Nếu bạn không thấy tài khoản xuất hiện, kiểm tra code khởi tạo trong `Program.cs`/`DbInitializer` và chạy lại `dotnet run`.
+| Vai trò | Username | Password |
+|---------|----------|----------|
+| Sinh viên | 1001-1090 | 123456 |
+| Giảng viên | 1-90 | 123456 |
+| Admin | admin | admin123 |
 
 ---
 
-## 🧩 Thêm Stored Procedures
+## 🎯 Chức năng chính
 
-* Mở file: **`/Database/StoredProcedures/thuctap_stored_procs.sql`**
-* Chạy toàn bộ script trong SSMS/Azure Data Studio để tạo/cập nhật các **Stored Procedure** cần thiết.
+### 👨‍🎓 Sinh viên
+- ✅ **Xem danh sách đề tài** với bộ lọc nâng cao
+- ✅ **Đăng ký/Thu hồi** đề tài
+- ✅ **Xem đề tài đã đăng ký** của bản thân
+- ✅ **Theo dõi trạng thái** sau khi đăng ký đề tài
+
+### 👨‍🏫 Giảng viên
+- ✅ **Quản lý đề tài** của bản thân
+- ✅ **Duyệt/Từ chối hướng dẫn** sinh viên
+- ✅ **Cập nhật tiến trình** hướng dẫn sinh viên thực hiện đề tài
+- ✅ **Nhập điểm** kết quả (Sau khi cập nhật trạng thái hoàn thành hướng dẫn)
+- ✅ **Thống kê** giảng viên xem thống kê tình trạng đăng kí đề tài của bản thân hiện tại
+
+### 🛠️ Admin
+- ✅ **CRUD Sinh viên & Giảng viên**
+- ✅ **Thống kê toàn hệ thống** Xem thống kê tình trạng đăng ký học phần của hệ thống
+- ✅ **Export dữ liệu** Export Danh sách Sinh viên/Danh sách giảng viên/Danh sách Đề tại (Có tùy chọn export cùng với các sinh viên đăng ký đề tài đó) ===> Cho người dùng chọn các trường cần export
+- ✅ **Import dữ liệu** Import danh sách Sinh Viên/Giảng Viên nhanh bằng file excel.
+- ✅ **Quản lý danh mục**  
+<span style="color:red">*Lưu ý: Khi người dùng tạo Sinh viên/Giảng viên mới thì hệ thống sẽ tự động tạo tài khoản đăng nhập cho họ với mật khẩu là 123456*</span>
 ---
 
-## ▶️ Chạy dự án
+## 🏗️ Kiến trúc và Công nghệ
 
-```bash
-dotnet run
-# hoặc chạy trong Visual Studio 
-```
+### Backend Stack
+- **Framework:** ASP.NET Core 8.0 MVC
+- **ORM:** Entity Framework Core 8.0
+- **Database:** SQL Server với Stored Procedures
+- **Authentication:** ASP.NET Core Identity
+- **Architecture:** Repository Pattern + Dependency Injection
 
-Ứng dụng lắng nghe ở `https://localhost:7122` 
+### Frontend Stack
+- **UI Framework:** Bootstrap 5
+- **Icons:** Bootstrap Icons
+- **Charts:** ECharts
+- **JavaScript:** jQuery
 
----
-
-## 👤👨‍🏫🛠️ Chức năng theo vai trò
-
-### 1) Sinh viên
-
-* Xem **danh sách đề tài** (filter theo nhiều thuộc tính: khoa, giảng viên, học kỳ, trạng thái, …)
-* **Đăng ký** đề tài
-* **Thu hồi** khi đã đăng ký
-* Xem **danh sách đề tài đã đăng ký** của bản thân
-
-### 2) Giảng viên
-
-* Xem **danh sách đề tài của bản thân**
-* Xem **danh sách sinh viên đang hướng dẫn**
-* Xem **danh sách sinh viên đã đăng ký đề tài**
-* Thao tác **Chấp nhận / Từ chối** đăng ký
-* Cập nhật **Trạng thái: Đang làm / Hoàn thành**
-* **Nhập điểm kết quả** cho đồ án
-* Xem **thống kê tình trạng** các đề tài của bản thân
-
-### 3) Admin
-
-* CRUD **Sinh viên**
-* CRUD **Giảng viên**
-* Xem **thống kê đăng ký đề tài** toàn hệ thống
-* Xem **danh sách đề tài** toàn hệ thống
-* **Export** danh sách theo bộ lọc (tuỳ chọn **xuất kèm danh sách đề tài** hay không)
+### Database Design
+- **Tables:** 7 entities chính + Identity tables
+- **Relationships:** One-to-Many, Many-to-Many
+- **Stored Procedures:** 5+ SP cho truy vấn phức tạp (Đã bỏ)
+- **Seed Data:** 90 sinh viên, 90 giảng viên, 450 đề tài
 
 ---
 
-## 🖼️ Khu vực ảnh minh hoạ
-
-> Bạn chụp màn hình theo gợi ý dưới đây rồi thay các liên kết ảnh:
-
-- Trang chủ: ![Home](docs/images/home.png)
-- Đăng nhập: ![Login](docs/images/login.png)
-- Danh sách đề tài (Sinh viên) + thanh filter: ![SV - Danh sách đề tài](docs/images/danhsachdetai.png)
-- Chi tiết đề tài: ![Chi tiết đề tài](docs/images/chitietdetai.png)
-- Danh sách đề tài đã đăng ký (SV): ![SV - Đề tài của tôi](docs/images/danhsachdetaidadangky.png)
-- Danh sách đề tài của tôi (GV): ![GV - Đề tài của tôi](docs/images/danhsachdetaicuagiangvien.png)
-- Duyệt đăng ký (GV) - Danh sách sinh viên đăng ký đề tài: ![GV - Duyệt đăng ký](docs/images/danhsachsinhviendangkydetai.png)
-- Cập nhật trạng thái & nhập điểm (GV): ![GV - Cập nhật trạng thái/Điểm](docs/images/nhapdiem.png)
-- Thống kê toàn hệ thống (Admin): ![Admin - Thống kê](docs/images/thongkeadmin.png)
-- Thống kê theo giảng viên: ![Thống kê theo giảng viên](docs/images/thongketheogiangvien.png)
-- Export theo filter (Admin) — có thể chỉ export danh sách đề tài hoặc kèm danh sách sinh viên: ![Admin - Export](docs/images/export.png)
-
-
-> **Lưu ý:** Tạo thư mục `docs/images/` trong repo để quản lý ảnh.
-
-## 📁 Cấu trúc thư mục (theo repo hiện tại)
+## 📁 Cấu trúc dự án
 
 ```
 InternshipManagement/
-├─ Controllers/              # Các controller xử lý request HTTP, định tuyến tới action và trả về view hoặc dữ liệu
-├─ Data/                     # Lớp DbContext, cấu hình EF Core, seeding dữ liệu
-├─ Database/                 # Tài nguyên database thủ công
-│  └─ StoredProcedures/      # Các script T-SQL định nghĩa Stored Procedure
-│     └── thuctap_stored_procs.sql
-├─ Migrations/               # Các file migration của EF Core
-├─ Models/                   # Các model ứng dụng
-│  ├─ Auth/                  # Model liên quan đến Identity, tài khoản, quyền
-│  ├─ DTOs/                  # Data Transfer Objects dùng cho API / truyền dữ liệu
-│  ├─ Enums/                 # Các kiểu liệt kê (enum)
-│  └─ ViewModels/            # ViewModel cho Razor View
-├─ Properties/               # Thông tin cấu hình dự án (launchSettings.json)
-├─ Repositories/             # Pattern Repository
-│  ├─ Implementations/       # Hiện thực các interface repository
-│  └─ Interfaces/            # Khai báo interface repository
-├─ Views/                    # Razor Views (giao diện)
-│  ├─ Auth/                  # Giao diện đăng nhập/đăng ký
-│  ├─ DeTai/                 # Giao diện quản lý đề tài
-│  ├─ GiangVien/             # Giao diện cho giảng viên
-│  ├─ Home/                  # Trang chủ
-│  ├─ Shared/                # Layout, partial view dùng chung
-│  ├─ SinhVien/              # Giao diện cho sinh viên
-│  └─ ThongKe/               # Giao diện thống kê
-├─ wwwroot/                  # Tài nguyên tĩnh (static files)
-│  ├─ css/                   # Stylesheet
-│  ├─ js/                    # Script JavaScript
-│  └─ lib/                   # Thư viện front-end (Bootstrap, ECharts, jQuery...)
-│     ├─ bootstrap/
-│     ├─ bootstrap-icons/
-│     ├─ echarts/
-│     ├─ jquery/
-│     ├─ jquery-validation/
-│     └─ jquery-validation-unobtrusive/
-├─ appsettings.json          # File cấu hình chính (connection string, logging...)
-└─ Program.cs                # Điểm khởi chạy ứng dụng
+├── Controllers/           # API Controllers
+├── Data/                  # DbContext & Seed Data
+├── Models/                # Domain Models
+│   ├── Auth/             # Identity Models
+│   ├── DTOs/             # Data Transfer Objects
+│   ├── Enums/            # Enumeration Types
+│   └── ViewModels/       # View Models
+├── Repositories/          # Repository Pattern
+├── Views/                # Razor Views
+├── wwwroot/              # Static Files
+└── Database/             # SQL Scripts
 ```
+
 ---
+
+## 📊 Screenshots
+
+### 🔐 Đăng nhập hệ thống
+![Login](docs/images/DangNhap.png)
+
+### 👨‍🎓 Admin - Danh sách đề tài
+![Danh sách đề tài](docs/images/DSDeTai_ViewAdmin.png)
+
+### 📋 Chi tiết đề tài
+
+![Chi tiết đề tài](docs/images/DetaiDetail.png)
+<span style="color:red">*Lưu ý: Tùy vào tình trạng của sinh viên với đề tài mà các nút sẽ hiển thị khác nhau (Đang chờ duyệt/Đã đăng ký/Bị từ chối/Quá thời gian đăng ký*</span>
+
+### 📝 Đề tài đã đăng ký
+![Đề tài đã đăng ký](docs/images/DSDeTaiDaDangKy.png)
+
+### 👨‍🏫 Giảng viên - Quản lý đề tài
+![Quản lý đề tài GV](docs/images/DanhSachDeTaiCuaToi.png)
+![Quản lý đề tài GV](docs/images/DeTaiCuarToi2.png)
+
+### 👥 Danh sách sinh viên đăng ký
+![Sinh viên đăng ký](docs/images/DanhSachSinhVienDangKyDeTai.png)
+
+### 📊 Nhập điểm kết quả
+![Nhập điểm](docs/images/NhapDiem.png)
+
+### 📈 Thống kê Admin
+![Thống kê Admin](docs/images/ThongKeAdmin.png)
+
+### 📊 Thống kê theo giảng viên
+![Thống kê GV](docs/images/ThongKeGV.png)
+
+### 📤 Export dữ liệu
+![Export Đề tài](docs/images/ExportDanhSachDeTai.png)
+![Export Giảng viên](docs/images/ExportDSGiangVien.png)
+![Export Sinh viên](docs/images/ExportGiangVien.png)
+
+
+### 📤 Import dữ liệu
+![Import Sinh viên](docs/images/ImportSinhViens.png)
+![Import Giảng viên](docs/images/ImportDSGiangVien.png)
+---
+
+## 🔧 Troubleshooting
+
+### Database Connection
+```bash
+# Kiểm tra kết nối
+dotnet ef database update
+
+# Reset database
+dotnet ef database drop -f
+dotnet ef database update
+```
+
+### Identity Seed
+```bash
+# Chạy lại seeding
+dotnet run -- --seed
+```
+
+### Stored Procedures
+- Đảm bảo đã execute file `thuctap_stored_procs.sql`
+- Kiểm tra database name: `ThucTap`
+
+---
+
+## 👨‍💻 Tác giả
+
+**Lê Hoàng Khang**
+
+- 📧 Email: iamhoangkhang@icloud.com
+- 📱 Phone: (+84) 383 741 xxx
+
+---
+
+## 📝 License
+
+This project is developed for educational purposes.
+
+---
+
+<div align="center">
+  <strong>🎓 Internship Management System - Review ASP MVC - Update (5/9/2025)</strong>
+</div>
