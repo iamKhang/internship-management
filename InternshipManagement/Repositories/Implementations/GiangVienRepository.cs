@@ -113,16 +113,59 @@ namespace InternshipManagement.Repositories.Implementations
 
         public async Task DeleteAsync(int id)
         {
-            var existing = await _db.GiangViens.FindAsync(id)
-                           ?? throw new KeyNotFoundException("Không tìm thấy giảng viên.");
+            // Sử dụng execution strategy để hỗ trợ user-initiated transactions
+            var strategy = _db.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var tx = await _db.Database.BeginTransactionAsync();
+                try
+                {
+                    var existing = await _db.GiangViens
+                        .Include(g => g.HuongDans)
+                        .Include(g => g.DeTais)
+                        .FirstOrDefaultAsync(g => g.MaGv == id)
+                        ?? throw new KeyNotFoundException("Không tìm thấy giảng viên.");
 
-            // Check constraint: cannot delete if teacher has any guidance
-            bool hasHuongDan = await _db.HuongDans.AnyAsync(h => h.MaGv == id);
-            if (hasHuongDan)
-                throw new InvalidOperationException("Giảng viên đã có hướng dẫn, không thể xoá.");
+                    // Check constraint: cannot delete if teacher has active guidance (status 1, 2, 3)
+                    bool hasActiveHuongDan = await _db.HuongDans.AnyAsync(h =>
+                        h.MaGv == id &&
+                        (h.TrangThai == InternshipManagement.Models.Enums.HuongDanStatus.Accepted ||
+                         h.TrangThai == InternshipManagement.Models.Enums.HuongDanStatus.InProgress ||
+                         h.TrangThai == InternshipManagement.Models.Enums.HuongDanStatus.Completed));
 
-            _db.GiangViens.Remove(existing);
-            await _db.SaveChangesAsync();
+                    if (hasActiveHuongDan)
+                        throw new InvalidOperationException("Giảng viên đang hướng dẫn sinh viên ở trạng thái hoạt động (chấp nhận/đang thực hiện/hoàn thành), không thể xoá.");
+
+                    // Xóa các hướng dẫn không hoạt động (Pending, Rejected, Withdrawn)
+                    var inactiveHuongDans = await _db.HuongDans
+                        .Where(h => h.MaGv == id &&
+                            (h.TrangThai == InternshipManagement.Models.Enums.HuongDanStatus.Pending ||
+                             h.TrangThai == InternshipManagement.Models.Enums.HuongDanStatus.Rejected ||
+                             h.TrangThai == InternshipManagement.Models.Enums.HuongDanStatus.Withdrawn))
+                        .ToListAsync();
+
+                    if (inactiveHuongDans.Any())
+                    {
+                        _db.HuongDans.RemoveRange(inactiveHuongDans);
+                    }
+
+                    // Xóa các đề tài của giảng viên
+                    if (existing.DeTais.Any())
+                    {
+                        _db.DeTais.RemoveRange(existing.DeTais);
+                    }
+
+                    // Xóa giảng viên
+                    _db.GiangViens.Remove(existing);
+                    await _db.SaveChangesAsync();
+                    await tx.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await tx.RollbackAsync();
+                    throw; // Re-throw để giữ nguyên exception type và message
+                }
+            });
         }
 
         public async Task<List<GiangVienOptionVm>> GetOptionsAsync(string? maKhoa = null)

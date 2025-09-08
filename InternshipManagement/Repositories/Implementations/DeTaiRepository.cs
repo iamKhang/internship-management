@@ -830,40 +830,47 @@ namespace InternshipManagement.Repositories.Implementations
         public async Task<(bool ok, string? error)> DeleteWithRulesAsync(string maDt)
         {
             var code = NormCode(maDt);
-            using var tx = await _db.Database.BeginTransactionAsync();
-            try
+
+            // Sử dụng execution strategy để hỗ trợ user-initiated transactions
+            var strategy = _db.Database.CreateExecutionStrategy();
+            var result = await strategy.ExecuteAsync(async () =>
             {
-                bool hasActive = await _db.Set<HuongDan>()
-                    .AnyAsync(h => h.MaDt == code &&
-                        (h.TrangThai == HuongDanStatus.Accepted
-                      || h.TrangThai == HuongDanStatus.InProgress
-                      || h.TrangThai == HuongDanStatus.Completed));
-                if (hasActive)
-                    return (false, "Đề tài đã có sinh viên đăng ký thành công hoặc đang thực hiện, không thể xóa.");
+                using var tx = await _db.Database.BeginTransactionAsync();
+                try
+                {
+                    bool hasActive = await _db.Set<HuongDan>()
+                        .AnyAsync(h => h.MaDt == code &&
+                            (h.TrangThai == HuongDanStatus.Accepted
+                          || h.TrangThai == HuongDanStatus.InProgress
+                          || h.TrangThai == HuongDanStatus.Completed));
+                    if (hasActive)
+                        return Task.FromResult<(bool, string?)>((false, "Đề tài đã có sinh viên đăng ký thành công hoặc đang thực hiện, không thể xóa."));
 
-                var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
-                if (e == null) return (false, "Không tìm thấy đề tài.");
+                    var e = await _db.Set<DeTai>().FirstOrDefaultAsync(x => x.MaDt == code);
+                    if (e == null) return Task.FromResult<(bool, string?)>((false, "Không tìm thấy đề tài."));
 
-                // Xóa các hướng dẫn có trạng thái cho phép xóa
-                var toRemove = await _db.HuongDans
-    .Where(h => h.MaDt == code &&
-        (h.TrangThai == HuongDanStatus.Pending
-      || h.TrangThai == HuongDanStatus.Rejected
-      || h.TrangThai == HuongDanStatus.Withdrawn))
-    .ToListAsync();
-                if (toRemove.Count > 0) _db.HuongDans.RemoveRange(toRemove);
+                    // Xóa các hướng dẫn có trạng thái cho phép xóa
+                    var toRemove = await _db.HuongDans
+        .Where(h => h.MaDt == code &&
+            (h.TrangThai == HuongDanStatus.Pending
+          || h.TrangThai == HuongDanStatus.Rejected
+          || h.TrangThai == HuongDanStatus.Withdrawn))
+        .ToListAsync();
+                    if (toRemove.Count > 0) _db.HuongDans.RemoveRange(toRemove);
 
-                // Xóa đề tài
-                _db.DeTais.Remove(e);
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
-                return (true, null);
-            }
-            catch (Exception ex)
-            {
-                await tx.RollbackAsync();
-                return (false, $"Không thể xóa: {ex.GetBaseException().Message}");
-            }
+                    // Xóa đề tài
+                    _db.DeTais.Remove(e);
+                    await _db.SaveChangesAsync();
+                    await tx.CommitAsync();
+                    return Task.FromResult<(bool, string?)>((true, null));
+                }
+                catch (Exception ex)
+                {
+                    await tx.RollbackAsync();
+                    return Task.FromResult<(bool, string?)>((false, $"Không thể xóa: {ex.GetBaseException().Message}"));
+                }
+            });
+            return await result;
         }
 
         public async Task<(bool ok, string? error)> UpdateAsync(string maDt, Action<DeTai> mutate)
