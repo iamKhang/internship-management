@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using Syncfusion.Licensing;
 
 static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
 {
@@ -50,6 +51,8 @@ static async Task SeedUsersAtRuntimeAsync(IServiceProvider services)
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+SyncfusionLicenseProvider.RegisterLicense(builder.Configuration["Syncfusion:LicenseKey"]);
 
 // Add services to the container
 builder.Services.AddControllersWithViews();
