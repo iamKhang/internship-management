@@ -23,7 +23,7 @@ namespace InternshipManagement.Controllers
             _gvRepo = gvRepo;
         }
 
-        public async Task<IActionResult> Index([FromQuery] DeTaiFilterVm filter, [FromQuery] PagingRequest paging)
+        public async Task<IActionResult> Index([FromQuery] DeTaiFilterVm filter)
         {
             var khoaOptions = (await _khoaRepo.GetOptionsAsync())
                 .Select(k => new SelectListItem { Value = k.MaKhoa, Text = k.TenKhoa, Selected = (filter.MaKhoa == k.MaKhoa) })
@@ -51,12 +51,12 @@ namespace InternshipManagement.Controllers
                 })
                 .ToList();
 
-            var (items, total) = await _repo.FilterAsync(filter, paging);
+            // Load toàn bộ dữ liệu (không còn paging)
+            var items = await _repo.FilterAsync(filter);
 
             var vm = new DeTaiIndexVm
             {
                 Filter = filter,
-                Paging = new PagingRequest { PageIndex = paging.PageIndex, PageSize = paging.PageSize, TotalRows = total },
                 Items = items,
                 KhoaOptions = khoaOptions,
                 GiangVienOptions = gvOptions,

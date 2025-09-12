@@ -4,10 +4,11 @@
     ViewData["Title"] = "Danh sách Đề tài";
 }
 
+
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
         <h5 class="mb-0">Danh sách Đề tài</h5>
-        <div class="small text-muted">Tổng: <strong>@Model.Paging.TotalRows</strong> bản ghi</div>
+        <div class="small text-muted">Tổng: <strong>@Model.Items.Count</strong> bản ghi</div>
     </div>
 
     <div class="card shadow-sm mb-3">
@@ -88,138 +89,59 @@
                     </a>
                 </div>
                 </div>
-        
-       
-                <!-- Hàng 2 -->
-               
-               
-                  
-
-
             </form>
         </div>
     </div>
 
 
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-            <thead class="table-primary">
-                <tr>
-                    <th class="text-nowrap fw-bold">Mã</th>
-                    <th class="text-nowrap fw-bold">Tên đề tài</th>
-                    <th class="text-nowrap fw-bold">Khoa</th>
-                    <th class="text-nowrap fw-bold text-center">Số lượng</th>
-                    <th class="text-nowrap fw-bold">Học kỳ</th>
-                    <th class="text-nowrap fw-bold text-end">Kinh phí</th>
-                    <th class="text-nowrap fw-bold text-center">Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Items.Any())
-                {
-                    foreach (var d in Model.Items)
-                    {
-                        <tr>
-                            <td><code class="text-monospace">@d.MaDt</code></td>
-                            <td>@d.TenDt</td>
-                            <td>@d.KhoaOptionVm.TenKhoa</td>
-                            <td class="text-center">@d.SoChapNhan/@d.SoLuongToiDa</td>
-                            <td>@d.HocKy/@d.NamHoc</td>
-                            <td class="text-end text-success">@d.KinhPhi triệu</td>
-                            <td class="text-center">
-                                <a class="btn btn-sm btn-primary text-white"
-                                   asp-action="Details"
-                                   asp-route-id="@d.MaDt"
-                                   title="Xem chi tiết">
+    <!-- Responsive Grid Container -->
+    <div class="grid-responsive">
+        <div class="grid-container">
+            <ejs-grid id="DeTaiGrid" dataSource="@Model.Items" allowPaging="true" allowSorting="true" allowMultiSorting="true" allowFiltering="false" allowResizing="true" gridLines="Both" height="600" width="100%" grid-lines="Both" enable-hover="false" enable-alt-row="true">
+                <e-grid-pagesettings pageSize="20" pageSizes="new List<int>{10,20,50,100,500}"></e-grid-pagesettings> 
+                <e-grid-columns>
+                <e-grid-column field="MaDt" headerText="Mã đề tài" width="120" template="#maDtTemplate"></e-grid-column>
+                <e-grid-column field="TenDt" headerText="Tên đề tài" width="300"></e-grid-column>
+                <e-grid-column headerText="Khoa" width="150" template="#khoaTemplate"></e-grid-column>
+                <e-grid-column headerText="Số lượng" width="120" textAlign="Center" template="#soLuongTemplate"></e-grid-column>
+                <e-grid-column headerText="Học kỳ" width="120" template="#hocKyTemplate"></e-grid-column>
+                <e-grid-column headerText="Kinh phí" width="120" textAlign="Right" template="#kinhPhiTemplate"></e-grid-column>
+                <e-grid-column headerText="Hành động" width="120" textAlign="Center" template="#actionTemplate"></e-grid-column>
+            </e-grid-columns>
+        </ejs-grid>
+    </div>
+
+
+    @* Templates for custom column rendering *@
+    <script id="maDtTemplate" type="text/x-template">
+        <span class="ma-dt-code">${MaDt}</span>
+    </script>
+
+    <script id="khoaTemplate" type="text/x-template">
+        ${KhoaOptionVm.TenKhoa}
+    </script>
+
+    <script id="soLuongTemplate" type="text/x-template">
+        <span class="so-luong-badge">${SoChapNhan}/${SoLuongToiDa}</span>
+    </script>
+
+    <script id="hocKyTemplate" type="text/x-template">
+        HK${HocKy} / ${NamHoc}
+    </script>
+
+    <script id="kinhPhiTemplate" type="text/x-template">
+        <span class="kinh-phi-text">${KinhPhi} triệu</span>
+    </script>
+
+    <script id="actionTemplate" type="text/x-template">
+        <a class="btn btn-sm btn-primary text-white" href="/DeTai/Details/${MaDt}" title="Xem chi tiết">
                                     <i class="bi bi-eye"></i> Xem
                                 </a>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-5 fs-5">
-                            <i class="bi bi-info-circle me-2"></i>Không có dữ liệu
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <div class="card-footer bg-white">
-        @{
-            var total = Model.Paging.TotalRows;
-            var pageIndex = Model.Paging.PageIndex <= 0 ? 1 : Model.Paging.PageIndex;
-            var pageSize = Model.Paging.PageSize <= 0 ? 20 : Model.Paging.PageSize;
-            var totalPages = (int)Math.Ceiling((double)total / pageSize);
-        }
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div class="text-muted">
-                Trang <strong>@pageIndex</strong> / <strong>@(totalPages == 0 ? 1 : totalPages)</strong>
-            </div>
-            <nav aria-label="pagination">
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item @(pageIndex <= 1 ? "disabled" : "")">
-                        <a class="page-link bg-primary text-white border-primary"
-                           asp-action="Index"
-                           asp-route-PageIndex="@(pageIndex - 1)"
-                           asp-route-PageSize="@pageSize"
-                           asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
-                           asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
-                           asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
-                           asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                           asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
-                           asp-route-Filter.Keyword="@Model.Filter.Keyword"
-                           asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())"
-                           aria-label="Previous">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                    </li>
-                    @for (int i = Math.Max(1, pageIndex - 2); i <= Math.Min(totalPages == 0 ? 1 : totalPages, pageIndex + 2); i++)
-                    {
-                        <li class="page-item @(i == pageIndex ? "active" : "")">
-                            <a class="page-link @(i == pageIndex ? "bg-primary text-white border-primary" : "bg-white border-primary text-dark")"
-                               asp-action="Index"
-                               asp-route-PageIndex="@i"
-                               asp-route-PageSize="@pageSize"
-                               asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
-                               asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
-                               asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
-                               asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                               asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
-                               asp-route-Filter.Keyword="@Model.Filter.Keyword"
-                               asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                               asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">
-                                @i
-                            </a>
-                        </li>
-                    }
-                    <li class="page-item @(pageIndex >= (totalPages == 0 ? 1 : totalPages) ? "disabled" : "")">
-                        <a class="page-link bg-primary text-white border-primary"
-                           asp-action="Index"
-                           asp-route-PageIndex="@(pageIndex + 1)"
-                           asp-route-PageSize="@pageSize"
-                           asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
-                           asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
-                           asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
-                           asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                           asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
-                           asp-route-Filter.Keyword="@Model.Filter.Keyword"
-                           asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())"
-                           aria-label="Next">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    </div>
+    </script>
+    @* EJ2 Grid component *@
 </div>
 
+@* Export Modal *@
 <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0">
@@ -270,7 +192,7 @@
                                 <i class="bi bi-person me-1"></i> Giảng viên
                             </label>
                         </div>
-                            <div class="form-check mb-2">
+                        <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="includeKhoa" value="true" id="chkKhoa" checked>
                             <input type="hidden" name="includeKhoa" value="false">
                             <label class="form-check-label" for="chkKhoa">
@@ -280,7 +202,6 @@
                     </div>
 
                     <div class="col-6">
-                    
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="includeHocKy" value="true" id="chkHocKy" checked>
                             <input type="hidden" name="includeHocKy" value="false">
@@ -393,36 +314,42 @@
 
 @section Scripts {
     <script>
-(function () {
-  const form = document.getElementById('filterForm');
-  const btnExport = document.getElementById('btnExport');
-  const tinhTrang = document.getElementById('Filter_TinhTrang');
-  const chkSinhVien = document.getElementById('chkSinhVien');
-  const sinhVienOptions = document.getElementById('sinhVienOptions');
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle filter form submission
+            const filterForm = document.getElementById('filterForm');
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
 
-  const urlExport = '@Url.Action("Export","DeTai")';
-  const urlExportDetail = '@Url.Action("ExportChiTiet","DeTai")';
-  const urlGetLecturers = '@Url.Action("GetLecturersByDepartment","DeTai")';
+                // Build query string with filter parameters (no paging)
+                var formData = new FormData(this);
+                var queryParams = new URLSearchParams();
 
-  // Lấy các dropdown
+                for (var pair of formData.entries()) {
+                    queryParams.append(pair[0], pair[1]);
+                }
+
+                window.location.href = '@Url.Action("Index", "DeTai")?' + queryParams.toString();
+            });
+
+            // Handle khoa change to update lecturers
   const khoaSelect = document.getElementById('Filter_MaKhoa');
   const giangVienSelect = document.getElementById('Filter_MaGv');
+            const urlGetLecturers = '@Url.Action("GetLecturersByDepartment", "DeTai")';
 
-  // Hàm cập nhật danh sách giảng viên theo khoa
   function updateLecturers(maKhoa) {
     fetch(`${urlGetLecturers}?maKhoa=${encodeURIComponent(maKhoa || '')}`)
       .then(response => response.json())
       .then(data => {
-        // Xóa tất cả options hiện tại
+                        // Clear current options
         giangVienSelect.innerHTML = '';
 
-        // Thêm option mặc định
+                        // Add default option
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.text = '-- Tất cả --';
         giangVienSelect.appendChild(defaultOption);
 
-        // Thêm các options mới
+                        // Add new options
         data.options.forEach(option => {
           const opt = document.createElement('option');
           opt.value = option.value;
@@ -435,86 +362,99 @@
       });
   }
 
-  // Xử lý khi thay đổi khoa
   khoaSelect.addEventListener('change', function() {
     const selectedMaKhoa = this.value;
     updateLecturers(selectedMaKhoa);
-    // Reset giảng viên về "tất cả" khi thay đổi khoa để tránh conflict
     giangVienSelect.value = '';
   });
 
-  // Khởi tạo danh sách giảng viên khi trang load
-  // Chỉ update nếu có khoa được chọn nhưng không có giảng viên được chọn
+            // Initialize lecturers on page load
   const initialMaKhoa = khoaSelect.value;
   const initialMaGv = giangVienSelect.value;
   if (initialMaKhoa && !initialMaGv) {
     updateLecturers(initialMaKhoa);
   }
 
-  // Tạo URL với query string từ form và các checkbox
-  function exportWith(url) {
-    // Lấy các tham số từ form filter
-    const params = new URLSearchParams(new FormData(form));
+            // Export modal logic with separate actions for student details
+            const exportModalEl = document.getElementById('exportModal');
+            const modal = new bootstrap.Modal(exportModalEl);
+            const urlExport = '@Url.Action("Export","DeTai")';
+            const urlExportChiTiet = '@Url.Action("ExportChiTiet","DeTai")';
 
-    window.location.href = url + '?' + params.toString();
-  }
+            // Handle "Kèm thông tin sinh viên" checkbox
+            document.getElementById('chkSinhVien')?.addEventListener('change', function() {
+                const sinhVienOptions = document.getElementById('sinhVienOptions');
+                const svCheckboxes = sinhVienOptions.querySelectorAll('input[type="checkbox"]');
 
-  // Modal Bootstrap 5
-  const exportModalEl = document.getElementById('exportModal');
-  const modal = new bootstrap.Modal(exportModalEl);
+                if (this.checked) {
+                    sinhVienOptions.style.display = 'block';
+                    svCheckboxes.forEach(cb => {
+                        cb.disabled = false;
+                        cb.checked = true;
+                    });
+                } else {
+                    sinhVienOptions.style.display = 'none';
+                    svCheckboxes.forEach(cb => {
+                        cb.disabled = true;
+                        cb.checked = false;
+                    });
+                }
+            });
 
-  // Xử lý khi mở modal export
-  exportModalEl.addEventListener('show.bs.modal', function () {
-    // Nếu chọn "Chưa có sinh viên đăng ký" -> ẩn phần sinh viên
-    if (tinhTrang && tinhTrang.value === 'OnlyNoStudent') {
-      chkSinhVien.checked = false;
-      chkSinhVien.disabled = true;
-      sinhVienOptions.style.display = 'none';
-    } else {
-      chkSinhVien.disabled = false;
-    }
+            // Select all fields button
+            document.getElementById('selectAllFields')?.addEventListener('click', function() {
+                const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
+                checkboxes.forEach(cb => cb.checked = true);
+            });
+
+            // Clear all fields button
+            document.getElementById('clearAllFields')?.addEventListener('click', function() {
+                const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
+                checkboxes.forEach(cb => cb.checked = false);
+                // Also uncheck the main sinh vien checkbox
+                document.getElementById('chkSinhVien').checked = false;
+                document.getElementById('sinhVienOptions').style.display = 'none';
+            });
+
+            // Export button with conditional action selection
+            document.getElementById('btnExport')?.addEventListener('click', function(e) {
+                // Validate at least one column is selected (excluding hidden inputs)
+                const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:checked:not([type="hidden"]):not([disabled])');
+                if (checkboxes.length === 0) {
+                    alert('Vui lòng chọn ít nhất một cột để export!');
+                    return;
+                }
+
+                // Get current filter parameters
+                var form = document.getElementById('filterForm');
+                var formData = new FormData(form);
+                var queryParams = new URLSearchParams();
+
+                // Add filter parameters
+                for (var pair of formData.entries()) {
+                    queryParams.append(pair[0], pair[1]);
+                }
+
+                // Add column selection parameters from modal
+                const modalCheckboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([type="hidden"])');
+                modalCheckboxes.forEach(cb => {
+                    if (!cb.disabled) {
+                        queryParams.append(cb.name, cb.checked ? 'true' : 'false');
+                    }
+                });
+
+                // Đóng modal và export
+                modal.hide();
+                document.querySelector('.modal-backdrop')?.remove();
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('padding-right');
+
+                // Choose export action based on whether student info is included
+                const includeSinhVien = document.getElementById('chkSinhVien').checked;
+                const exportUrl = includeSinhVien ? urlExportChiTiet : urlExport;
+
+                window.location.href = exportUrl + '?' + queryParams.toString();
+            });
   });
-
-  // Xử lý hiện/ẩn tùy chọn sinh viên
-  chkSinhVien.addEventListener('change', function() {
-    sinhVienOptions.style.display = this.checked ? 'block' : 'none';
-    const svCheckboxes = sinhVienOptions.querySelectorAll('input[type="checkbox"]');
-    svCheckboxes.forEach(cb => {
-      cb.disabled = !this.checked;
-    });
-  });
-
-  // Xử lý nút chọn tất cả
-  document.getElementById('selectAllFields')?.addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
-    checkboxes.forEach(cb => cb.checked = true);
-  });
-
-  // Xử lý nút bỏ chọn tất cả
-  document.getElementById('clearAllFields')?.addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
-    checkboxes.forEach(cb => cb.checked = false);
-  });
-
-  // Validation cho export
-  document.getElementById('btnExport')?.addEventListener('click', function(e) {
-    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:checked:not([disabled])');
-    if (checkboxes.length === 0) {
-      e.preventDefault();
-      alert('Vui lòng chọn ít nhất một trường để export!');
-      return;
-    }
-
-    // Đóng modal trước khi export
-    modal.hide();
-    document.querySelector('.modal-backdrop')?.remove();
-    document.body.classList.remove('modal-open');
-    document.body.style.removeProperty('padding-right');
-
-    // Export dữ liệu
-    exportWith(chkSinhVien.checked ? urlExportDetail : urlExport);
-  });
-
-})();
     </script>
 }

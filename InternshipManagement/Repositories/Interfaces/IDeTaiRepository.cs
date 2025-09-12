@@ -8,7 +8,7 @@ namespace InternshipManagement.Repositories.Interfaces
 {
     public interface IDeTaiRepository
     {
-        Task<(List<DeTaiListItemVm> items, int totalRows)> FilterAsync(DeTaiFilterVm filter, PagingRequest page);
+        Task<List<DeTaiListItemVm>> FilterAsync(DeTaiFilterVm filter);
         Task<List<DeTaiExportRowVm>> GetForExportAsync(DeTaiFilterVm filter);
         Task<List<DeTaiExportChiTietRowVm>> GetChiTietForExportAsync(DeTaiFilterVm filter);
         Task<DeTaiDetailVm?> GetDetailAsync(string maDt);

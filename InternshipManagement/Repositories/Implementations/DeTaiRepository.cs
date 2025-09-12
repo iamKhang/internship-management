@@ -60,7 +60,7 @@ namespace InternshipManagement.Repositories.Implementations
         private static string NormCode(string? s) => (s ?? "").Trim().ToUpperInvariant();
         public DeTaiRepository(AppDbContext db) => _db = db;
 
-        public async Task<(List<DeTaiListItemVm> items, int totalRows)> FilterAsync(DeTaiFilterVm filter, PagingRequest page)
+        public async Task<List<DeTaiListItemVm>> FilterAsync(DeTaiFilterVm filter)
         {
             // Build base query
             var query = _db.DeTais
@@ -145,14 +145,9 @@ namespace InternshipManagement.Repositories.Implementations
                 }
             }
 
-            // Get total count
-            var totalRows = await query.CountAsync();
-
-            // Apply paging and project to ViewModel
+            // Load toàn bộ dữ liệu và project to ViewModel
             var items = await query
                 .OrderBy(d => d.MaDt)
-                .Skip((page.PageIndex - 1) * page.PageSize)
-                .Take(page.PageSize)
                 .Select(d => new DeTaiListItemVm
                 {
                     MaDt = d.MaDt,
@@ -174,7 +169,7 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .ToListAsync();
 
-            return (items, totalRows);
+            return items;
         }
 
         /// <summary>
