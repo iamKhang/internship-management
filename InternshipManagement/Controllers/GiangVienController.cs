@@ -30,9 +30,9 @@ namespace InternshipManagement.Controllers
             _userAccountService = userAccountService;
         }
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Index([FromQuery] GiangVienFilterVm filter, [FromQuery] PagingRequest paging)
+        public async Task<IActionResult> Index([FromQuery] GiangVienFilterVm filter)
         {
-            var (items, total) = await _repo.SearchAsync(filter, paging);
+            var items = await _repo.SearchAsync(filter);
             var khoaList = await _khoaRepo.GetOptionsAsync();
             var khoaOptions = khoaList.Select(k => new SelectListItem
             {
@@ -44,12 +44,6 @@ namespace InternshipManagement.Controllers
             var vm = new GiangVienIndexVm
             {
                 Filter = filter,
-                Paging = new PagingRequest
-                {
-                    PageIndex = paging.PageIndex,
-                    PageSize = paging.PageSize,
-                    TotalRows = total
-                },
                 Items = items,
                 KhoaOptions = khoaOptions
             };
@@ -84,6 +78,11 @@ namespace InternshipManagement.Controllers
         {
             if (!ModelState.IsValid)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, errors = ModelState.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()) });
+                }
+
                 var khoaList = await _khoaRepo.GetOptionsAsync();
                 ViewBag.KhoaOptions = khoaList.Select(k => new SelectListItem
                 {
@@ -97,18 +96,37 @@ namespace InternshipManagement.Controllers
             {
                 // chuẩn hoá char fields
                 model.MaKhoa = model.MaKhoa?.Trim();
-                model.HoTenGv = model.HoTenGv?.Trim();
+                model.HoTenGv = NormalizeName(model.HoTenGv?.Trim());
 
                 await _repo.CreateAsync(model);
 
                 // Tạo tài khoản đăng nhập cho giảng viên
                 await _userAccountService.CreateTeacherAccountAsync(model.MaGv);
 
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { 
+                        success = true, 
+                        message = "Thêm giảng viên thành công!",
+                        data = new {
+                            magv = model.MaGv,
+                            hotengv = model.HoTenGv,
+                            maKhoa = model.MaKhoa,
+                            luong = model.Luong
+                        }
+                    });
+                }
+
                 TempData["Success"] = "Thêm giảng viên thành công.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+
                 ModelState.AddModelError("", ex.Message);
                 var khoaList = await _khoaRepo.GetOptionsAsync();
                 ViewBag.KhoaOptions = khoaList.Select(k => new SelectListItem
@@ -147,19 +165,47 @@ namespace InternshipManagement.Controllers
         public async Task<IActionResult> Edit(int id, GiangVien model)
         {
             if (id != model.MaGv) return BadRequest();
-            if (!ModelState.IsValid) return View(model);
+            
+            if (!ModelState.IsValid)
+            {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, errors = ModelState.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()) });
+                }
+                return View(model);
+            }
 
             try
             {
                 model.MaKhoa = model.MaKhoa?.Trim();
-                model.HoTenGv = model.HoTenGv?.Trim();
+                model.HoTenGv = NormalizeName(model.HoTenGv?.Trim());
 
                 await _repo.UpdateAsync(model);
+                
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { 
+                        success = true, 
+                        message = "Cập nhật giảng viên thành công!",
+                        data = new {
+                            magv = model.MaGv,
+                            hotengv = model.HoTenGv,
+                            maKhoa = model.MaKhoa,
+                            luong = model.Luong
+                        }
+                    });
+                }
+
                 TempData["Success"] = "Cập nhật giảng viên thành công.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+
                 ModelState.AddModelError("", ex.Message);
                 return View(model);
             }
@@ -173,15 +219,66 @@ namespace InternshipManagement.Controllers
             try
             {
                 await _repo.DeleteAsync(id);
+                
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = true, message = "Đã xoá giảng viên thành công." });
+                }
+
                 TempData["Success"] = "Đã xoá giảng viên thành công.";
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+
                 TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
             }
-            return RedirectToAction(nameof(Index));
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                var gv = await _repo.GetEntityAsync(id);
+                if (gv == null)
+                {
+                    return Json(new { success = false, message = "Không tìm thấy giảng viên" });
+                }
+
+                return Json(new { 
+                    success = true, 
+                    data = new {
+                        magv = gv.MaGv,
+                        hotengv = gv.HoTenGv,
+                        maKhoa = gv.MaKhoa,
+                        luong = gv.Luong
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        private string NormalizeName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+            var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var normalizedWords = words.Select(word => 
+            {
+                if (string.IsNullOrWhiteSpace(word)) return string.Empty;
+                return char.ToUpper(word[0]) + word.Substring(1).ToLower();
+            });
+            return string.Join(" ", normalizedWords);
+        }
 
         [HttpGet]
         [Authorize(Roles = "GiangVien")]
@@ -307,10 +404,10 @@ namespace InternshipManagement.Controllers
                     worksheet.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
                 }
 
-                // Thêm dữ liệu mẫu
+                // Thêm dữ liệu mẫu (lương đơn vị triệu)
                 worksheet.Cells[2, 1].Value = "1";
                 worksheet.Cells[2, 2].Value = "Nguyễn Văn A";
-                worksheet.Cells[2, 3].Value = "15000000";
+                worksheet.Cells[2, 3].Value = "15";
                 worksheet.Cells[2, 4].Value = "CNTT";
 
                 // Căn chỉnh cột
@@ -328,7 +425,7 @@ namespace InternshipManagement.Controllers
                 var row = 3;
                 guideSheet.Cells[row++, 1].Value = "1. STT: Số thứ tự bắt đầu từ 1";
                 guideSheet.Cells[row++, 1].Value = "2. Họ và tên: Nhập đầy đủ họ tên giảng viên";
-                guideSheet.Cells[row++, 1].Value = "3. Lương: Nhập lương (có thể để trống)";
+                guideSheet.Cells[row++, 1].Value = "3. Lương: Nhập lương theo đơn vị triệu (VD: 15 = 15 triệu), có thể để trống";
                 guideSheet.Cells[row++, 1].Value = "4. Mã khoa: Nhập một trong các mã khoa sau:";
 
                 row++;
@@ -357,25 +454,38 @@ namespace InternshipManagement.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Import(GiangVienImportVm model)
         {
-            if (!ModelState.IsValid)
-            {
-                TempData["Error"] = "Vui lòng chọn file Excel để import";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var errors = new List<string>();
-            var importedRows = new List<GiangVienImportRow>();
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    if (IsAjaxRequest(Request))
+                    {
+                        var modelErrors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                        return Json(new { success = false, message = string.Join("\n", modelErrors) });
+                    }
+                    TempData["Error"] = "Vui lòng chọn file Excel để import";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var errors = new List<string>();
+                var importedRows = new List<GiangVienImportRow>();
+
                 if (model.ExcelFile == null || model.ExcelFile.Length <= 0)
                 {
+                    if (IsAjaxRequest(Request))
+                    {
+                        return Json(new { success = false, message = "Vui lòng chọn file Excel để import" });
+                    }
                     TempData["Error"] = "Vui lòng chọn file Excel để import";
                     return RedirectToAction(nameof(Index));
                 }
 
                 if (!Path.GetExtension(model.ExcelFile.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (IsAjaxRequest(Request))
+                    {
+                        return Json(new { success = false, message = "Vui lòng chọn file Excel đúng định dạng (.xlsx)" });
+                    }
                     TempData["Error"] = "Vui lòng chọn file Excel đúng định dạng (.xlsx)";
                     return RedirectToAction(nameof(Index));
                 }
@@ -383,6 +493,10 @@ namespace InternshipManagement.Controllers
                 // Validate file size (e.g., max 10MB)
                 if (model.ExcelFile.Length > 10 * 1024 * 1024)
                 {
+                    if (IsAjaxRequest(Request))
+                    {
+                        return Json(new { success = false, message = "File không được vượt quá 10MB" });
+                    }
                     TempData["Error"] = "File không được vượt quá 10MB";
                     return RedirectToAction(nameof(Index));
                 }
@@ -403,6 +517,10 @@ namespace InternshipManagement.Controllers
 
                         if (rowCount <= 1)
                         {
+                            if (IsAjaxRequest(Request))
+                            {
+                                return Json(new { success = false, message = "File Excel không có dữ liệu" });
+                            }
                             TempData["Error"] = "File Excel không có dữ liệu";
                             return RedirectToAction(nameof(Index));
                         }
@@ -437,12 +555,21 @@ namespace InternshipManagement.Controllers
                         // If there are any validation errors, return them
                         if (errors.Any())
                         {
+                            var errorMessage = string.Join("\n", errors);
+                            if (IsAjaxRequest(Request))
+                            {
+                                return Json(new { success = false, message = errorMessage });
+                            }
                             TempData["Error"] = string.Join("<br/>", errors);
                             return RedirectToAction(nameof(Index));
                         }
 
                         if (!importedRows.Any())
                         {
+                            if (IsAjaxRequest(Request))
+                            {
+                                return Json(new { success = false, message = "Không có dữ liệu hợp lệ để import" });
+                            }
                             TempData["Error"] = "Không có dữ liệu hợp lệ để import";
                             return RedirectToAction(nameof(Index));
                         }
@@ -452,7 +579,7 @@ namespace InternshipManagement.Controllers
                         {
                             var giangVien = new GiangVien
                             {
-                                HoTenGv = row.HoTen,
+                                HoTenGv = NormalizeName(row.HoTen?.Trim()),
                                 Luong = row.Luong,
                                 MaKhoa = row.MaKhoa
                             };
@@ -463,13 +590,22 @@ namespace InternshipManagement.Controllers
                             await _userAccountService.CreateTeacherAccountAsync(giangVien.MaGv);
                         }
 
-                        TempData["Success"] = $"Đã import thành công {importedRows.Count} giảng viên.";
+                        var successMessage = $"Đã import thành công {importedRows.Count} giảng viên.";
+                        if (IsAjaxRequest(Request))
+                        {
+                            return Json(new { success = true, message = successMessage });
+                        }
+                        TempData["Success"] = successMessage;
                         return RedirectToAction(nameof(Index));
                     }
                 }
             }
             catch (Exception ex)
             {
+                if (IsAjaxRequest(Request))
+                {
+                    return Json(new { success = false, message = $"Lỗi khi import: {ex.Message}" });
+                }
                 TempData["Error"] = $"Lỗi khi import: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
@@ -666,6 +802,13 @@ namespace InternshipManagement.Controllers
                 TempData["Error"] = $"Lỗi khi xuất file: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        private bool IsAjaxRequest(HttpRequest request)
+        {
+            return request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                   request.Headers["Content-Type"].ToString().Contains("application/json") ||
+                   request.Headers["Accept"].ToString().Contains("application/json");
         }
     }
 }

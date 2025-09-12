@@ -11,8 +11,7 @@ namespace InternshipManagement.Repositories.Implementations
         private readonly AppDbContext _db;
         public GiangVienRepository(AppDbContext db) => _db = db;
 
-        public async Task<(List<GiangVienListItemVm> items, int totalRows)> SearchAsync(
-             GiangVienFilterVm filter, PagingRequest page)
+        public async Task<List<GiangVienListItemVm>> SearchAsync(GiangVienFilterVm filter)
         {
             // Build query
             var query = _db.GiangViens
@@ -43,14 +42,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(g => g.Luong <= filter.LuongMax.Value);
             }
 
-            // Get total count
-            var totalRows = await query.CountAsync();
-
-            // Apply paging and project to ViewModel
+            // Project to ViewModel (no paging)
             var items = await query
                 .OrderBy(g => g.MaGv)
-                .Skip((page.PageIndex - 1) * page.PageSize)
-                .Take(page.PageSize)
                 .Select(g => new GiangVienListItemVm
                 {
                     Magv = g.MaGv,
@@ -61,7 +55,7 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .ToListAsync();
 
-            return (items, totalRows);
+            return items;
         }
 
         public async Task<GiangVienListItemVm?> GetByIdAsync(int maGv)
@@ -163,6 +157,7 @@ namespace InternshipManagement.Repositories.Implementations
                 catch (Exception ex)
                 {
                     await tx.RollbackAsync();
+                    Console.WriteLine(ex.Message);
                     throw; // Re-throw để giữ nguyên exception type và message
                 }
             });

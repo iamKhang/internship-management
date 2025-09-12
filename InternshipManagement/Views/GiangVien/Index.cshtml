@@ -2,510 +2,1023 @@
 @{
     ViewData["Title"] = "Danh sách Giảng viên";
     Layout = "~/Views/Shared/_Layout.cshtml";
-
-    var paging = Model?.Paging ?? new InternshipManagement.Models.ViewModels.PagingRequest();
-    var filter = Model?.Filter ?? new InternshipManagement.Models.ViewModels.GiangVienFilterVm();
-
-    int pageSize = paging.PageSize <= 0 ? 20 : paging.PageSize;
-    int pageIndex = paging.PageIndex <= 0 ? 1 : paging.PageIndex;
-
-    // ✅ dùng TotalRows thay vì Total
-    int total = paging.TotalRows;
-    int totalPages = (int)Math.Ceiling((double)Math.Max(total, 0) / Math.Max(pageSize, 1));
 }
 
-<style>
-    .export-checkbox-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .export-column {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    /* Đảm bảo modal export có đủ không gian */
-    #exportModal .modal-dialog {
-        max-width: 800px;
-    }
-
-    /* Force grid layout trong modal */
-    #exportModal .export-checkbox-grid {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 1rem !important;
-        margin-bottom: 1rem !important;
-    }
-
-    #exportModal .export-column {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0.5rem !important;
-    }
-</style>
-
 <div class="card shadow-sm">
-<div class="card-body">
-    @* Alerts *@
-    @if (TempData["Success"] is string ok && !string.IsNullOrWhiteSpace(ok))
-    {
-        <div class="alert alert-success shadow-sm d-flex align-items-center gap-2" role="alert">
-            <i class="bi bi-check-circle-fill"></i><span>@ok</span>
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Danh sách Giảng viên</h5>
+        <div class="small text-muted">Tổng: <strong>@Model.Items.Count</strong> bản ghi</div>
         </div>
-    }
-    @if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
-    {
-        <div class="alert alert-danger shadow-sm d-flex align-items-center gap-2" role="alert">
-            <i class="bi bi-x-circle-fill"></i><span>@err</span>
-        </div>
-    }
 
-    <form method="get" class="mb-3 p-3 bg-white rounded-3 shadow-sm">
-        <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-6 col-lg-4">
-                <label class="form-label fw-bold text-primary">Từ khóa</label>
-                <input class="form-control form-control-sm" name="Keyword"
-                       value="@Model?.Filter?.Keyword"
-                       placeholder="Mã GV hoặc họ tên" />
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" id="filterForm" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-md-4">
+                    <label class="form-label">Từ khóa</label>
+                    <input class="form-control" asp-for="Filter.Keyword" placeholder="Mã GV hoặc họ tên" />
             </div>
-            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-                <label class="form-label fw-bold text-primary">Khoa/Bộ môn</label>
-                <select class="form-select form-select-sm" name="MaKhoa">
-                    <option value="">-- Chọn khoa --</option>
-                    @foreach (var opt in Model.KhoaOptions)
-                    {
-                        <option value="@opt.Value" selected="@(opt.Selected ? "selected" : null)">@opt.Text</option>
-                    }
+                <div class="col-md-4">
+                    <label class="form-label">Khoa</label>
+                    <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
+                        <option value="">-- Tất cả --</option>
                 </select>
             </div>
-            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                <label class="form-label fw-bold text-primary">Lương từ</label>
-                <input class="form-control form-control-sm" type="number" name="LuongMin"
-                       value="@(Model?.Filter?.LuongMin?.ToString())" min="0" step="1" />
+                <div class="col-md-2">
+                    <label class="form-label">Lương từ</label>
+                    <input class="form-control" type="number" asp-for="Filter.LuongMin" min="0" step="1" />
             </div>
-            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                <label class="form-label fw-bold text-primary">Đến</label>
-                <input class="form-control form-control-sm" type="number" name="LuongMax"
-                       value="@(Model?.Filter?.LuongMax?.ToString())" min="0" step="1" />
+                <div class="col-md-2">
+                    <label class="form-label">Đến</label>
+                    <input class="form-control" type="number" asp-for="Filter.LuongMax" min="0" step="1" />
             </div>
-            <div class="col-12 d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-primary btn-sm text-white py-2">
-                    <i class="bi bi-funnel-fill me-1"></i> Lọc
+
+                <div class="col-md-12 d-flex justify-content-end gap-2">
+                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
+                        <i class="bi bi-funnel me-1"></i> Lọc
                 </button>
-                <a class="btn btn-secondary btn-sm text-white py-2" href="@Url.Action("Index")">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Xóa lọc
+                    <a asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center px-3 py-2">
+                        <i class="bi-arrow-clockwise me-1"></i> Hủy
                 </a>
-                <a class="btn btn-success btn-sm text-white py-2" href="@Url.Action("Create")">
+                    <button type="button" id="btnAddGiangVien" class="btn btn-success d-flex align-items-center px-3 py-2" onclick="showAddGiangVienDialog()">
                     <i class="bi bi-person-fill-add me-1"></i> Thêm GV
-                </a>
-                <button type="button" class="btn btn-primary btn-sm text-white py-2" data-bs-toggle="modal" data-bs-target="#importModal">
-                    <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
-                </button>
-                <button type="button" class="btn btn-success btn-sm text-white py-2" data-bs-toggle="modal" data-bs-target="#exportModal">
-                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
-                </button>
+                    </button>
+                    <button type="button" class="btn btn-primary d-flex align-items-center px-3 py-2" onclick="showImportDialog()">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
+                    </button>
+                    <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2" onclick="showExportDialog()">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
+                    </button>
             </div>
+            </form>
         </div>
-    </form>
-
-
-    @* BẢNG *@
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-            <thead class="table-primary">
-            <tr>
-                <th class="text-nowrap fw-bold">Mã GV</th>
-                <th class="text-nowrap fw-bold">Họ tên</th>
-                <th class="text-nowrap fw-bold d-none d-md-table-cell">Khoa</th>
-                <th class="text-nowrap fw-bold d-none d-lg-table-cell">Lương</th>
-                <th class="text-nowrap fw-bold text-end">Thao tác</th>
-            </tr>
-            </thead>
-            <tbody>
-            @if (Model.Items is null || !Model.Items.Any())
-            {
-                <tr>
-                    <td colspan="5" class="text-center text-muted py-5 fs-5">
-                        <i class="bi bi-info-circle me-2"></i> Không có dữ liệu
-                    </td>
-                </tr>
-            }
-            else
-            {
-                foreach (var gv in Model.Items)
-                {
-                    <tr>
-                        <td class="text-monospace">@gv.Magv</td>
-                        <td class="fw-semibold">@gv.Hotengv</td>
-                        <td class="d-none d-md-table-cell">@gv.TenKhoa</td>
-                        <td class="d-none d-lg-table-cell">
-                            @if (gv.Luong.HasValue)
-                            {
-                                @gv.Luong.Value.ToString("#,##0")
-                            }
-                        </td>
-                        <td class="text-end text-nowrap">
-                            <a class="btn btn-primary btn-sm me-1 text-white" href="@Url.Action("Details", new { id = gv.Magv })" title="Xem">
-                                <i class="bi bi-eye-fill"></i>
-                            </a>
-                            <a class="btn btn-warning btn-sm me-1 text-white" href="@Url.Action("Edit", new { id = gv.Magv })" title="Sửa">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                            <button type="button"
-                                    class="btn btn-danger btn-sm"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#deleteGvModal"
-                                    data-id="@gv.Magv"
-                                    data-name="@gv.Hotengv"
-                                    title="Xóa">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                }
-            }
-            </tbody>
-        </table>
-        @* PHÂN TRANG – dựa trên paging.TotalRows *@
-        @if (total > 0 && total > pageSize)
-        {
-            <nav class="mt-3" aria-label="pagination">
-                <ul class="pagination pagination-sm justify-content-center mb-0">
-                    <li class="page-item @(pageIndex <= 1 ? "disabled" : "")">
-                        <a class="page-link bg-primary text-white border-primary"
-                           asp-action="Index"
-                           asp-route-paging.PageIndex="@(pageIndex - 1)"
-                           asp-route-paging.PageSize="@pageSize"
-                           asp-route-filter.Keyword="@filter.Keyword"
-                           asp-route-filter.MaKhoa="@filter.MaKhoa"
-                           aria-label="Previous">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                    </li>
-                    @for (var i = 1; i <= totalPages; i++)
-                    {
-                        <li class="page-item @(i == pageIndex ? "active" : "")">
-                            <a class="page-link @(i == pageIndex ? "bg-primary text-white border-primary" : "bg-white border-primary text-dark")"
-                               asp-action="Index"
-                               asp-route-paging.PageIndex="@i"
-                               asp-route-paging.PageSize="@pageSize"
-                               asp-route-filter.Keyword="@filter.Keyword"
-                               asp-route-filter.MaKhoa="@filter.MaKhoa">
-                                @i
-                            </a>
-                        </li>
-                    }
-                    <li class="page-item @(pageIndex >= totalPages ? "disabled" : "")">
-                        <a class="page-link bg-primary text-white border-primary"
-                           asp-action="Index"
-                           asp-route-paging.PageIndex="@(pageIndex + 1)"
-                           asp-route-paging.PageSize="@pageSize"
-                           asp-route-filter.Keyword="@filter.Keyword"
-                           asp-route-filter.MaKhoa="@filter.MaKhoa"
-                           aria-label="Next">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        }
     </div>
-</div>
+
+    @* Syncfusion Toast *@
+    <ejs-toast id="toast_type" close="onclose" beforeOpen="onBeforeOpen" created="created" timeOut="5000">
+        <e-toast-position X="Right" Y="Top"></e-toast-position>
+    </ejs-toast>
+
+    <script>
+        // Toast functions must be defined BEFORE the tag helper renders
+        var toastObj;
+
+        window.created = function() {
+            toastObj = this;
+            toastObj.target = document.body;
+            toastObj.position = { X: 'Right', Y: 'Top' };
+        };
+
+        window.onclose = function(e) {
+            // Toast closed
+        };
+
+        window.onBeforeOpen = function() {
+            // Toast opening
+        };
+    </script>
+
+
+    <!-- Responsive Grid Container -->
+    <div class="grid-responsive">
+        <div class="grid-container">
+            <ejs-grid id="GiangVienGrid" dataSource="@Model.Items" allowPaging="true" allowSorting="true" allowMultiSorting="true" allowFiltering="false" allowResizing="true" gridLines="Both" height="600" width="100%" grid-lines="Both" enable-hover="false" enable-alt-row="true">
+                <e-grid-pagesettings pageSize="20" pageSizes="new List<int>{10,20,50,100,500}"></e-grid-pagesettings>
+                <e-grid-columns>
+                    <e-grid-column field="Magv" headerText="Mã GV" width="100" template="#maGvTemplate"></e-grid-column>
+                    <e-grid-column field="Hotengv" headerText="Họ tên" width="250"></e-grid-column>
+                    <e-grid-column headerText="Khoa" width="150" template="#khoaTemplate"></e-grid-column>
+                    <e-grid-column field="Luong" headerText="Lương" width="120" textAlign="Center" format="N0"></e-grid-column>
+                    <e-grid-column headerText="Hành động" width="150" textAlign="Center" template="#actionTemplate"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+    @* Templates for custom column rendering *@
+    <script id="maGvTemplate" type="text/x-template">
+        <span class="ma-gv-code">${Magv}</span>
+    </script>
+
+    <script id="khoaTemplate" type="text/x-template">
+        ${TenKhoa}
+    </script>
+
+    <script id="actionTemplate" type="text/x-template">
+        <div class="d-flex gap-1 justify-content-center">
+            <a class="btn btn-sm btn-primary text-white" href="/GiangVien/Details/${Magv}" title="Xem chi tiết">
+                <i class="bi bi-eye"></i>
+            </a>
+            <button type="button" class="btn btn-sm btn-warning text-white" onclick="editGiangVien(${Magv})" title="Sửa">
+                                <i class="bi bi-pencil-square"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" data-id="${Magv}" data-name="${Hotengv}" onclick="showDeleteDialogFromButton(this)" title="Xóa">
+                <i class="bi bi-trash"></i>
+            </button>
+    </div>
+    </script>
 </div>
 
-    @* MODAL XOÁ – post đúng action Delete (POST) *@
-    <div class="modal fade" id="deleteGvModal" tabindex="-1" aria-labelledby="deleteGvLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form asp-action="Delete" method="post">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="deleteGvLabel">
-                            <i class="bi bi-exclamation-triangle-fill text-danger"></i> Xác nhận xoá
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+    @* SyncFusion Dialog for Create/Edit *@
+    <ejs-dialog id="giangVienDialog" header="Thêm Giảng viên" isModal="true" showCloseIcon="true" width="500px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <form id="giangVienForm">
+                <input type="hidden" id="MaGv" name="MaGv" />
+
+                <div class="mb-3">
+                    <label class="form-label">Khoa <span class="text-danger">*</span></label>
+                    <select class="form-select" id="MaKhoa" name="MaKhoa" required>
+                        <option value="">-- Chọn khoa --</option>
+                        @foreach (var khoa in Model.KhoaOptions)
+                        {
+                            <option value="@khoa.Value">@khoa.Text</option>
+                        }
+                    </select>
+                    <div class="invalid-feedback" id="maKhoaError"></div>
+</div>
+
+                <div class="mb-3">
+                    <label class="form-label">Họ tên <span class="text-danger">*</span></label>
+                    <input class="form-control" id="HoTenGv" name="HoTenGv" required />
+                    <div class="invalid-feedback" id="hoTenGvError"></div>
                     </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="delete-id" name="id" />
-                        <p>
-                            Bạn có chắc muốn xoá giảng viên:
-                            <strong id="delete-name" class="text-danger"></strong>?
-                        </p>
-                        <p class="small text-muted mb-0">Thao tác này không thể hoàn tác.</p>
+
+                <div class="mb-3">
+                    <label class="form-label">Lương</label>
+                    <input class="form-control" type="number" id="Luong" name="Luong" min="0" step="1" />
+                    <div class="invalid-feedback" id="luongError"></div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
-                        <button type="submit" class="btn btn-danger">Xoá</button>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeGiangVienDialog()">Huỷ</button>
+                    <button type="button" id="btnSaveGiangVien" class="btn btn-primary">Lưu</button>
                     </div>
                 </form>
+        </e-content-template>
+    </ejs-dialog>
+
+    @* SyncFusion Dialog for Delete Confirmation *@
+    <ejs-dialog id="deleteGvDialog" header="Xác nhận xoá" isModal="true" showCloseIcon="true" width="400px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
             </div>
+                <p>Bạn chắc chắn muốn xoá giảng viên <strong id="delete-name"></strong>?</p>
+                <div class="small text-muted">Thao tác này không thể hoàn tác.</div>
+
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeDeleteDialog()">Huỷ</button>
+                    <button type="button" id="btnConfirmDelete" class="btn btn-danger">Xoá</button>
         </div>
     </div>
+        </e-content-template>
+    </ejs-dialog>
 
-    @* ---- Import Modal ---- *@
-    <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0">
-                <div class="modal-header">
-                    <h5 class="modal-title">Import Giảng viên từ Excel</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+    @* SyncFusion Dialog for Import *@
+    <ejs-dialog id="importGvDialog" header="Import Giảng viên từ Excel" isModal="true" showCloseIcon="true" width="600px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <form method="post" enctype="multipart/form-data" asp-action="Import" id="importForm">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-4">
+                    <label class="form-label">File Excel mẫu</label>
+                    <p class="text-muted small mb-2">
+                        File Excel phải có các cột sau:
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Họ và tên</th>
+                                    <th>Lương</th>
+                                    <th>Mã khoa</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Nguyễn Văn A</td>
+                                    <td>15</td>
+                                    <td>CNTT</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-muted small mb-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Lưu ý: Dòng đầu tiên sẽ được coi là tiêu đề và sẽ bị bỏ qua khi import
+                    </div>
+                    <div class="d-grid mb-4">
+                        <a href="@Url.Action("DownloadTemplate")" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-download me-1"></i> Tải biểu mẫu Excel
+                        </a>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <form method="post" enctype="multipart/form-data" asp-action="Import" id="importForm">
-                        @Html.AntiForgeryToken()
 
-                        <div class="mb-4">
-                            <label class="form-label">File Excel mẫu</label>
-                            <p class="text-muted small mb-2">
-                                File Excel phải có các cột sau:
-                            </p>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered mb-2">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>STT</th>
-                                            <th>Họ và tên</th>
-                                            <th>Lương</th>
-                                            <th>Mã khoa</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>Nguyễn Văn A</td>
-                                            <td>15000000</td>
-                                            <td>CNTT</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="text-muted small mb-2">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Lưu ý: Dòng đầu tiên sẽ được coi là tiêu đề và sẽ bị bỏ qua khi import
-                            </div>
-                            <div class="d-grid">
-                                <a href="@Url.Action("DownloadTemplate")" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-download me-1"></i> Tải biểu mẫu Excel
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label required">Chọn file Excel</label>
-                            <input type="file" class="form-control" name="ExcelFile" accept=".xlsx" required />
-                            <div class="invalid-feedback">Vui lòng chọn file Excel</div>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Chỉ chấp nhận file Excel (.xlsx) và dung lượng tối đa 10MB
-                            </div>
-                        </div>
-                    </form>
+                <div class="mb-4">
+                    <label class="form-label required">Chọn file Excel</label>
+                    <input type="file" class="form-control" name="ExcelFile" accept=".xlsx" required />
+                    <div class="invalid-feedback">Vui lòng chọn file Excel</div>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Chỉ chấp nhận file Excel (.xlsx) và dung lượng tối đa 10MB
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeImportDialog()">Huỷ</button>
                     <button type="submit" form="importForm" class="btn btn-primary">
                         <i class="bi bi-file-earmark-excel me-1"></i> Import
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
+            </form>
+        </e-content-template>
+    </ejs-dialog>
 
-    @* ---- Export Modal ---- *@
-    <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content border-0">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>
-                        Export danh sách giảng viên
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+    @* SyncFusion Dialog for Export *@
+    <ejs-dialog id="exportGvDialog" header="Export danh sách giảng viên" isModal="true" showCloseIcon="true" width="700px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <form method="post" asp-action="Export" id="exportForm">
+                @Html.AntiForgeryToken()
+
+                @* Hidden inputs để truyền filter hiện tại *@
+                <input type="hidden" name="Filter.Keyword" value="@Model?.Filter?.Keyword" />
+                <input type="hidden" name="Filter.MaKhoa" value="@Model?.Filter?.MaKhoa" />
+                <input type="hidden" name="Filter.LuongMin" value="@Model?.Filter?.LuongMin" />
+                <input type="hidden" name="Filter.LuongMax" value="@Model?.Filter?.LuongMax" />
+
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Thông tin export:</strong><br/>
+                    File Excel sẽ được tạo với các điều kiện lọc hiện tại và các trường được chọn bên dưới.
+                    <div id="filterInfo">
+                        <!-- Filter info sẽ được hiển thị bằng JavaScript -->
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <form method="get" asp-action="Export" id="exportForm">
 
-                        @* Hidden inputs để truyền filter hiện tại *@
-                        <input type="hidden" name="Filter.Keyword" value="@Model?.Filter?.Keyword" />
-                        <input type="hidden" name="Filter.MaKhoa" value="@Model?.Filter?.MaKhoa" />
-                        <input type="hidden" name="Filter.LuongMin" value="@Model?.Filter?.LuongMin" />
-                        <input type="hidden" name="Filter.LuongMax" value="@Model?.Filter?.LuongMax" />
-
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    <strong>Thông tin export:</strong><br/>
-                                    File Excel sẽ được tạo với các điều kiện lọc hiện tại và các trường được chọn bên dưới.
-                                    <div id="filterInfo">
-                                        <!-- Filter info sẽ được hiển thị bằng JavaScript -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Chọn các trường cần export:</label>
-                            </div>
-                        </div>
-
-                        <div class="export-checkbox-grid">
-                            <div class="export-column">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="ExportMaGv" value="true" id="exportMaGv" checked>
-                                    <input type="hidden" name="ExportMaGv" value="false">
-                                    <label class="form-check-label" for="exportMaGv">
-                                        <i class="bi bi-person-badge me-1"></i> Mã giảng viên
-                                    </label>
-                                </div>
-
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="ExportHoTenGv" value="true" id="exportHoTenGv" checked>
-                                    <input type="hidden" name="ExportHoTenGv" value="false">
-                                    <label class="form-check-label" for="exportHoTenGv">
-                                        <i class="bi bi-person me-1"></i> Họ và tên
-                                    </label>
-                                </div>
-                                   <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="ExportLuong" value="true" id="exportLuong" checked>
-                                    <input type="hidden" name="ExportLuong" value="false">
-                                    <label class="form-check-label" for="exportLuong">
-                                        <i class="bi bi-currency-dollar me-1"></i> Lương
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="export-column">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
-                                    <input type="hidden" name="ExportTenKhoa" value="false">
-                                    <label class="form-check-label" for="exportTenKhoa">
-                                        <i class="bi bi-buildings me-1"></i> Tên khoa
-                                    </label>
-                                </div>
-
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
-                                    <input type="hidden" name="ExportMaKhoa" value="false">
-                                    <label class="form-check-label" for="exportMaKhoa">
-                                        <i class="bi bi-building me-1"></i> Mã khoa
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllFields">
-                                            <i class="bi bi-check-all me-1"></i> Chọn tất cả
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clearAllFields">
-                                            <i class="bi bi-x-square me-1"></i> Bỏ chọn tất cả
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Chọn các trường cần export:</label>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
-                    <button type="submit" form="exportForm" class="btn btn-success text-white">
-                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
-                    </button>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ExportMaGv" value="true" id="exportMaGv" checked>
+                            <input type="hidden" name="ExportMaGv" value="false">
+                            <label class="form-check-label" for="exportMaGv">
+                                <i class="bi bi-person-badge me-1"></i> Mã giảng viên
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ExportHoTenGv" value="true" id="exportHoTenGv" checked>
+                            <input type="hidden" name="ExportHoTenGv" value="false">
+                            <label class="form-check-label" for="exportHoTenGv">
+                                <i class="bi bi-person me-1"></i> Họ và tên
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ExportLuong" value="true" id="exportLuong" checked>
+                            <input type="hidden" name="ExportLuong" value="false">
+                            <label class="form-check-label" for="exportLuong">
+                                <i class="bi bi-currency-dollar me-1"></i> Lương
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
+                            <input type="hidden" name="ExportTenKhoa" value="false">
+                            <label class="form-check-label" for="exportTenKhoa">
+                                <i class="bi bi-buildings me-1"></i> Tên khoa
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
+                            <input type="hidden" name="ExportMaKhoa" value="false">
+                            <label class="form-check-label" for="exportMaKhoa">
+                                <i class="bi bi-building me-1"></i> Mã khoa
+                            </label>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-2" id="selectAllFields">
+                            <i class="bi bi-check-all me-1"></i> Chọn tất cả
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAllFields">
+                            <i class="bi bi-x-square me-1"></i> Bỏ chọn tất cả
+                        </button>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" onclick="closeExportDialog()">Huỷ</button>
+                        <button type="submit" form="exportForm" class="btn btn-success">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </e-content-template>
+    </ejs-dialog>
 
     @section Scripts{
+    <style>
+        /* Toast styles */
+        .e-toast-container {
+            z-index: 9999 !important;
+        }
+
+        .e-toast {
+            z-index: 9999 !important;
+        }
+
+        /* Fix scroll issue */
+        body {
+            overflow: auto !important;
+            height: auto !important;
+        }
+
+        html {
+            overflow: auto !important;
+        }
+
+        /* Đảm bảo modal hoạt động */
+        .modal {
+            z-index: 1055 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 1050 !important;
+        }
+
+        /* Toast animations */
+        @@keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @@keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Đảm bảo toast không tạo backdrop */
+        #toast-container {
+            pointer-events: none !important;
+        }
+
+        #toast-container > div {
+            pointer-events: auto !important;
+        }
+
+        /* Toast icons */
+        @@font-face {
+            font-family: 'Toast_icons';
+            src: url(data:application/x-font-ttf;charset=utf-8;base64,AAEAAAAKAIAAAwAgT1MvMj0gSRkAAAEoAAAAVmNtYXDnM+eRAAABsAAAAEpnbHlmzVnmlwAAAhgAAAZAaGVhZBEYIl8AAADQAAAANmhoZWEHlgN3AAAArAAAACRobXR4LvgAAAAAAYAAAAAwbG9jYQnUCGIAAAH8AAAAGm1heHABHQBcAAABCAAAACBuYW1lfUUTYwAACFgAAAKpcG9zdAxfTDgAAAsEAAAAggABAAADUv9qAFoEAAAAAAAD6AABAAAAAAAAAAAAAAAAAAAADAABAAAAAQAACcU5MF8PPPUACwPoAAAAANcI7skAAAAA1wjuyQAAAAAD6APoAAAACAACAAAAAAAAAAEAAAAMAFAABwAAAAAAAgAAAAoACgAAAP8AAAAAAAAAAQPqAZAABQAAAnoCvAAAAIwCegK8AAAB4AAxAQIAAAIABQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGZFZABA5wDnCgNS/2oAWgPoAJYAAAABAAAAAAAABAAAAAPoAAAD6AAAA+gAAAPoAAAD6AAAA+gAAAPoAAAD6AAAA+gAAAPoAAAD6AAAAAAAAgAAAAMAAAAUAAMAAQAAABQABAA2AAAABAAEAAEAAOcK//8AAOcA//8AAAABAAQAAAABAAIAAwAEAAUABgAHAAgACQAKAAsAAAAAAAAAQgB8AMIA4gEcAZQCBgJwAo4DAAMgAAAAAwAAAAADlAOUAAsAFwAjAAABFwcXNxc3JzcnBycFDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgEBTXh4L3h4L3h4L3h4AbwDt4qKtwMDt4qKt/0eBeuxsesFBeuxsesCbHh4L3h4L3h4L3h4p4q3AwO3ioq3AwO3irHrBQXrsbHrBQXrAAAAAwAAAAADlAOUAAUAEQAdAAABJwcXAScXDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgEBr2UylwEbMqADt4qKtwMDt4qKt/0eBeuxsesFBeuxsesBrGQylgEcMqKKtwMDt4qKtwMDt4qx6wUF67Gx6wUF6wAAAAAFAAAAAAOUA5cABQARAB0AIQAlAAABFzcnNSMFDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgElFzcnBRc3JwHKxiCnPwFOA6V8fKUDA6V8fKX9aATToJ/UBATUn5/UAh7ANsD9fja/NQGedzNj29F8pAMDpHx8pQMDpXyf1AQE1J+g0wQE0/GhQKGhQKFAAAQAAAAAA74DfgADAAcACgANAAAlMzUjNTM1IwEhCQEhAQHLUlJSUgFj/YwBOv42A5T+NuZUUqf+igIc/ZADFgAEAAAAAAOUA5QAAwAHABMAHwAAATM1IzUzNSMFDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgEBylRUVFQBbgO3ioq3AwO3ioq3/R4F67Gx6wUF67Gx6wEk+lNT0Iq3AwO3ioq3AwO3irHrBQXrsbHrBQXrAAAAAAcAAAAAA+gDMQALABUAJQAuADcAQQBLAAABERQfARYfAzMVHgE7ATI2NRE0JisBNTEWOwEyNjQmJyMiJi8BLgErAQ4BAxUzNTQ2NzMeARcVMzUuAScjIgcjESM1HgEXPgE3LgEnDgEBVQEBAwQCCAjXARENOg0REQ2zDROVExoaE2UQGAQfAxAKYg0RPR8RDZcNEQEeASIalxANAR8CTTo6TQEBTTo6TQJ8/nYEBQIGBAIFArYNERENARENEUoNGicZARMPfQoNARH98Hl5DREBARENeXkaIgEIAe3FOk0CAk06Ok0BAU0AAAAAAgAAAAAC5gMyAAkAEQAAJRQWMyEyNjURITcjFSE1IycjASApHgEaHin+WFBuAeR+JLD8HigoHgGfeT09HgAAAAAAEgDeAAEAAAAAAAAAAQAAAAEAAAAAAAEAEgABAAEAAAAAAAIABwATAAEAAAAAAAMAEgAaAAEAAAAAAAQAEgAsAAEAAAAAAAUACwA+AAEAAAAAAAYAEgBJAAEAAAAAAAoALABbAAEAAAAAAAsAEgCHAAMAAQQJAAAAAgCZAAMAAQQJAAEAJACbAAMAAQQJAAIADgC/AAMAAQQJAAMAJADNAAMAAQQJAAQAJADxAAMAAQQJAAUAFgEVAAMAAQQJAAYAJAErAAMAAQQJAAoAWAFPAAMAAQQJAAsAJAGnIEZpbmFsIFRvYXN0IE1ldHJvcFJlZ3VsYXJGaW5hbCBUb2FzdCBNZXRyb3BGaW5hbCBUb2FzdCBNZXRyb3BWZXJzaW9uIDEuMEZpbmFsIFRvYXN0IE1ldHJvcEZvbnQgZ2VuZXJhdGVkIHVzaW5nIFN5bmNmdXNpb24gTWV0cm8gU3R1ZGlvd3d3LnN5bmNmdXNpb24uY29tACAARgBpAG4AYQBsACAAVABvAGEAcwB0ACAATQBlAHQAcgBvAHAAUgBlAGcAdQBsAGEAcgBGAGkAbgBhAGwAIABUAG8AYQBzAHQAIABNAGUAdAByAG8AcABGAGkAbgBhAGwAIABUAG8AYQBzAHQAIABNAGUAdAByAG8AcABWAGUAcgBzAGkAbwBuACAAMQAuADAARgBpAG4AYQBsACAAVABvAGEAcwB0ACAATQBlAHQAcgBvAHAARgBvAG4AdAAgAGcAZQBuAGUAcgBhAHQAZQBkACAAdQBzAGkAbgBnACAAUwB5AG4AYwBmAHUAcwBpAG8AbgAgAE0AZQB0AHIAbwAgAFMAdAB1AGQAaQBvAHcAdwB3AC4AcwB5AG4AYwBmAHUAcwBpAG8AbgAuAGMAbwBtAAAAAAIAAAAAAAAACgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAECAQMBBAEFAQYBBwEIAQkBCgELAQwBDQAFRXJyb3IHU3VjY2VzcwVBbGFybQdXYXJuaW5nBEluZm8HTWVldGluZwVCbGluawdTdHJldGNoA1NpcANTaXQFVHJhc2gAAAAA) format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        .toast-icons {
+            font-family: 'Toast_icons' !important;
+            speak: none;
+            font-size: 55px;
+            font-style: normal;
+            font-weight: normal;
+            font-variant: normal;
+            text-transform: none;
+            line-height: 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #toast_type .e-toast-icon.e-icons {
+            height: auto;
+            font-size: 30px;
+        }
+
+        .toast-icons.e-success::before {
+            content: "\e701";
+        }
+
+        .toast-icons.e-error::before {
+            content: "\e700";
+        }
+
+        .toast-icons.e-info::before {
+            content: "\e704";
+        }
+
+        .toast-icons.e-warning::before {
+            content: "\e703";
+        }
+
+        /* Grid responsive styles */
+        .grid-responsive {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .grid-container {
+            min-width: 100%;
+        }
+
+        /* Ma GV styling - removed custom styling to use default black color */
+
+        /* Bootstrap icons in toast */
+        .e-toast .bi {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+
+        .e-toast-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+
         <script>
-            // Gán dữ liệu cho modal xoá
-            document.getElementById('deleteGvModal')
-                ?.addEventListener('show.bs.modal', function (e) {
-                    const btn = e.relatedTarget;
-                    const id = btn?.getAttribute('data-id');
-                    const name = btn?.getAttribute('data-name');
-                    document.getElementById('delete-id').value = id || '';
-                    document.getElementById('delete-name').textContent = name || '';
+        var toastObj;
+        var giangVienDialog;
+        var deleteGvDialog;
+        var importGvDialog;
+        var exportGvDialog;
+        var toasts = [
+            { title: 'Warning!', content: 'There was a problem with your network connection.', cssClass: 'e-toast-warning', icon: 'bi bi-exclamation-triangle text-warning' },
+            { title: 'Success!', content: 'Your message has been sent successfully.', cssClass: 'e-toast-success', icon: 'bi bi-check-circle text-success' },
+            { title: 'Error!', content: 'A problem has been occurred while submitting your data.', cssClass: 'e-toast-danger', icon: 'bi bi-x-circle text-danger' },
+            { title: 'Information!', content: 'Please read the comments carefully.', cssClass: 'e-toast-info', icon: 'bi bi-info-circle text-info' }
+        ];
+
+        // Function to show toast notification
+        function showMessage(content, severity = 'Info') {
+            if (!toastObj) return;
+
+            let toastIndex;
+            switch(severity) {
+                case 'Success':
+                    toastIndex = 1;
+                    toasts[toastIndex].content = content;
+                    break;
+                case 'Error':
+                    toastIndex = 2;
+                    toasts[toastIndex].content = content;
+                    break;
+                case 'Warning':
+                    toastIndex = 0;
+                    toasts[toastIndex].content = content;
+                    break;
+                default:
+                    toastIndex = 3;
+                    toasts[toastIndex].content = content;
+                    break;
+            }
+
+            toastObj.show(toasts[toastIndex]);
+        }
+
+        // Initialize SyncFusion Dialogs
+        function initializeDialogs() {
+            // Initialize GiangVien Dialog
+            giangVienDialog = document.getElementById('giangVienDialog').ej2_instances[0];
+
+            // Initialize Delete Dialog
+            deleteGvDialog = document.getElementById('deleteGvDialog').ej2_instances[0];
+
+            // Initialize Import Dialog
+            importGvDialog = document.getElementById('importGvDialog').ej2_instances[0];
+
+            // Initialize Export Dialog
+            exportGvDialog = document.getElementById('exportGvDialog').ej2_instances[0];
+        }
+
+        // Show Add GiangVien Dialog
+        function showAddGiangVienDialog() {
+            if (!giangVienDialog) initializeDialogs();
+
+            document.getElementById('giangVienForm').reset();
+            document.getElementById('MaGv').value = '';
+            document.getElementById('giangVienDialog').ej2_instances[0].header = 'Thêm Giảng viên';
+            document.getElementById('btnSaveGiangVien').textContent = 'Lưu';
+            clearValidationErrors();
+
+            giangVienDialog.show();
+        }
+
+        // Show Edit GiangVien Dialog
+        window.editGiangVien = function(maGv) {
+            if (!giangVienDialog) initializeDialogs();
+
+            // Load giang vien data
+            loadGiangVienData(maGv);
+            document.getElementById('giangVienDialog').ej2_instances[0].header = 'Sửa Giảng viên';
+            document.getElementById('btnSaveGiangVien').textContent = 'Cập nhật';
+
+            giangVienDialog.show();
+        };
+
+        // Show Delete Confirmation Dialog from button click
+        function showDeleteDialogFromButton(button) {
+            const maGv = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+
+            if (!deleteGvDialog) initializeDialogs();
+
+            document.getElementById('delete-name').textContent = name;
+            // Store the ID for later use in confirmDelete
+            if (deleteGvDialog) {
+                deleteGvDialog.dataId = maGv;
+            }
+            deleteGvDialog.show();
+        }
+
+        // Show Delete Confirmation Dialog (legacy function for backward compatibility)
+        function showDeleteDialog(maGv, name) {
+            if (!deleteGvDialog) initializeDialogs();
+
+            document.getElementById('delete-name').textContent = name;
+            // Store the ID for later use in confirmDelete
+            if (deleteGvDialog) {
+                deleteGvDialog.dataId = maGv;
+            }
+            deleteGvDialog.show();
+        }
+
+        // Close GiangVien Dialog
+        function closeGiangVienDialog() {
+            if (giangVienDialog) {
+                giangVienDialog.hide();
+            }
+        }
+
+        // Close Delete Dialog
+        function closeDeleteDialog() {
+            if (deleteGvDialog) {
+                deleteGvDialog.hide();
+            }
+        }
+
+        // Show Import Dialog
+        function showImportDialog() {
+            if (!importGvDialog) initializeDialogs();
+            importGvDialog.show();
+        }
+
+        // Close Import Dialog
+        function closeImportDialog() {
+            if (importGvDialog) {
+                importGvDialog.hide();
+            }
+        }
+
+        // Show Export Dialog
+        function showExportDialog() {
+            if (!exportGvDialog) initializeDialogs();
+
+            // Update filter info in export dialog
+            updateExportFilterInfo();
+
+            exportGvDialog.show();
+        }
+
+        // Close Export Dialog
+        function closeExportDialog() {
+            if (exportGvDialog) {
+                exportGvDialog.hide();
+            }
+        }
+
+        // Update filter information in export dialog
+        function updateExportFilterInfo() {
+            const filterInfo = document.getElementById('filterInfo');
+            if (!filterInfo) return;
+
+            const keyword = document.querySelector('input[name="Filter.Keyword"]')?.value;
+            const maKhoa = document.querySelector('select[name="Filter.MaKhoa"]')?.value;
+            const luongMin = document.querySelector('input[name="Filter.LuongMin"]')?.value;
+            const luongMax = document.querySelector('input[name="Filter.LuongMax"]')?.value;
+
+            const selectedKhoaText = maKhoa ? document.querySelector(`select[name="Filter.MaKhoa"] option[value="${maKhoa}"]`)?.textContent : '';
+
+            let filterText = '';
+            if (keyword || maKhoa || luongMin || luongMax) {
+                filterText = '<br/><strong>Điều kiện lọc hiện tại:</strong>';
+
+                if (keyword) {
+                    filterText += '<br/>- Từ khóa: ' + keyword;
+                }
+
+                if (maKhoa && selectedKhoaText) {
+                    filterText += '<br/>- Khoa: ' + selectedKhoaText;
+                }
+
+                if (luongMin || luongMax) {
+                    filterText += '<br/>- Lương: ';
+                    if (luongMin && luongMax) {
+                        filterText += 'từ ' + parseInt(luongMin).toLocaleString() + ' đến ' + parseInt(luongMax).toLocaleString();
+                    } else if (luongMin) {
+                        filterText += 'từ ' + parseInt(luongMin).toLocaleString() + ' trở lên';
+                    } else if (luongMax) {
+                        filterText += 'đến ' + parseInt(luongMax).toLocaleString() + ' trở xuống';
+                    }
+                }
+            } else {
+                filterText = '<br/>Không có điều kiện lọc - sẽ export toàn bộ giảng viên.';
+            }
+
+            filterInfo.innerHTML = filterText;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize dialogs when DOM is loaded
+            setTimeout(function() {
+                initializeDialogs();
+
+                // Handle Save button click
+                document.getElementById('btnSaveGiangVien').addEventListener('click', function() {
+                    saveGiangVien();
                 });
 
-            // Xử lý form import
-            document.getElementById('importForm')?.addEventListener('submit', function(e) {
-                const fileInput = this.querySelector('input[type="file"]');
-                if (!fileInput.files.length) {
-                    e.preventDefault();
-                    fileInput.classList.add('is-invalid');
-                } else {
-                    fileInput.classList.remove('is-invalid');
-                }
-            });
+                // Handle Delete confirmation
+                document.getElementById('btnConfirmDelete').addEventListener('click', function() {
+                    confirmDelete();
+                });
+            }, 100);
+        });
 
-            // Xử lý export modal
-            document.getElementById('selectAllFields')?.addEventListener('click', function() {
-                const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]');
-                checkboxes.forEach(cb => cb.checked = true);
-            });
+        // Function to reset form
+        function resetForm() {
+            document.getElementById('giangVienForm').reset();
+            document.getElementById('MaGv').value = '';
+            clearValidationErrors();
+        }
 
-            document.getElementById('clearAllFields')?.addEventListener('click', function() {
-                const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]');
-                checkboxes.forEach(cb => cb.checked = false);
-            });
+        // Function to clear validation errors
+        function clearValidationErrors() {
+            const errorElements = document.querySelectorAll('.invalid-feedback');
+            errorElements.forEach(el => el.textContent = '');
 
-            // Validation cho export form
-            document.getElementById('exportForm')?.addEventListener('submit', function(e) {
-                const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]:checked');
-                if (checkboxes.length === 0) {
-                    e.preventDefault();
-                    alert('Vui lòng chọn ít nhất một trường để export!');
-                }
-            });
+            const formControls = document.querySelectorAll('.form-control, .form-select');
+            formControls.forEach(el => el.classList.remove('is-invalid'));
+        }
 
-            // Hiển thị thông tin filter trong export modal
-            document.getElementById('exportModal')?.addEventListener('show.bs.modal', function() {
-                const filterInfo = document.getElementById('filterInfo');
-                if (!filterInfo) return;
-
-                const keyword = document.querySelector('input[name="Keyword"]')?.value;
-                const maKhoa = document.querySelector('select[name="MaKhoa"]')?.value;
-                const luongMin = document.querySelector('input[name="LuongMin"]')?.value;
-                const luongMax = document.querySelector('input[name="LuongMax"]')?.value;
-                
-                const selectedKhoaText = maKhoa ? document.querySelector(`select[name="MaKhoa"] option[value="${maKhoa}"]`)?.textContent : '';
-
-                let filterText = '';
-                if (keyword || maKhoa || luongMin || luongMax) {
-                    filterText = '<br/><strong>Điều kiện lọc hiện tại:</strong>';
-                    
-                    if (keyword) {
-                        filterText += '<br/>- Từ khóa: ' + keyword;
+        // Function to load giang vien data for editing
+        function loadGiangVienData(maGv) {
+            fetch(`/GiangVien/GetById/${maGv}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('MaGv').value = data.data.magv;
+                        document.getElementById('MaKhoa').value = data.data.maKhoa || '';
+                        document.getElementById('HoTenGv').value = data.data.hotengv || '';
+                        document.getElementById('Luong').value = data.data.luong || '';
+                    } else {
+                        showMessage('Không thể tải dữ liệu giảng viên', 'Error');
                     }
-                    
-                    if (maKhoa && selectedKhoaText) {
-                        filterText += '<br/>- Khoa: ' + selectedKhoaText;
+                })
+                .catch(error => {
+                    console.error('Error loading giang vien data:', error);
+                    showMessage('Có lỗi xảy ra khi tải dữ liệu', 'Error');
+                });
+        }
+
+        // Function to normalize name (capitalize first letter of each word)
+        function normalizeName(name) {
+            if (!name || typeof name !== 'string') return '';
+
+            return name.trim()
+                .split(' ')
+                .filter(word => word.length > 0)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+        }
+
+        // Function to save giang vien
+        function saveGiangVien() {
+                clearValidationErrors();
+
+                // Chuẩn hóa dữ liệu đầu vào
+                const hoTenInput = document.getElementById('HoTenGv');
+                if (hoTenInput.value) {
+                    hoTenInput.value = normalizeName(hoTenInput.value);
+                }
+
+                const formData = new FormData(document.getElementById('giangVienForm'));
+                const maGv = document.getElementById('MaGv').value;
+                const isEdit = maGv && maGv !== '';
+
+                // For create mode, remove MaGv from form data since it will be auto-generated
+                if (!isEdit) {
+                    formData.delete('MaGv');
+                }
+
+                const url = isEdit ? `/GiangVien/Edit/${maGv}` : '/GiangVien/Create';
+                const method = 'POST';
+
+                // Add anti-forgery token
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                formData.append('__RequestVerificationToken', token);
+
+                fetch(url, {
+                    method: method,
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    
-                    if (luongMin || luongMax) {
-                        filterText += '<br/>- Lương: ';
-                        if (luongMin && luongMax) {
-                            filterText += 'từ ' + parseInt(luongMin).toLocaleString() + ' đến ' + parseInt(luongMax).toLocaleString();
-                        } else if (luongMin) {
-                            filterText += 'từ ' + parseInt(luongMin).toLocaleString() + ' trở lên';
-                        } else if (luongMax) {
-                            filterText += 'đến ' + parseInt(luongMax).toLocaleString() + ' trở xuống';
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeGiangVienDialog();
+                        const successMessage = isEdit ? 'Cập nhật giảng viên thành công!' : 'Thêm giảng viên thành công!';
+                        showMessage(successMessage, 'Success');
+
+                        // Update DataGrid without page reload
+                        setTimeout(() => {
+                            updateDataGridAfterSave(isEdit, data.data);
+                        }, 500);
+                    } else {
+                        // Handle validation errors
+                        if (data.errors) {
+                            Object.keys(data.errors).forEach(field => {
+                                const errorElement = document.getElementById(field + 'Error');
+                                const inputElement = document.getElementById(field);
+                                if (errorElement && inputElement) {
+                                    errorElement.textContent = data.errors[field][0];
+                                    inputElement.classList.add('is-invalid');
+                                }
+                            });
+                        } else {
+                            showMessage(data.message || 'Có lỗi xảy ra', 'Error');
                         }
                     }
-                } else {
-                    filterText = '<br/>Không có điều kiện lọc - sẽ export toàn bộ giảng viên.';
+                })
+                .catch(error => {
+                    console.error('Error saving giang vien:', error);
+                    showMessage('Có lỗi xảy ra khi lưu dữ liệu', 'Error');
+                });
+            }
+
+        // Function to update DataGrid after save/edit
+        function updateDataGridAfterSave(isEdit, savedData) {
+            const grid = document.getElementById('GiangVienGrid').ej2_instances[0];
+            if (!grid || !savedData) return;
+
+            if (isEdit) {
+                // Update existing row
+                const dataSource = grid.dataSource;
+                const index = dataSource.findIndex(item => item.Magv == savedData.magv);
+                if (index !== -1) {
+                    // Update the row data with correct field names
+                    dataSource[index] = {
+                        ...dataSource[index],
+                        Hotengv: savedData.hotengv,
+                        MaKhoa: savedData.maKhoa,
+                        Luong: savedData.luong
+                    };
+                    grid.refresh();
                 }
-                
-                filterInfo.innerHTML = filterText;
+            } else {
+                // Add new row - cần lấy thông tin khoa từ khoa options
+                const khoaSelect = document.getElementById('MaKhoa');
+                const selectedKhoaText = khoaSelect.options[khoaSelect.selectedIndex]?.text || '';
+
+                const newRow = {
+                    Magv: savedData.magv,
+                    Hotengv: savedData.hotengv,
+                    MaKhoa: savedData.maKhoa,
+                    TenKhoa: selectedKhoaText,
+                    Luong: savedData.luong
+                };
+
+                // Thêm vào dataSource
+                grid.dataSource.push(newRow);
+                grid.refresh();
+
+                // Sort lại theo Magv để giữ thứ tự
+                grid.sortColumn('Magv', 'Ascending');
+            }
+        }
+
+        // Function to confirm delete
+        function confirmDelete() {
+            if (!deleteGvDialog) {
+                showMessage('Không thể thực hiện thao tác xóa', 'Error');
+                return;
+            }
+
+            const id = deleteGvDialog.dataId;
+
+            if (!id) {
+                showMessage('Không tìm thấy ID giảng viên', 'Error');
+                return;
+            }
+
+            fetch(`/GiangVien/Delete/${id}`, {
+                method: 'POST',
+                body: new FormData(),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                closeDeleteDialog();
+
+                if (data.success) {
+                    showMessage(data.message || 'Đã xóa giảng viên thành công!', 'Success');
+
+                    // Xóa row khỏi DataGrid mà không reload trang
+                    setTimeout(() => {
+                        const grid = document.getElementById('GiangVienGrid').ej2_instances[0];
+                        if (grid) {
+                            // Tìm và xóa row có ID tương ứng
+                            const rowToDelete = grid.dataSource.find(item => item.Magv == id);
+                            if (rowToDelete) {
+                                // Lưu trang hiện tại
+                                const currentPage = grid.pageSettings.currentPage;
+                                const pageSize = grid.pageSettings.pageSize;
+
+                                // Xóa row khỏi dataSource
+                                const index = grid.dataSource.indexOf(rowToDelete);
+                                grid.dataSource.splice(index, 1);
+
+                                // Refresh grid
+                                grid.refresh();
+
+                                // Tính toán trang mới
+                                const totalPages = Math.ceil(grid.dataSource.length / pageSize);
+                                const newPage = Math.min(currentPage, totalPages || 1);
+
+                                // Nếu trang hiện tại trống và không phải trang 1, quay về trang trước
+                                if (currentPage > totalPages && totalPages > 0) {
+                                    grid.goToPage(totalPages);
+                                } else if (newPage > 0) {
+                                    grid.goToPage(newPage);
+                                }
+                            }
+                        }
+                    }, 1500);
+                } else {
+                    showMessage(data.message || 'Có lỗi xảy ra khi xóa giảng viên', 'Error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                closeDeleteDialog();
+                showMessage('Có lỗi xảy ra khi xóa giảng viên', 'Error');
             });
+        }
+
+        // Xử lý form import
+        document.getElementById('importForm')?.addEventListener('submit', function(e) {
+            e.preventDefault(); // Ngăn submit mặc định
+
+            const fileInput = this.querySelector('input[type="file"]');
+            if (!fileInput.files.length) {
+                fileInput.classList.add('is-invalid');
+                showMessage('Vui lòng chọn file Excel để import!', 'Warning');
+                return;
+            }
+
+            fileInput.classList.remove('is-invalid');
+            const form = this;
+            const formData = new FormData(form);
+
+            showMessage('Đang xử lý file Excel...', 'Info');
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('#importForm input[name="__RequestVerificationToken"]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Thành công
+                    closeImportDialog();
+                    showMessage(data.message, 'Success');
+
+                    // Reset form
+                    form.reset();
+                    fileInput.classList.remove('is-invalid');
+
+                    // Reload page sau 2 giây để cập nhật danh sách
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // Lỗi
+                    showMessage(data.message, 'Error');
+                }
+            })
+            .catch(error => {
+                console.error('Import error:', error);
+                showMessage('Lỗi khi import file: ' + error.message, 'Error');
+            });
+        });
+
+        // Xử lý export form
+        document.getElementById('selectAllFields')?.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        });
+
+        document.getElementById('clearAllFields')?.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        });
+
+        // Validation cho export form
+        document.getElementById('exportForm')?.addEventListener('submit', function(e) {
+            e.preventDefault(); // Ngăn submit mặc định
+
+            const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) {
+                showMessage('Vui lòng chọn ít nhất một trường để export!', 'Warning');
+                return;
+            }
+
+            // Sử dụng AJAX để submit form
+            submitExportForm();
+        });
+
+        // Function để submit export form via AJAX
+        function submitExportForm() {
+            const form = document.getElementById('exportForm');
+            const formData = new FormData(form);
+
+            showMessage('Đang xuất file Excel...', 'Info');
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('#exportForm input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Lấy filename từ header trước khi trả về blob
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'DanhSach_GiangVien.xlsx';
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    return response.blob().then(blob => ({ blob, filename }));
+                } else {
+                    throw new Error('Lỗi khi xuất file: ' + response.statusText);
+                }
+            })
+            .then(({ blob, filename }) => {
+                // Tạo download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                // Đóng dialog và hiển thị thông báo thành công
+                closeExportDialog();
+                showMessage('Đã xuất file Excel thành công!', 'Success');
+            })
+            .catch(error => {
+                console.error('Export error:', error);
+                showMessage('Lỗi khi xuất file: ' + error.message, 'Error');
+            });
+        }
         </script>
     }

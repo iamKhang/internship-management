@@ -5,8 +5,7 @@ namespace InternshipManagement.Repositories.Interfaces
 {
     public interface IGiangVienRepository
     {
-        Task<(List<GiangVienListItemVm> items, int totalRows)> SearchAsync(
-            GiangVienFilterVm filter, PagingRequest page);
+        Task<List<GiangVienListItemVm>> SearchAsync(GiangVienFilterVm filter);
 
         Task<GiangVienListItemVm?> GetByIdAsync(int maGv);
         Task<GiangVien?> GetEntityAsync(int id);
