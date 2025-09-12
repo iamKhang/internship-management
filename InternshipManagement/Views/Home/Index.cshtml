@@ -1,4 +1,11 @@
-﻿@{
+﻿@using System.Collections.Generic;
+@using System.Linq;
+@using InternshipManagement.Models;
+@using Syncfusion.EJ2.Diagrams;
+@using Syncfusion.EJ2.Navigations;
+@using Syncfusion.EJ2.Inputs;
+
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -14,39 +21,13 @@
                 <a class="btn btn-outline-light btn-lg" target="_blank" href="https://learn.microsoft.com/aspnet/core">
                     Tài liệu ASP.NET Core
                 </a>
+                <a class="btn btn-outline-light btn-lg" target="_blank" href="https://ej2.syncfusion.com/home/aspnetcore.html">
+                    Tài liệu SyncFusion ASP MVC
+                </a>
             </div>
         </div>
     </div>
 </section>
 
-<section class="mt-4">
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Sinh viên</h5>
-                    <p class="card-text text-secondary">Tìm kiếm, lọc theo khoa, quản lý hồ sơ và kết quả thực tập.</p>
-                    <a href="/SinhVien" class="btn btn-primary-main">Đi tới danh sách</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Giảng viên</h5>
-                    <p class="card-text text-secondary">Danh sách giảng viên hướng dẫn, thống kê số lượng SV.</p>
-                    <a href="/GiangVien" class="btn btn-primary-main">Quản lý giảng viên</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Báo cáo</h5>
-                    <p class="card-text text-secondary">Xuất Word/Excel danh sách thực tập theo tiêu chí lọc.</p>
-                    <a href="/Reports" class="btn btn-primary-main">Mở trang báo cáo</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+
+

@@ -15,7 +15,8 @@ namespace InternshipManagement.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            var flowChartModel = new FlowChartModel();
+            return View(flowChartModel);
         }
 
         public IActionResult Privacy()
