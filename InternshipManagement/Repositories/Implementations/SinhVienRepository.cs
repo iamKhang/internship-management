@@ -11,8 +11,7 @@ namespace InternshipManagement.Repositories.Implementations
         private readonly AppDbContext _db;
         public SinhVienRepository(AppDbContext db) => _db = db;
 
-        public async Task<(List<SinhVienListItemVm> items, int totalRows)> SearchAsync(
-            SinhVienFilterVm filter, PagingRequest page)
+        public async Task<List<SinhVienListItemVm>> SearchAsync(SinhVienFilterVm filter)
         {
             // Build query
             var query = _db.SinhViens
@@ -44,14 +43,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(s => s.NamSinh <= filter.NamSinhMax.Value);
             }
 
-            // Get total count
-            var totalRows = await query.CountAsync();
-
-            // Apply paging and project to ViewModel
+            // Project to ViewModel and return all results
             var items = await query
                 .OrderBy(s => s.MaSv)
-                .Skip((page.PageIndex - 1) * page.PageSize)
-                .Take(page.PageSize)
                 .Select(s => new SinhVienListItemVm
                 {
                     Masv = s.MaSv,
@@ -63,7 +57,7 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .ToListAsync();
 
-            return (items, totalRows);
+            return items;
         }
 
         public async Task<SinhVienListItemVm?> GetByIdAsync(int maSv)

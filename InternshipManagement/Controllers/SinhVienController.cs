@@ -31,9 +31,9 @@ namespace InternshipManagement.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Index([FromQuery] SinhVienFilterVm filter, [FromQuery] PagingRequest paging)
+        public async Task<IActionResult> Index([FromQuery] SinhVienFilterVm filter)
         {
-            var (items, total) = await _repo.SearchAsync(filter, paging);
+            var items = await _repo.SearchAsync(filter);
             var khoaList = await _khoaRepo.GetOptionsAsync();
             var khoaOptions = khoaList.Select(k => new SelectListItem
             {
@@ -44,11 +44,39 @@ namespace InternshipManagement.Controllers
             var vm = new SinhVienIndexVm
             {
                 Filter = filter,
-                Paging = new PagingRequest { PageIndex = paging.PageIndex, PageSize = paging.PageSize, TotalRows = total },
                 Items = items,
                 KhoaOptions = khoaOptions
             };
             return View(vm);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                var sv = await _repo.GetByIdAsync(id);
+                if (sv == null)
+                {
+                    return Json(new { success = false, message = "Không tìm thấy sinh viên" });
+                }
+
+                return Json(new { 
+                    success = true, 
+                    data = new {
+                        masv = sv.Masv,
+                        maKhoa = sv.MaKhoa,
+                        hotensv = sv.Hotensv,
+                        namSinh = sv.NamSinh,
+                        queQuan = sv.QueQuan
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
 
         [Authorize(Roles = "Admin")]
@@ -112,8 +140,47 @@ namespace InternshipManagement.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(SinhVien model)
         {
+            // Chuẩn hóa dữ liệu đầu vào
+            if (!string.IsNullOrWhiteSpace(model.HoTenSv))
+            {
+                model.HoTenSv = NormalizeName(model.HoTenSv.Trim());
+            }
+            
+            if (!string.IsNullOrWhiteSpace(model.QueQuan))
+            {
+                model.QueQuan = model.QueQuan.Trim();
+            }
+
+            // Validation năm sinh
+            if (model.NamSinh.HasValue)
+            {
+                var currentYear = DateTime.Now.Year;
+                var age = currentYear - model.NamSinh.Value;
+                
+                if (age < 17)
+                {
+                    ModelState.AddModelError("NamSinh", "Tuổi sinh viên phải từ 17 tuổi trở lên");
+                }
+                else if (age > 100)
+                {
+                    ModelState.AddModelError("NamSinh", "Tuổi sinh viên không được quá 100 tuổi");
+                }
+                else if (model.NamSinh.Value > currentYear)
+                {
+                    ModelState.AddModelError("NamSinh", "Năm sinh không được lớn hơn năm hiện tại");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    var errors = ModelState.Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+                    return Json(new { success = false, errors = errors });
+                }
+
                 // nếu có lỗi thì cũng phải nạp lại combobox
                 var khoaList = await _khoaRepo.GetOptionsAsync();
                 ViewBag.KhoaOptions = khoaList.Select(k => new SelectListItem
@@ -132,11 +199,32 @@ namespace InternshipManagement.Controllers
                 // Tạo tài khoản đăng nhập cho sinh viên (sử dụng MaSv từ model)
                 await _userAccountService.CreateStudentAccountAsync(model.MaSv);
 
-                TempData["Success"] = "Thêm sinh viên thành công.";
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { 
+                        success = true, 
+                        message = "Thêm sinh viên thành công.",
+                        data = new {
+                            masv = model.MaSv,
+                            hotensv = model.HoTenSv,
+                            maKhoa = model.MaKhoa,
+                            namSinh = model.NamSinh,
+                            queQuan = model.QueQuan
+                        }
+                    });
+                }
+
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+
                 ModelState.AddModelError("", ex.Message);
                 var khoaList = await _khoaRepo.GetOptionsAsync();
                 ViewBag.KhoaOptions = khoaList.Select(k => new SelectListItem
@@ -146,6 +234,21 @@ namespace InternshipManagement.Controllers
                 }).ToList();
                 return View(model);
             }
+        }
+
+        // Helper method để chuẩn hóa tên
+        private string NormalizeName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+            
+            var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var normalizedWords = words.Select(word => 
+            {
+                if (string.IsNullOrWhiteSpace(word)) return string.Empty;
+                return char.ToUpper(word[0]) + word.Substring(1).ToLower();
+            });
+            
+            return string.Join(" ", normalizedWords);
         }
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id)
@@ -179,14 +282,80 @@ namespace InternshipManagement.Controllers
         public async Task<IActionResult> Edit(int id, SinhVien model)
         {
             if (id != model.MaSv) return BadRequest();
-            if (!ModelState.IsValid) return View(model);
+            
+            // Chuẩn hóa dữ liệu đầu vào
+            if (!string.IsNullOrWhiteSpace(model.HoTenSv))
+            {
+                model.HoTenSv = NormalizeName(model.HoTenSv.Trim());
+            }
+            
+            if (!string.IsNullOrWhiteSpace(model.QueQuan))
+            {
+                model.QueQuan = model.QueQuan.Trim();
+            }
+
+            // Validation năm sinh
+            if (model.NamSinh.HasValue)
+            {
+                var currentYear = DateTime.Now.Year;
+                var age = currentYear - model.NamSinh.Value;
+                
+                if (age < 17)
+                {
+                    ModelState.AddModelError("NamSinh", "Tuổi sinh viên phải từ 17 tuổi trở lên");
+                }
+                else if (age > 100)
+                {
+                    ModelState.AddModelError("NamSinh", "Tuổi sinh viên không được quá 100 tuổi");
+                }
+                else if (model.NamSinh.Value > currentYear)
+                {
+                    ModelState.AddModelError("NamSinh", "Năm sinh không được lớn hơn năm hiện tại");
+                }
+            }
+            
+            if (!ModelState.IsValid)
+            {
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    var errors = ModelState.Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+                    return Json(new { success = false, errors = errors });
+                }
+                return View(model);
+            }
+            
             try
             {
                 await _repo.UpdateAsync(model);
+                
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { 
+                        success = true, 
+                        message = "Cập nhật sinh viên thành công.",
+                        data = new {
+                            masv = model.MaSv,
+                            hotensv = model.HoTenSv,
+                            maKhoa = model.MaKhoa,
+                            namSinh = model.NamSinh,
+                            queQuan = model.QueQuan
+                        }
+                    });
+                }
+                
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+                
                 ModelState.AddModelError("", ex.Message);
                 return View(model);
             }
@@ -200,13 +369,26 @@ namespace InternshipManagement.Controllers
             try
             {
                 await _repo.DeleteAsync(id);
-                TempData["Success"] = "Đã xoá sinh viên thành công.";
+                
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = true, message = "Xóa sinh viên thành công." });
+                }
+                
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                // Return JSON response for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+                
                 TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
             }
-            return RedirectToAction(nameof(Index));
         }
 
         [Authorize(Roles = "Admin")]
@@ -392,7 +574,6 @@ namespace InternshipManagement.Controllers
                             await _userAccountService.CreateStudentAccountAsync(sinhVien.MaSv);
                         }
 
-                        TempData["Success"] = $"Đã import thành công {importedRows.Count} sinh viên.";
                         return RedirectToAction(nameof(Index));
                     }
                 }
@@ -498,7 +679,6 @@ namespace InternshipManagement.Controllers
                     }
                 }
 
-                TempData["Success"] = "Cập nhật thông tin thành công";
                 return RedirectToAction(nameof(EditProfile));
             }
             catch (Exception ex)

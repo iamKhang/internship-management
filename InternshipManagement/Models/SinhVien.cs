@@ -12,6 +12,7 @@ public class SinhVien
 
     [Column("hotensv", TypeName = "nvarchar(100)")]
     [StringLength(100)]
+    [Required(ErrorMessage = "Họ tên sinh viên là bắt buộc")]
     public string? HoTenSv { get; set; }
 
     [Column("makhoa", TypeName = "char(10)")]
@@ -19,6 +20,7 @@ public class SinhVien
     public string MaKhoa { get; set; } = null!;
 
     [Column("namsinh")]
+    [Required(ErrorMessage = "Năm sinh là bắt buộc")]
     public int? NamSinh { get; set; }
 
     [Column("quequan", TypeName = "nvarchar(100)")]
