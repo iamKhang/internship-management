@@ -1,5 +1,6 @@
 ﻿using InternshipManagement.Data;
 using InternshipManagement.Models;
+using InternshipManagement.Models.DTOs;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,30 @@ namespace InternshipManagement.Repositories.Implementations
                 .AsNoTracking()
                 .OrderBy(k => k.TenKhoa)
                 .Select(k => new KhoaOptionVm
+                {
+                    MaKhoa = k.MaKhoa ?? "",
+                    TenKhoa = k.TenKhoa ?? ""
+                })
+                .ToListAsync();
+        }
+
+        ///<summary>Tìm kiếm khoa theo mã và tên.</summary>
+        public async Task<List<KhoaSearchDto>> SearchBasicAsync(string? query)
+        {
+            var dbQuery = _db.Khoas.AsNoTracking();
+
+            // Filter theo query nếu có
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var searchTerm = query.Trim().ToLower();
+                dbQuery = dbQuery.Where(k =>
+                    (k.TenKhoa != null && k.TenKhoa.ToLower().Contains(searchTerm)) ||
+                    (k.MaKhoa != null && k.MaKhoa.ToLower().Contains(searchTerm)));
+            }
+
+            return await dbQuery
+                .OrderBy(k => k.TenKhoa)
+                .Select(k => new KhoaSearchDto
                 {
                     MaKhoa = k.MaKhoa ?? "",
                     TenKhoa = k.TenKhoa ?? ""

@@ -175,8 +175,30 @@ class SearchableDropdown {
                 const opt = document.createElement('a');
                 opt.className = 'dropdown-item';
                 opt.href = '#';
-                opt.setAttribute('data-value', option.value);
-                opt.textContent = option.text;
+                
+                // Handle different data formats
+                let value, text;
+                if (option.value !== undefined && option.text !== undefined) {
+                    // Standard format: {value, text}
+                    value = option.value;
+                    text = option.text;
+                } else if (option.MaKhoa !== undefined && option.TenKhoa !== undefined) {
+                    // Khoa format: {MaKhoa, TenKhoa}
+                    value = option.MaKhoa;
+                    text = `${option.TenKhoa} - ${option.MaKhoa}`;
+                } else if (option.MaGv !== undefined && option.HoTenGv !== undefined) {
+                    // GiangVien format: {MaGv, HoTenGv}
+                    value = option.MaGv.toString();
+                    text = `${option.HoTenGv} - ${option.MaGv}`;
+                } else {
+                    // Fallback: use first two properties
+                    const keys = Object.keys(option);
+                    value = option[keys[0]] || '';
+                    text = option[keys[1]] || option[keys[0]] || '';
+                }
+                
+                opt.setAttribute('data-value', value);
+                opt.textContent = text;
                 this.optionsContainer.appendChild(opt);
             });
         } else {
@@ -214,7 +236,10 @@ class SearchableDropdown {
             
             // Handle different response formats
             let options = [];
-            if (data.options) {
+            if (data.success && data.data) {
+                // API format: {success: true, data: [...]}
+                options = data.data;
+            } else if (data.options) {
                 options = data.options;
             } else if (Array.isArray(data)) {
                 options = data;
@@ -299,9 +324,8 @@ class SearchableDropdown {
         this.textInput.value = '';
         this.currentSearchQuery = '';
         
-        if (this.isDropdownOpen) {
-            this.searchData('', value);
-        }
+        // Always update data when filter changes, regardless of dropdown state
+        this.searchData('', value);
     }
     
     setValue(value, text) {

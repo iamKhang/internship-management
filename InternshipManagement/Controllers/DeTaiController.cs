@@ -70,12 +70,15 @@ namespace InternshipManagement.Controllers
         [HttpGet]
         public async Task<IActionResult> GetLecturersByDepartment(string? maKhoa, string? q = null)
         {
-            var lecturers = await _gvRepo.SearchBasicAsync(q, maKhoa);
-            var options = lecturers
-                .Select(g => new { Value = g.MaGv.ToString(), Text = $"{g.HoTenGv} - {g.MaGv}" })
-                .ToList();
-
-            return Json(new { options });
+            try
+            {
+                var lecturers = await _gvRepo.SearchBasicAsync(q, maKhoa);
+                return Json(new { success = true, data = lecturers });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpGet]

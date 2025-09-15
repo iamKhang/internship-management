@@ -44,9 +44,16 @@
                 <!-- Hàng 1 -->
                 <div class="col-md-4">
                     <label class="form-label">Khoa</label>
-                    <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
+                    <div class="searchable-dropdown" id="khoaDropdown">
+                        <input type="hidden" asp-for="Filter.MaKhoa" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Giảng viên</label>
@@ -340,8 +347,16 @@
                 window.location.href = '@Url.Action("Index", "DeTai")?' + queryParams.toString();
             });
 
+            // Initialize SearchableDropdown for khoa
+            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                placeholder: 'Tìm kiếm khoa...',
+                searchUrl: '@Url.Action("Search", "Khoa")',
+                searchParam: 'q',
+                debounceDelay: 300,
+                allowClear: true
+            });
+
             // Initialize SearchableDropdown for giảng viên
-            const khoaSelect = document.getElementById('Filter_MaKhoa');
             const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
                 placeholder: 'Tìm kiếm giảng viên...',
                 searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
@@ -352,8 +367,8 @@
             });
 
             // Handle khoa change to update lecturers
-            khoaSelect.addEventListener('change', function() {
-                const selectedMaKhoa = this.value;
+            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
+                const selectedMaKhoa = e.detail.value;
                 giangVienDropdown.setFilterValue(selectedMaKhoa);
             });
 

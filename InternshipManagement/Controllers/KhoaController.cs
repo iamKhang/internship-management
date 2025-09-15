@@ -36,6 +36,24 @@ namespace InternshipManagement.Controllers
             var options = await _repo.GetOptionsAsync();
             return Json(options); // [{ maKhoa: "...", tenKhoa: "..." }, ...]
         }
+
+        /// <summary>
+        /// Endpoint tìm kiếm khoa theo mã và tên.
+        /// GET /Khoa/Search?q=query
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Search([FromQuery] string? q)
+        {
+            try
+            {
+                var results = await _repo.SearchBasicAsync(q);
+                return Json(new { success = true, data = results });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
         public IActionResult Create() => View(new Khoa());
 
         [HttpPost]
