@@ -1,5 +1,6 @@
 ﻿using InternshipManagement.Data;
 using InternshipManagement.Models;
+using InternshipManagement.Models.DTOs;
 using InternshipManagement.Models.ViewModels;
 using InternshipManagement.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,40 @@ namespace InternshipManagement.Repositories.Implementations
                 .ToListAsync();
 
             return items;
+        }
+
+        public async Task<List<GiangVienSearchDto>> SearchBasicAsync(string? query, string? maKhoa = null)
+        {
+            var dbQuery = _db.GiangViens
+                .Include(g => g.Khoa)
+                .AsNoTracking();
+
+            // Filter theo khoa nếu có
+            if (!string.IsNullOrWhiteSpace(maKhoa))
+            {
+                var mk = maKhoa.Trim();
+                dbQuery = dbQuery.Where(g => g.MaKhoa == mk);
+            }
+
+            // Filter theo query nếu có
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var searchTerm = query.Trim().ToLower();
+                dbQuery = dbQuery.Where(g =>
+                    g.HoTenGv != null && g.HoTenGv.ToLower().Contains(searchTerm) ||
+                    g.MaGv.ToString().Contains(searchTerm));
+            }
+
+            return await dbQuery
+                .OrderBy(g => g.HoTenGv)
+                .Select(g => new GiangVienSearchDto
+                {
+                    MaGv = g.MaGv,
+                    HoTenGv = g.HoTenGv,
+                    MaKhoa = g.MaKhoa,
+                    TenKhoa = g.Khoa != null ? g.Khoa.TenKhoa : null
+                })
+                .ToListAsync();
         }
 
         public async Task<GiangVienListItemVm?> GetByIdAsync(int maGv)

@@ -50,9 +50,16 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Giảng viên</label>
-                    <select class="form-select" asp-for="Filter.MaGv" asp-items="Model.GiangVienOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
+                    <div class="searchable-dropdown" id="giangVienDropdown">
+                        <input type="hidden" asp-for="Filter.MaGv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Học kỳ</label>
@@ -313,6 +320,8 @@
 </div>
 
 @section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Handle filter form submission
@@ -331,49 +340,27 @@
                 window.location.href = '@Url.Action("Index", "DeTai")?' + queryParams.toString();
             });
 
+            // Initialize SearchableDropdown for giảng viên
+            const khoaSelect = document.getElementById('Filter_MaKhoa');
+            const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
+                placeholder: 'Tìm kiếm giảng viên...',
+                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+                searchParam: 'q',
+                filterParam: 'maKhoa',
+                debounceDelay: 300,
+                allowClear: true
+            });
+
             // Handle khoa change to update lecturers
-  const khoaSelect = document.getElementById('Filter_MaKhoa');
-  const giangVienSelect = document.getElementById('Filter_MaGv');
-            const urlGetLecturers = '@Url.Action("GetLecturersByDepartment", "DeTai")';
+            khoaSelect.addEventListener('change', function() {
+                const selectedMaKhoa = this.value;
+                giangVienDropdown.setFilterValue(selectedMaKhoa);
+            });
 
-  function updateLecturers(maKhoa) {
-    fetch(`${urlGetLecturers}?maKhoa=${encodeURIComponent(maKhoa || '')}`)
-      .then(response => response.json())
-      .then(data => {
-                        // Clear current options
-        giangVienSelect.innerHTML = '';
-
-                        // Add default option
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.text = '-- Tất cả --';
-        giangVienSelect.appendChild(defaultOption);
-
-                        // Add new options
-        data.options.forEach(option => {
-          const opt = document.createElement('option');
-          opt.value = option.value;
-          opt.text = option.text;
-          giangVienSelect.appendChild(opt);
-        });
-      })
-      .catch(error => {
-        console.error('Error updating lecturers:', error);
-      });
-  }
-
-  khoaSelect.addEventListener('change', function() {
-    const selectedMaKhoa = this.value;
-    updateLecturers(selectedMaKhoa);
-    giangVienSelect.value = '';
-  });
-
-            // Initialize lecturers on page load
-  const initialMaKhoa = khoaSelect.value;
-  const initialMaGv = giangVienSelect.value;
-  if (initialMaKhoa && !initialMaGv) {
-    updateLecturers(initialMaKhoa);
-  }
+            // Listen for selection changes
+            document.getElementById('giangVienDropdown').addEventListener('selectionChanged', function(e) {
+                console.log('Giảng viên selected:', e.detail);
+            });
 
             // Export modal logic with separate actions for student details
             const exportModalEl = document.getElementById('exportModal');

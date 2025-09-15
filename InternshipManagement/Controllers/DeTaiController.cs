@@ -68,11 +68,11 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetLecturersByDepartment(string? maKhoa)
+        public async Task<IActionResult> GetLecturersByDepartment(string? maKhoa, string? q = null)
         {
-            var lecturers = await _gvRepo.GetOptionsAsync(maKhoa);
+            var lecturers = await _gvRepo.SearchBasicAsync(q, maKhoa);
             var options = lecturers
-                .Select(g => new { Value = g.MaGv.ToString(), Text = g.TenGv })
+                .Select(g => new { Value = g.MaGv.ToString(), Text = $"{g.HoTenGv} - {g.MaGv}" })
                 .ToList();
 
             return Json(new { options });

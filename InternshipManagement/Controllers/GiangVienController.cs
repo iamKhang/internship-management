@@ -1,4 +1,5 @@
 ﻿using InternshipManagement.Models;
+using InternshipManagement.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using InternshipManagement.Data;
 using InternshipManagement.Models.ViewModels;
@@ -261,6 +262,20 @@ namespace InternshipManagement.Controllers
                         luong = gv.Luong
                     }
                 });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] string? maKhoa)
+        {
+            try
+            {
+                var results = await _repo.SearchBasicAsync(q, maKhoa);
+                return Json(new { success = true, data = results });
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
 ﻿using InternshipManagement.Models;
+using InternshipManagement.Models.DTOs;
 using InternshipManagement.Models.ViewModels;
 
 namespace InternshipManagement.Repositories.Interfaces
@@ -6,6 +7,7 @@ namespace InternshipManagement.Repositories.Interfaces
     public interface IGiangVienRepository
     {
         Task<List<GiangVienListItemVm>> SearchAsync(GiangVienFilterVm filter);
+        Task<List<GiangVienSearchDto>> SearchBasicAsync(string? query, string? maKhoa = null);
 
         Task<GiangVienListItemVm?> GetByIdAsync(int maGv);
         Task<GiangVien?> GetEntityAsync(int id);
