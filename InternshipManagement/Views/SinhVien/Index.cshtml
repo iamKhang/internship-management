@@ -20,9 +20,16 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Khoa</label>
-                    <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
+                    <div class="searchable-dropdown" id="khoaDropdown">
+                        <input type="hidden" asp-for="Filter.MaKhoa" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Năm sinh từ</label>
@@ -258,60 +265,94 @@
 
                     <div class="row">
                         <div class="col-12">
-                            <label class="form-label fw-bold">Chọn các trường cần export:</label>
+                            <label class="form-label fw-bold">Chọn và sắp xếp thứ tự các cột:</label>
+                            <div class="small text-muted mb-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Kéo thả để sắp xếp thứ tự hiển thị. Bỏ chọn để ẩn cột.
+                            </div>
                         </div>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="ExportMaSv" value="true" id="exportMaSv" checked>
-                                <input type="hidden" name="ExportMaSv" value="false">
-                                <label class="form-check-label" for="exportMaSv">
-                                    <i class="bi bi-person-badge me-1"></i> Mã sinh viên
-                                </label>
-                            </div>
+                        <div class="col-12">
+                            <div id="sortableColumns" class="sortable-columns">
+                                <div class="column-item" data-column="ExportMaSv">
+                                    <div class="column-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="ExportMaSv" value="true" id="exportMaSv" checked>
+                                        <input type="hidden" name="ExportMaSv" value="false">
+                                        <label class="form-check-label" for="exportMaSv">
+                                            <i class="bi bi-person-badge me-1"></i> Mã sinh viên
+                                        </label>
+                                    </div>
+                                </div>
 
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="ExportHoTenSv" value="true" id="exportHoTenSv" checked>
-                                <input type="hidden" name="ExportHoTenSv" value="false">
-                                <label class="form-check-label" for="exportHoTenSv">
-                                    <i class="bi bi-person me-1"></i> Họ và tên
-                                </label>
-                            </div>
+                                <div class="column-item" data-column="ExportHoTenSv">
+                                    <div class="column-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="ExportHoTenSv" value="true" id="exportHoTenSv" checked>
+                                        <input type="hidden" name="ExportHoTenSv" value="false">
+                                        <label class="form-check-label" for="exportHoTenSv">
+                                            <i class="bi bi-person me-1"></i> Họ và tên
+                                        </label>
+                                    </div>
+                                </div>
 
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
-                                <input type="hidden" name="ExportMaKhoa" value="false">
-                                <label class="form-check-label" for="exportMaKhoa">
-                                    <i class="bi bi-building me-1"></i> Mã khoa
-                                </label>
-                            </div>
-                        </div>
+                                <div class="column-item" data-column="ExportTenKhoa">
+                                    <div class="column-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
+                                        <input type="hidden" name="ExportTenKhoa" value="false">
+                                        <label class="form-check-label" for="exportTenKhoa">
+                                            <i class="bi bi-buildings me-1"></i> Tên khoa
+                                        </label>
+                                    </div>
+                                </div>
 
-                        <div class="col-md-6">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
-                                <input type="hidden" name="ExportTenKhoa" value="false">
-                                <label class="form-check-label" for="exportTenKhoa">
-                                    <i class="bi bi-buildings me-1"></i> Tên khoa
-                                </label>
-                            </div>
+                                <div class="column-item" data-column="ExportNamSinh">
+                                    <div class="column-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="ExportNamSinh" value="true" id="exportNamSinh" checked>
+                                        <input type="hidden" name="ExportNamSinh" value="false">
+                                        <label class="form-check-label" for="exportNamSinh">
+                                            <i class="bi bi-calendar-event me-1"></i> Năm sinh
+                                        </label>
+                                    </div>
+                                </div>
 
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="ExportNamSinh" value="true" id="exportNamSinh" checked>
-                                <input type="hidden" name="ExportNamSinh" value="false">
-                                <label class="form-check-label" for="exportNamSinh">
-                                    <i class="bi bi-calendar-event me-1"></i> Năm sinh
-                                </label>
-                            </div>
+                                <div class="column-item" data-column="ExportQueQuan">
+                                    <div class="column-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="ExportQueQuan" value="true" id="exportQueQuan" checked>
+                                        <input type="hidden" name="ExportQueQuan" value="false">
+                                        <label class="form-check-label" for="exportQueQuan">
+                                            <i class="bi bi-geo-alt me-1"></i> Quê quán
+                                        </label>
+                                    </div>
+                                </div>
 
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="ExportQueQuan" value="true" id="exportQueQuan" checked>
-                                <input type="hidden" name="ExportQueQuan" value="false">
-                                <label class="form-check-label" for="exportQueQuan">
-                                    <i class="bi bi-geo-alt me-1"></i> Quê quán
-                                </label>
+                                <div class="column-item" data-column="ExportMaKhoa">
+                                    <div class="column-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
+                                        <input type="hidden" name="ExportMaKhoa" value="false">
+                                        <label class="form-check-label" for="exportMaKhoa">
+                                            <i class="bi bi-building me-1"></i> Mã khoa
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -396,6 +437,9 @@
 </div>
 
 @section Scripts{
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         /* Toast styles */
         .e-toast-container {
@@ -497,6 +541,62 @@
 
         .toast-icons.e-warning::before {
             content: "\e703";
+        }
+
+        /* Sortable columns styles */
+        .sortable-columns {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+        }
+        
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            background-color: white;
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+        
+        .column-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        .column-item.sortable-ghost {
+            opacity: 0.4;
+            background-color: #e3f2fd;
+        }
+        
+        .column-item.sortable-chosen {
+            background-color: #e3f2fd;
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        
+        .column-handle {
+            margin-right: 0.75rem;
+            color: #6c757d;
+            cursor: grab;
+        }
+        
+        .column-handle:active {
+            cursor: grabbing;
+        }
+        
+        .column-item .form-check {
+            flex: 1;
+            margin: 0;
+        }
+        
+        .column-item .form-check-label {
+            cursor: pointer;
+            margin: 0;
         }
     </style>
 
@@ -650,6 +750,30 @@
             // Populate year comboboxes
             populateYearComboBox();
             populateFilterYearComboBoxes();
+
+            // Initialize SearchableDropdown for Khoa
+            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                placeholder: 'Tìm kiếm khoa...',
+                searchUrl: '@Url.Action("Search", "Khoa")',
+                searchParam: 'q',
+                debounceDelay: 300,
+                allowClear: true
+            });
+
+            // Initialize sortable columns
+            const sortableColumns = document.getElementById('sortableColumns');
+            if (sortableColumns) {
+                const sortable = new Sortable(sortableColumns, {
+                    handle: '.column-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function(evt) {
+                        // Update column order when drag ends
+                        updateColumnOrder();
+                    }
+                });
+            }
             
             // Handle filter form submission
             const filterForm = document.getElementById('filterForm');
@@ -792,8 +916,28 @@
             checkboxes.forEach(cb => cb.checked = false);
         });
 
+        // Function to update column order
+        function updateColumnOrder() {
+            const columnItems = document.querySelectorAll('#sortableColumns .column-item');
+            const columnOrder = Array.from(columnItems).map(item => item.getAttribute('data-column'));
+            
+            // Store column order in hidden input
+            let orderInput = document.getElementById('columnOrder');
+            if (!orderInput) {
+                orderInput = document.createElement('input');
+                orderInput.type = 'hidden';
+                orderInput.name = 'columnOrder';
+                orderInput.id = 'columnOrder';
+                document.getElementById('exportForm').appendChild(orderInput);
+            }
+            orderInput.value = columnOrder.join(',');
+        }
+
         // Validation cho export form
         document.getElementById('exportForm')?.addEventListener('submit', function(e) {
+            // Update column order before export
+            updateColumnOrder();
+            
             const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]:checked');
             if (checkboxes.length === 0) {
                 e.preventDefault();

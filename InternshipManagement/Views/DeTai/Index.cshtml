@@ -179,70 +179,120 @@
 
                 <div class="row">
                     <div class="col-12">
-                        <label class="form-label fw-bold">Chọn các trường cần export:</label>
+                        <label class="form-label fw-bold">Chọn và sắp xếp thứ tự các cột:</label>
+                        <div class="small text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Kéo thả để sắp xếp thứ tự hiển thị. Bỏ chọn để ẩn cột.
+                        </div>
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeMaDt" value="true" id="chkMaDt" checked>
-                            <input type="hidden" name="includeMaDt" value="false">
-                            <label class="form-check-label" for="chkMaDt">
-                                <i class="bi bi-tag me-1"></i> Mã đề tài
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeTenDt" value="true" id="chkTenDt" checked>
-                            <input type="hidden" name="includeTenDt" value="false">
-                            <label class="form-check-label" for="chkTenDt">
-                                <i class="bi bi-file-text me-1"></i> Tên đề tài
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeGiangVien" value="true" id="chkGiangVien" checked>
-                            <input type="hidden" name="includeGiangVien" value="false">
-                            <label class="form-check-label" for="chkGiangVien">
-                                <i class="bi bi-person me-1"></i> Giảng viên
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeKhoa" value="true" id="chkKhoa" checked>
-                            <input type="hidden" name="includeKhoa" value="false">
-                            <label class="form-check-label" for="chkKhoa">
-                                <i class="bi bi-building me-1"></i> Khoa
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeHocKy" value="true" id="chkHocKy" checked>
-                            <input type="hidden" name="includeHocKy" value="false">
-                            <label class="form-check-label" for="chkHocKy">
-                                <i class="bi bi-calendar me-1"></i> Học kỳ/Năm học
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSoLuong" value="true" id="chkSoLuong" checked>
-                            <input type="hidden" name="includeSoLuong" value="false">
-                            <label class="form-check-label" for="chkSoLuong">
-                                <i class="bi bi-hash me-1"></i> Số lượng
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeKinhPhi" value="true" id="chkKinhPhi" checked>
-                            <input type="hidden" name="includeKinhPhi" value="false">
-                            <label class="form-check-label" for="chkKinhPhi">
-                                <i class="bi bi-currency-dollar me-1"></i> Kinh phí
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeNoiThucTap" value="true" id="chkNoiThucTap" checked>
-                            <input type="hidden" name="includeNoiThucTap" value="false">
-                            <label class="form-check-label" for="chkNoiThucTap">
-                                <i class="bi bi-geo-alt me-1"></i> Nơi thực tập
-                            </label>
+                    <div class="col-12">
+                        <div id="sortableColumns" class="sortable-columns">
+                            <div class="column-item" data-column="includeMaDt">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeMaDt" value="true" id="chkMaDt" checked>
+                                    <input type="hidden" name="includeMaDt" value="false">
+                                    <label class="form-check-label" for="chkMaDt">
+                                        <i class="bi bi-tag me-1"></i> Mã đề tài
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeTenDt">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeTenDt" value="true" id="chkTenDt" checked>
+                                    <input type="hidden" name="includeTenDt" value="false">
+                                    <label class="form-check-label" for="chkTenDt">
+                                        <i class="bi bi-file-text me-1"></i> Tên đề tài
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeGiangVien">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeGiangVien" value="true" id="chkGiangVien" checked>
+                                    <input type="hidden" name="includeGiangVien" value="false">
+                                    <label class="form-check-label" for="chkGiangVien">
+                                        <i class="bi bi-person me-1"></i> Giảng viên
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeKhoa">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeKhoa" value="true" id="chkKhoa" checked>
+                                    <input type="hidden" name="includeKhoa" value="false">
+                                    <label class="form-check-label" for="chkKhoa">
+                                        <i class="bi bi-building me-1"></i> Khoa
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeHocKy">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeHocKy" value="true" id="chkHocKy" checked>
+                                    <input type="hidden" name="includeHocKy" value="false">
+                                    <label class="form-check-label" for="chkHocKy">
+                                        <i class="bi bi-calendar me-1"></i> Học kỳ/Năm học
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeSoLuong">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSoLuong" value="true" id="chkSoLuong" checked>
+                                    <input type="hidden" name="includeSoLuong" value="false">
+                                    <label class="form-check-label" for="chkSoLuong">
+                                        <i class="bi bi-hash me-1"></i> Số lượng
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeKinhPhi">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeKinhPhi" value="true" id="chkKinhPhi" checked>
+                                    <input type="hidden" name="includeKinhPhi" value="false">
+                                    <label class="form-check-label" for="chkKinhPhi">
+                                        <i class="bi bi-currency-dollar me-1"></i> Kinh phí
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeNoiThucTap">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeNoiThucTap" value="true" id="chkNoiThucTap" checked>
+                                    <input type="hidden" name="includeNoiThucTap" value="false">
+                                    <label class="form-check-label" for="chkNoiThucTap">
+                                        <i class="bi bi-geo-alt me-1"></i> Nơi thực tập
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -329,6 +379,63 @@
 @section Scripts {
     <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
     <script src="~/js/searchable-dropdown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        .sortable-columns {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+        }
+        
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            background-color: white;
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+        
+        .column-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        .column-item.sortable-ghost {
+            opacity: 0.4;
+            background-color: #e3f2fd;
+        }
+        
+        .column-item.sortable-chosen {
+            background-color: #e3f2fd;
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        
+        .column-handle {
+            margin-right: 0.75rem;
+            color: #6c757d;
+            cursor: grab;
+        }
+        
+        .column-handle:active {
+            cursor: grabbing;
+        }
+        
+        .column-item .form-check {
+            flex: 1;
+            margin: 0;
+        }
+        
+        .column-item .form-check-label {
+            cursor: pointer;
+            margin: 0;
+        }
+    </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Handle filter form submission
@@ -377,6 +484,19 @@
                 console.log('Giảng viên selected:', e.detail);
             });
 
+            // Initialize sortable columns
+            const sortableColumns = document.getElementById('sortableColumns');
+            const sortable = new Sortable(sortableColumns, {
+                handle: '.column-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onEnd: function(evt) {
+                    // Update column order when drag ends
+                    updateColumnOrder();
+                }
+            });
+
             // Export modal logic with separate actions for student details
             const exportModalEl = document.getElementById('exportModal');
             const modal = new bootstrap.Modal(exportModalEl);
@@ -403,6 +523,23 @@
                 }
             });
 
+            // Function to update column order
+            function updateColumnOrder() {
+                const columnItems = document.querySelectorAll('#sortableColumns .column-item');
+                const columnOrder = Array.from(columnItems).map(item => item.getAttribute('data-column'));
+                
+                // Store column order in hidden input
+                let orderInput = document.getElementById('columnOrder');
+                if (!orderInput) {
+                    orderInput = document.createElement('input');
+                    orderInput.type = 'hidden';
+                    orderInput.name = 'columnOrder';
+                    orderInput.id = 'columnOrder';
+                    document.getElementById('exportModal').appendChild(orderInput);
+                }
+                orderInput.value = columnOrder.join(',');
+            }
+
             // Select all fields button
             document.getElementById('selectAllFields')?.addEventListener('click', function() {
                 const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
@@ -427,6 +564,9 @@
                     return;
                 }
 
+                // Update column order before export
+                updateColumnOrder();
+
                 // Get current filter parameters
                 var form = document.getElementById('filterForm');
                 var formData = new FormData(form);
@@ -444,6 +584,12 @@
                         queryParams.append(cb.name, cb.checked ? 'true' : 'false');
                     }
                 });
+
+                // Add column order parameter
+                const columnOrder = document.getElementById('columnOrder')?.value;
+                if (columnOrder) {
+                    queryParams.append('columnOrder', columnOrder);
+                }
 
                 // Đóng modal và export
                 modal.hide();

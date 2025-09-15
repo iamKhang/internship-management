@@ -691,7 +691,7 @@ namespace InternshipManagement.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Export(SinhVienExportVm model)
+        public async Task<IActionResult> Export(SinhVienExportVm model, string? columnOrder = null)
         {
             try
             {
@@ -776,50 +776,41 @@ namespace InternshipManagement.Controllers
 
                     currentRow += 2; // Khoảng cách trước bảng dữ liệu
 
-                    // Tạo header cho bảng dữ liệu
+                    // Define column configuration
+                    var columnConfigs = new Dictionary<string, (bool include, string header, string key)>
+                    {
+                        ["ExportMaSv"] = (model.ExportMaSv, "Mã SV", "MaSv"),
+                        ["ExportHoTenSv"] = (model.ExportHoTenSv, "Họ và tên", "HoTenSv"),
+                        ["ExportTenKhoa"] = (model.ExportTenKhoa, "Tên khoa", "TenKhoa"),
+                        ["ExportNamSinh"] = (model.ExportNamSinh, "Năm sinh", "NamSinh"),
+                        ["ExportQueQuan"] = (model.ExportQueQuan, "Quê quán", "QueQuan"),
+                        ["ExportMaKhoa"] = (model.ExportMaKhoa, "Mã khoa", "MaKhoa")
+                    };
+
+                    // Parse column order if provided
+                    var orderedColumns = new List<string>();
+                    if (!string.IsNullOrEmpty(columnOrder))
+                    {
+                        orderedColumns = columnOrder.Split(',').ToList();
+                    }
+                    else
+                    {
+                        // Default order
+                        orderedColumns = columnConfigs.Keys.ToList();
+                    }
+
+                    // Tạo header cho bảng dữ liệu theo thứ tự được chỉ định
                     var headers = new List<string>();
                     var columnIndex = 1;
 
-                    if (model.ExportMaSv)
+                    foreach (var columnName in orderedColumns)
                     {
-                        headers.Add("Mã SV");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Mã SV";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportHoTenSv)
-                    {
-                        headers.Add("Họ và tên");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Họ và tên";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportMaKhoa)
-                    {
-                        headers.Add("Mã khoa");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Mã khoa";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportTenKhoa)
-                    {
-                        headers.Add("Tên khoa");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Tên khoa";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportNamSinh)
-                    {
-                        headers.Add("Năm sinh");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Năm sinh";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportQueQuan)
-                    {
-                        headers.Add("Quê quán");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Quê quán";
-                        columnIndex++;
+                        if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                        {
+                            headers.Add(config.header);
+                            worksheet.Cells[currentRow, columnIndex].Value = config.header;
+                            columnIndex++;
+                        }
                     }
 
                     // Định dạng header
@@ -831,45 +822,38 @@ namespace InternshipManagement.Controllers
 
                     currentRow++;
 
-                    // Thêm dữ liệu
+                    // Thêm dữ liệu theo thứ tự được chỉ định
                     foreach (var sv in sinhVienData)
                     {
                         columnIndex = 1;
 
-                        if (model.ExportMaSv)
+                        foreach (var columnName in orderedColumns)
                         {
-                            worksheet.Cells[currentRow, columnIndex].Value = sv.Masv;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportHoTenSv)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = sv.Hotensv;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportMaKhoa)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = sv.MaKhoa;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportTenKhoa)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = sv.TenKhoa;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportNamSinh)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = sv.NamSinh;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportQueQuan)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = sv.QueQuan;
-                            columnIndex++;
+                            if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                            {
+                                switch (config.key)
+                                {
+                                    case "MaSv":
+                                        worksheet.Cells[currentRow, columnIndex].Value = sv.Masv;
+                                        break;
+                                    case "HoTenSv":
+                                        worksheet.Cells[currentRow, columnIndex].Value = sv.Hotensv;
+                                        break;
+                                    case "MaKhoa":
+                                        worksheet.Cells[currentRow, columnIndex].Value = sv.MaKhoa;
+                                        break;
+                                    case "TenKhoa":
+                                        worksheet.Cells[currentRow, columnIndex].Value = sv.TenKhoa;
+                                        break;
+                                    case "NamSinh":
+                                        worksheet.Cells[currentRow, columnIndex].Value = sv.NamSinh;
+                                        break;
+                                    case "QueQuan":
+                                        worksheet.Cells[currentRow, columnIndex].Value = sv.QueQuan;
+                                        break;
+                                }
+                                columnIndex++;
+                            }
                         }
 
                         currentRow++;
