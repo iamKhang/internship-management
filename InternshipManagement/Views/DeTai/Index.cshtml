@@ -470,7 +470,19 @@
                 searchParam: 'q',
                 filterParam: 'maKhoa',
                 debounceDelay: 300,
-                allowClear: true
+                allowClear: true,
+                labelFormatter: function(item) {
+                    // Expect API returns {MaGv, HoTenGv}
+                    if (item) {
+                        const mgv = item.MaGv ?? item.maGv;
+                        const hten = item.HoTenGv ?? item.hoTenGv;
+                        if (mgv !== undefined && hten !== undefined) {
+                            return { value: String(mgv), text: `${mgv} - ${hten}` };
+                        }
+                    }
+                    // Fallback to default parser
+                    return null;
+                }
             });
 
             // Handle khoa change to update lecturers

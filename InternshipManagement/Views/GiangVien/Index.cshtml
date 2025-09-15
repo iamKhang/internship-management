@@ -20,10 +20,17 @@
             </div>
                 <div class="col-md-4">
                     <label class="form-label">Khoa</label>
-                    <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
-                        <option value="">-- Tất cả --</option>
-                </select>
-            </div>
+                    <div class="searchable-dropdown" id="khoaDropdown">
+                        <input type="hidden" asp-for="Filter.MaKhoa" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label">Lương từ</label>
                     <input class="form-control" type="number" asp-for="Filter.LuongMin" min="0" step="1" />
@@ -259,51 +266,80 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Chọn các trường cần export:</label>
+                    <label class="form-label fw-bold">Chọn và sắp xếp thứ tự các cột:</label>
+                    <div class="small text-muted mb-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Kéo thả để sắp xếp thứ tự hiển thị. Bỏ chọn để ẩn cột.
+                    </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="ExportMaGv" value="true" id="exportMaGv" checked>
-                            <input type="hidden" name="ExportMaGv" value="false">
-                            <label class="form-check-label" for="exportMaGv">
-                                <i class="bi bi-person-badge me-1"></i> Mã giảng viên
-                            </label>
-                        </div>
+                    <div class="col-12">
+                        <div id="sortableColumns" class="sortable-columns">
+                            <div class="column-item" data-column="ExportMaGv">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ExportMaGv" value="true" id="exportMaGv" checked>
+                                    <input type="hidden" name="ExportMaGv" value="false">
+                                    <label class="form-check-label" for="exportMaGv">
+                                        <i class="bi bi-person-badge me-1"></i> Mã giảng viên
+                                    </label>
+                                </div>
+                            </div>
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="ExportHoTenGv" value="true" id="exportHoTenGv" checked>
-                            <input type="hidden" name="ExportHoTenGv" value="false">
-                            <label class="form-check-label" for="exportHoTenGv">
-                                <i class="bi bi-person me-1"></i> Họ và tên
-                            </label>
-                        </div>
+                            <div class="column-item" data-column="ExportHoTenGv">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ExportHoTenGv" value="true" id="exportHoTenGv" checked>
+                                    <input type="hidden" name="ExportHoTenGv" value="false">
+                                    <label class="form-check-label" for="exportHoTenGv">
+                                        <i class="bi bi-person me-1"></i> Họ và tên
+                                    </label>
+                                </div>
+                            </div>
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="ExportLuong" value="true" id="exportLuong" checked>
-                            <input type="hidden" name="ExportLuong" value="false">
-                            <label class="form-check-label" for="exportLuong">
-                                <i class="bi bi-currency-dollar me-1"></i> Lương
-                            </label>
-                        </div>
-                    </div>
+                            <div class="column-item" data-column="ExportTenKhoa">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
+                                    <input type="hidden" name="ExportTenKhoa" value="false">
+                                    <label class="form-check-label" for="exportTenKhoa">
+                                        <i class="bi bi-buildings me-1"></i> Tên khoa
+                                    </label>
+                                </div>
+                            </div>
 
-                    <div class="col-md-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="ExportTenKhoa" value="true" id="exportTenKhoa" checked>
-                            <input type="hidden" name="ExportTenKhoa" value="false">
-                            <label class="form-check-label" for="exportTenKhoa">
-                                <i class="bi bi-buildings me-1"></i> Tên khoa
-                            </label>
-                        </div>
+                            <div class="column-item" data-column="ExportLuong">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ExportLuong" value="true" id="exportLuong" checked>
+                                    <input type="hidden" name="ExportLuong" value="false">
+                                    <label class="form-check-label" for="exportLuong">
+                                        <i class="bi bi-currency-dollar me-1"></i> Lương
+                                    </label>
+                                </div>
+                            </div>
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
-                            <input type="hidden" name="ExportMaKhoa" value="false">
-                            <label class="form-check-label" for="exportMaKhoa">
-                                <i class="bi bi-building me-1"></i> Mã khoa
-                            </label>
+                            <div class="column-item" data-column="ExportMaKhoa">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ExportMaKhoa" value="true" id="exportMaKhoa">
+                                    <input type="hidden" name="ExportMaKhoa" value="false">
+                                    <label class="form-check-label" for="exportMaKhoa">
+                                        <i class="bi bi-building me-1"></i> Mã khoa
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -330,6 +366,8 @@
     </ejs-dialog>
 
     @section Scripts{
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
     <style>
         /* Toast styles */
         .e-toast-container {
@@ -459,6 +497,20 @@
     </style>
 
         <script>
+        // Initialize searchable dropdown for Khoa filter
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                new SearchableDropdown('khoaDropdown', {
+                    placeholder: 'Tìm kiếm khoa...',
+                    searchUrl: '@Url.Action("Search", "Khoa")',
+                    searchParam: 'q',
+                    debounceDelay: 300,
+                    allowClear: true
+                });
+            } catch (e) {
+                console.error('Failed to init Khoa searchable dropdown:', e);
+            }
+        });
         var toastObj;
         var giangVienDialog;
         var deleteGvDialog;
@@ -497,6 +549,19 @@
 
             toastObj.show(toasts[toastIndex]);
         }
+
+        // Initialize searchable dropdown for Khoa in filter form
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                new SearchableDropdown('khoaDropdown', {
+                    placeholder: 'Tìm kiếm khoa...',
+                    searchUrl: '@Url.Action("Search", "Khoa")',
+                    searchParam: 'q',
+                    debounceDelay: 300,
+                    allowClear: true
+                });
+            } catch {}
+        });
 
         // Initialize SyncFusion Dialogs
         function initializeDialogs() {
@@ -954,71 +1019,29 @@
             checkboxes.forEach(cb => cb.checked = false);
         });
 
-        // Validation cho export form
+        // Validation cho export form + đính kèm columnOrder
         document.getElementById('exportForm')?.addEventListener('submit', function(e) {
-            e.preventDefault(); // Ngăn submit mặc định
-
             const checkboxes = document.querySelectorAll('#exportForm input[type="checkbox"]:checked');
             if (checkboxes.length === 0) {
+                e.preventDefault();
                 showMessage('Vui lòng chọn ít nhất một trường để export!', 'Warning');
                 return;
             }
 
-            // Sử dụng AJAX để submit form
-            submitExportForm();
+            // Lưu thứ tự cột trước khi submit
+            (function updateColumnOrder(){
+                const columnItems = document.querySelectorAll('#sortableColumns .column-item');
+                const columnOrder = Array.from(columnItems).map(item => item.getAttribute('data-column'));
+                let orderInput = document.getElementById('columnOrder');
+                if (!orderInput) {
+                    orderInput = document.createElement('input');
+                    orderInput.type = 'hidden';
+                    orderInput.name = 'columnOrder';
+                    orderInput.id = 'columnOrder';
+                    document.getElementById('exportForm').appendChild(orderInput);
+                }
+                orderInput.value = columnOrder.join(',');
+            })();
         });
-
-        // Function để submit export form via AJAX
-        function submitExportForm() {
-            const form = document.getElementById('exportForm');
-            const formData = new FormData(form);
-
-            showMessage('Đang xuất file Excel...', 'Info');
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'RequestVerificationToken': document.querySelector('#exportForm input[name="__RequestVerificationToken"]').value
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Lấy filename từ header trước khi trả về blob
-                    const contentDisposition = response.headers.get('Content-Disposition');
-                    let filename = 'DanhSach_GiangVien.xlsx';
-                    if (contentDisposition) {
-                        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-                        if (filenameMatch && filenameMatch[1]) {
-                            filename = filenameMatch[1].replace(/['"]/g, '');
-                        }
-                    }
-
-                    return response.blob().then(blob => ({ blob, filename }));
-                } else {
-                    throw new Error('Lỗi khi xuất file: ' + response.statusText);
-                }
-            })
-            .then(({ blob, filename }) => {
-                // Tạo download link
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-
-                // Đóng dialog và hiển thị thông báo thành công
-                closeExportDialog();
-                showMessage('Đã xuất file Excel thành công!', 'Success');
-            })
-            .catch(error => {
-                console.error('Export error:', error);
-                showMessage('Lỗi khi xuất file: ' + error.message, 'Error');
-            });
-        }
         </script>
     }

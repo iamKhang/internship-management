@@ -629,7 +629,7 @@ namespace InternshipManagement.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Export(GiangVienExportVm model)
+        public async Task<IActionResult> Export(GiangVienExportVm model, string? columnOrder = null)
         {
             try
             {
@@ -714,43 +714,29 @@ namespace InternshipManagement.Controllers
 
                     currentRow += 2; // Khoảng cách trước bảng dữ liệu
 
-                    // Tạo header cho bảng dữ liệu
-                    var headers = new List<string>();
+                    // Cấu hình cột + thứ tự cột
+                    var columnConfigs = new Dictionary<string, (bool include, string header, string key)>
+                    {
+                        ["ExportMaGv"] = (model.ExportMaGv, "Mã GV", "MaGv"),
+                        ["ExportHoTenGv"] = (model.ExportHoTenGv, "Họ và tên", "HoTenGv"),
+                        ["ExportTenKhoa"] = (model.ExportTenKhoa, "Tên khoa", "TenKhoa"),
+                        ["ExportLuong"] = (model.ExportLuong, "Lương", "Luong"),
+                        ["ExportMaKhoa"] = (model.ExportMaKhoa, "Mã khoa", "MaKhoa")
+                    };
+
+                    var orderedColumns = string.IsNullOrEmpty(columnOrder)
+                        ? columnConfigs.Keys.ToList()
+                        : columnOrder.Split(',').ToList();
+
+                    // Tạo header theo thứ tự cột
                     var columnIndex = 1;
-
-                    if (model.ExportMaGv)
+                    foreach (var columnName in orderedColumns)
                     {
-                        headers.Add("Mã GV");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Mã GV";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportHoTenGv)
-                    {
-                        headers.Add("Họ và tên");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Họ và tên";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportMaKhoa)
-                    {
-                        headers.Add("Mã khoa");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Mã khoa";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportTenKhoa)
-                    {
-                        headers.Add("Tên khoa");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Tên khoa";
-                        columnIndex++;
-                    }
-
-                    if (model.ExportLuong)
-                    {
-                        headers.Add("Lương");
-                        worksheet.Cells[currentRow, columnIndex].Value = "Lương";
-                        columnIndex++;
+                        if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                        {
+                            worksheet.Cells[currentRow, columnIndex].Value = config.header;
+                            columnIndex++;
+                        }
                     }
 
                     // Định dạng header
@@ -762,43 +748,37 @@ namespace InternshipManagement.Controllers
 
                     currentRow++;
 
-                    // Thêm dữ liệu
+                    // Thêm dữ liệu theo thứ tự cột
                     foreach (var gv in giangVienData)
                     {
                         columnIndex = 1;
-
-                        if (model.ExportMaGv)
+                        foreach (var columnName in orderedColumns)
                         {
-                            worksheet.Cells[currentRow, columnIndex].Value = gv.MaGv;
-                            columnIndex++;
+                            if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                            {
+                                switch (config.key)
+                                {
+                                    case "MaGv":
+                                        worksheet.Cells[currentRow, columnIndex].Value = gv.MaGv;
+                                        break;
+                                    case "HoTenGv":
+                                        worksheet.Cells[currentRow, columnIndex].Value = gv.HoTenGv;
+                                        break;
+                                    case "MaKhoa":
+                                        worksheet.Cells[currentRow, columnIndex].Value = gv.MaKhoa;
+                                        break;
+                                    case "TenKhoa":
+                                        worksheet.Cells[currentRow, columnIndex].Value = gv.TenKhoa;
+                                        break;
+                                    case "Luong":
+                                        worksheet.Cells[currentRow, columnIndex].Value = gv.Luong;
+                                        if (gv.Luong.HasValue)
+                                            worksheet.Cells[currentRow, columnIndex].Style.Numberformat.Format = "#,##0";
+                                        break;
+                                }
+                                columnIndex++;
+                            }
                         }
-
-                        if (model.ExportHoTenGv)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = gv.HoTenGv;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportMaKhoa)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = gv.MaKhoa;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportTenKhoa)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = gv.TenKhoa;
-                            columnIndex++;
-                        }
-
-                        if (model.ExportLuong)
-                        {
-                            worksheet.Cells[currentRow, columnIndex].Value = gv.Luong;
-                            if (gv.Luong.HasValue)
-                                worksheet.Cells[currentRow, columnIndex].Style.Numberformat.Format = "#,##0";
-                            columnIndex++;
-                        }
-
                         currentRow++;
                     }
 

@@ -175,28 +175,49 @@ class SearchableDropdown {
                 const opt = document.createElement('a');
                 opt.className = 'dropdown-item';
                 opt.href = '#';
-                
-                // Handle different data formats
+
+                // Allow custom label/value formatter from options
+                if (typeof this.options.labelFormatter === 'function') {
+                    const formatted = this.options.labelFormatter(option) || {};
+                    const value = formatted.value ?? '';
+                    const text = formatted.text ?? '';
+                    opt.setAttribute('data-value', value);
+                    opt.textContent = text;
+                    this.optionsContainer.appendChild(opt);
+                    return;
+                }
+
+                // Handle different data formats (default behaviors)
                 let value, text;
                 if (option.value !== undefined && option.text !== undefined) {
                     // Standard format: {value, text}
                     value = option.value;
                     text = option.text;
-                } else if (option.MaKhoa !== undefined && option.TenKhoa !== undefined) {
-                    // Khoa format: {MaKhoa, TenKhoa}
-                    value = option.MaKhoa;
-                    text = `${option.TenKhoa} - ${option.MaKhoa}`;
-                } else if (option.MaGv !== undefined && option.HoTenGv !== undefined) {
-                    // GiangVien format: {MaGv, HoTenGv}
-                    value = option.MaGv.toString();
-                    text = `${option.HoTenGv} - ${option.MaGv}`;
+                } else if (
+                    (option.MaKhoa !== undefined && option.TenKhoa !== undefined) ||
+                    (option.maKhoa !== undefined && option.tenKhoa !== undefined)
+                ) {
+                    // Khoa format: PascalCase or camelCase
+                    const mk = option.MaKhoa ?? option.maKhoa;
+                    const tk = option.TenKhoa ?? option.tenKhoa;
+                    value = mk;
+                    text = `${tk}`;
+                } else if (
+                    (option.MaGv !== undefined && option.HoTenGv !== undefined) ||
+                    (option.maGv !== undefined && option.hoTenGv !== undefined)
+                ) {
+                    // GiangVien format: PascalCase or camelCase
+                    const mgv = option.MaGv ?? option.maGv;
+                    const hten = option.HoTenGv ?? option.hoTenGv;
+                    value = String(mgv);
+                    text = `${hten} - ${mgv}`;
                 } else {
                     // Fallback: use first two properties
                     const keys = Object.keys(option);
                     value = option[keys[0]] || '';
                     text = option[keys[1]] || option[keys[0]] || '';
                 }
-                
+
                 opt.setAttribute('data-value', value);
                 opt.textContent = text;
                 this.optionsContainer.appendChild(opt);
