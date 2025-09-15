@@ -194,15 +194,6 @@ class SearchableDropdown {
                     value = option.value;
                     text = option.text;
                 } else if (
-                    (option.MaKhoa !== undefined && option.TenKhoa !== undefined) ||
-                    (option.maKhoa !== undefined && option.tenKhoa !== undefined)
-                ) {
-                    // Khoa format: PascalCase or camelCase
-                    const mk = option.MaKhoa ?? option.maKhoa;
-                    const tk = option.TenKhoa ?? option.tenKhoa;
-                    value = mk;
-                    text = `${tk}`;
-                } else if (
                     (option.MaGv !== undefined && option.HoTenGv !== undefined) ||
                     (option.maGv !== undefined && option.hoTenGv !== undefined)
                 ) {
@@ -211,6 +202,15 @@ class SearchableDropdown {
                     const hten = option.HoTenGv ?? option.hoTenGv;
                     value = String(mgv);
                     text = `${hten} - ${mgv}`;
+                } else if (
+                    (option.MaKhoa !== undefined && option.TenKhoa !== undefined) ||
+                    (option.maKhoa !== undefined && option.tenKhoa !== undefined)
+                ) {
+                    // Khoa format: PascalCase or camelCase
+                    const mk = option.MaKhoa ?? option.maKhoa;
+                    const tk = option.TenKhoa ?? option.tenKhoa;
+                    value = mk;
+                    text = `${tk}`;
                 } else {
                     // Fallback: use first two properties
                     const keys = Object.keys(option);

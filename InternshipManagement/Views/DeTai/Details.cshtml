@@ -118,22 +118,20 @@
         case 1:
             // HK1: 5/9 -> 31/12, nằm trong năm đầu của năm học
             regStart = new DateTime(baseYear, 9, 5);
-            regEnd = new DateTime(baseYear, 12, 31);
             break;
         case 2:
             // HK2: 1/1 -> 25/5, nhưng của NĂM SAU
             regStart = new DateTime(baseYear + 1, 1, 1);
-            regEnd = new DateTime(baseYear + 1, 5, 25);
             break;
         case 3:
             // HK3: 26/5 -> 4/9, nhưng của NĂM SAU
             regStart = new DateTime(baseYear + 1, 5, 26);
-            regEnd = new DateTime(baseYear + 1, 9, 4);
             break;
         default:
             regStart = regEnd = today.AddDays(-1); // đóng luôn nếu dữ liệu kỳ lạ
             break;
     }
+    regEnd = regStart.AddDays(14);
 
     bool registrationClosed = today < regStart || today > regEnd;
 }

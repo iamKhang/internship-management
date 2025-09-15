@@ -79,6 +79,32 @@
                     <input type="date" name="to" class="form-control form-control-sm"
                            value="@(Context.Request.Query["to"].FirstOrDefault() ?? termEnd.ToString("yyyy-MM-dd"))" />
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Khoa</label>
+                    <div class="searchable-dropdown" id="khoaDropdown">
+                        <input type="hidden" name="maKhoa" value="@Context.Request.Query["maKhoa"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Giảng viên</label>
+                    <div class="searchable-dropdown" id="giangVienDropdown">
+                        <input type="hidden" name="maGv" value="@Context.Request.Query["maGv"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-semibold">Năm học</label>
                     <select name="namHoc" class="form-select form-select-sm">
@@ -101,7 +127,7 @@
                         <option value="3" selected="@(Context.Request.Query["hocKy"].FirstOrDefault() == "3")">Học kỳ 3</option>
                     </select>
                 </div>
-                <div class="col-4">
+                <div class="col-12">
                     <div class="d-flex gap-2 justify-content-end">
                         <button class="btn btn-primary btn-sm px-3 py-2" type="submit">
                             <i class="bi bi-funnel me-1"></i>Lọc
@@ -200,6 +226,8 @@
 </div>
 
 @section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
     <script src="~/lib/echarts/dist/echarts.min.js"></script>
     <script>
         const trendData  = @Html.Raw(trendJson);
@@ -258,6 +286,46 @@
                 ]
             });
             window.addEventListener('resize', () => chart.resize());
+        })();
+
+        // Initialize SearchableDropdowns
+        (function() {
+            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                placeholder: 'Tìm kiếm khoa...',
+                searchUrl: '@Url.Action("Search", "Khoa")',
+                searchParam: 'q',
+                debounceDelay: 300,
+                allowClear: true,
+                labelFormatter: function(item) {
+                    const mk = item.MaKhoa ?? item.maKhoa;
+                    const tk = item.TenKhoa ?? item.tenKhoa;
+                    if (mk !== undefined && tk !== undefined) {
+                        return { value: mk, text: `${tk}` };
+                    }
+                    return null;
+                }
+            });
+
+            const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
+                placeholder: 'Tìm kiếm giảng viên...',
+                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+                searchParam: 'q',
+                filterParam: 'maKhoa',
+                debounceDelay: 300,
+                allowClear: true,
+                labelFormatter: function(item) {
+                    const mgv = item.MaGv ?? item.maGv;
+                    const hten = item.HoTenGv ?? item.hoTenGv;
+                    if (mgv !== undefined && hten !== undefined) {
+                        return { value: String(mgv), text: `${mgv} - ${hten}` };
+                    }
+                    return null;
+                }
+            });
+
+            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
+                giangVienDropdown.setFilterValue(e.detail.value || '');
+            });
         })();
 
         // Update date inputs when học kỳ or năm học changes

@@ -37,35 +37,29 @@
             <form method="get" class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small fw-semibold">Khoa</label>
-                    <select name="maKhoa" id="khoaSelect" class="form-select form-select-sm">
-                        <option value="">-- Tất cả khoa --</option>
-                        @if (ViewBag.KhoaOptions != null)
-                        {
-                            foreach (var khoa in ViewBag.KhoaOptions)
-                            {
-                                <option value="@khoa.MaKhoa" selected="@(Context.Request.Query["maKhoa"].ToString() == khoa.MaKhoa)">
-                                    @khoa.TenKhoa (@khoa.MaKhoa)
-                                </option>
-                            }
-                        }
-                    </select>
+                    <div class="searchable-dropdown" id="khoaDropdown">
+                        <input type="hidden" name="maKhoa" value="@Context.Request.Query["maKhoa"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-semibold">Giảng viên</label>
-                    <select name="maGv" id="giangVienSelect" class="form-select form-select-sm">
-                        <option value="">-- Tất cả giảng viên --</option>
-                        @if (ViewBag.GiangVienOptions != null)
-                        {
-                            foreach (var gv in ViewBag.GiangVienOptions)
-                            {
-                                <option value="@gv.MaGv"
-                                        data-khoa="@gv.MaKhoa"
-                                        selected="@(Context.Request.Query["maGv"].ToString() == gv.MaGv.ToString())">
-                                    @gv.TenGv
-                                </option>
-                            }
-                        }
-                    </select>
+                    <div class="searchable-dropdown" id="giangVienDropdown">
+                        <input type="hidden" name="maGv" value="@Context.Request.Query["maGv"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-semibold">Từ ngày</label>
@@ -254,13 +248,55 @@
 </div>
 
 @section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
     <script src="~/lib/echarts/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
-        // Quick term selection
+        // Quick term selection + SearchableDropdown init
         document.addEventListener('DOMContentLoaded', function() {
-            const quickTermBtns = document.querySelectorAll('.quick-term-btn');
+            // Initialize Khoa dropdown
+            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                placeholder: 'Tìm kiếm khoa...',
+                searchUrl: '@Url.Action("Search", "Khoa")',
+                searchParam: 'q',
+                debounceDelay: 300,
+                allowClear: true,
+                labelFormatter: function(item) {
+                    const mk = item.MaKhoa ?? item.maKhoa;
+                    const tk = item.TenKhoa ?? item.tenKhoa;
+                    if (mk !== undefined && tk !== undefined) {
+                        return { value: mk, text: `${tk}` };
+                    }
+                    return null;
+                }
+            });
 
+            // Initialize GiangVien dropdown
+            const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
+                placeholder: 'Tìm kiếm giảng viên...',
+                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+                searchParam: 'q',
+                filterParam: 'maKhoa',
+                debounceDelay: 300,
+                allowClear: true,
+                labelFormatter: function(item) {
+                    const mgv = item.MaGv ?? item.maGv;
+                    const hten = item.HoTenGv ?? item.hoTenGv;
+                    if (mgv !== undefined && hten !== undefined) {
+                        return { value: String(mgv), text: `${mgv} - ${hten}` };
+                    }
+                    return null;
+                }
+            });
+
+            // Update GV list when Khoa changes
+            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
+                giangVienDropdown.setFilterValue(e.detail.value || '');
+            });
+
+            // Quick term buttons
+            const quickTermBtns = document.querySelectorAll('.quick-term-btn');
             quickTermBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
                     const term = this.getAttribute('data-term');
@@ -268,71 +304,25 @@
                     const [startYear, endYear] = year.split('-').map(y => parseInt(y));
 
                     let fromDate, toDate;
-
                     switch(term) {
-                        case '1': // HK1: Sep - Dec
-                            fromDate = new Date(startYear, 8, 1); // Sep 1
-                            toDate = new Date(startYear, 11, 31); // Dec 31
-                            break;
-                        case '2': // HK2: Jan - Apr
-                            fromDate = new Date(endYear, 0, 1); // Jan 1
-                            toDate = new Date(endYear, 3, 30); // Apr 30
-                            break;
-                        case '3': // HK3: May - Aug
-                            fromDate = new Date(endYear, 4, 1); // May 1
-                            toDate = new Date(endYear, 7, 31); // Aug 31
-                            break;
+                        case '1': fromDate = new Date(startYear, 8, 1); toDate = new Date(startYear, 11, 31); break;
+                        case '2': fromDate = new Date(endYear, 0, 1);   toDate = new Date(endYear, 3, 30);  break;
+                        case '3': fromDate = new Date(endYear, 4, 1);   toDate = new Date(endYear, 7, 31);  break;
                     }
 
-                    // Update form inputs
                     const fromInput = document.querySelector('input[name="from"]');
                     const toInput = document.querySelector('input[name="to"]');
-
                     if (fromInput && toInput) {
                         fromInput.value = fromDate.toISOString().split('T')[0];
                         toInput.value = toDate.toISOString().split('T')[0];
 
-                        // Clear other filters
-                        document.querySelector('select[name="maKhoa"]').value = '';
-                        document.querySelector('select[name="maGv"]').value = '';
+                        // Clear combobox filters
+                        if (typeof khoaDropdown.clear === 'function') khoaDropdown.clear();
+                        if (typeof giangVienDropdown.clear === 'function') giangVienDropdown.clear();
                     }
                 });
             });
         });
-
-        // Filter giảng viên theo khoa
-        const khoaSelect = document.getElementById('khoaSelect');
-        const giangVienSelect = document.getElementById('giangVienSelect');
-        const allGiangVienOptions = Array.from(giangVienSelect.options);
-
-        khoaSelect.addEventListener('change', function() {
-            const selectedKhoa = this.value;
-            const currentSelectedGv = giangVienSelect.value;
-
-            // Clear current options except the "Tất cả giảng viên" option
-            giangVienSelect.innerHTML = '<option value="">-- Tất cả giảng viên --</option>';
-
-            // Filter and add matching giảng viên options
-            allGiangVienOptions.forEach(option => {
-                if (option.value === '') return; // Skip the "Tất cả" option
-
-                const khoa = option.getAttribute('data-khoa');
-                if (!selectedKhoa || khoa === selectedKhoa) {
-                    const newOption = option.cloneNode(true);
-                    giangVienSelect.appendChild(newOption);
-
-                    // Restore selection if it was selected before
-                    if (option.value === currentSelectedGv) {
-                        newOption.selected = true;
-                    }
-                }
-            });
-        });
-
-        // Trigger filter on page load if khoa is already selected
-        if (khoaSelect.value) {
-            khoaSelect.dispatchEvent(new Event('change'));
-        }
     </script>
     <script>
         const trendData  = @Html.Raw(trendJson);
