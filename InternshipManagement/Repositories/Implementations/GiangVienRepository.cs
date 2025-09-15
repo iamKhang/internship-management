@@ -24,8 +24,9 @@ namespace InternshipManagement.Repositories.Implementations
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
                 var keyword = filter.Keyword.Trim().ToLower();
-                query = query.Where(g => 
-                    g.HoTenGv != null && g.HoTenGv.ToLower().Contains(keyword));
+                query = query.Where(g =>
+                    (g.HoTenGv != null && g.HoTenGv.ToLower().Contains(keyword)) ||
+                    EF.Functions.Like(g.MaGv.ToString(), $"%{keyword}%"));
             }
 
             if (!string.IsNullOrWhiteSpace(filter.MaKhoa))
@@ -231,8 +232,9 @@ namespace InternshipManagement.Repositories.Implementations
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
                 var keyword = filter.Keyword.Trim().ToLower();
-                query = query.Where(g => 
-                    g.HoTenGv != null && g.HoTenGv.ToLower().Contains(keyword));
+                query = query.Where(g =>
+                    (g.HoTenGv != null && g.HoTenGv.ToLower().Contains(keyword)) ||
+                    EF.Functions.Like(g.MaGv.ToString(), $"%{keyword}%"));
             }
 
             if (!string.IsNullOrWhiteSpace(filter.MaKhoa))

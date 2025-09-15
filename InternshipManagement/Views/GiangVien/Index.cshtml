@@ -198,6 +198,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>STT</th>
+                                    <th>Mã giảng viên</th>
                                     <th>Họ và tên</th>
                                     <th>Lương</th>
                                     <th>Mã khoa</th>
@@ -206,6 +207,7 @@
                             <tbody>
                                 <tr>
                                     <td>1</td>
+                                    <td>1001</td>
                                     <td>Nguyễn Văn A</td>
                                     <td>15</td>
                                     <td>CNTT</td>
@@ -258,8 +260,8 @@
 
                 <div class="alert alert-info mb-4">
                     <i class="bi bi-info-circle me-1"></i>
-                    <strong>Thông tin export:</strong><br/>
-                    File Excel sẽ được tạo với các điều kiện lọc hiện tại và các trường được chọn bên dưới.
+                    <strong>Cấu hình xuất dữ liệu</strong><br/>
+                    Tệp Excel sẽ bao gồm các cột bạn chọn và dữ liệu theo bộ lọc hiện tại.
                     <div id="filterInfo">
                         <!-- Filter info sẽ được hiển thị bằng JavaScript -->
                     </div>
@@ -430,12 +432,12 @@
         }
 
         /* Toast icons */
-        @@font-face {
+        @* @@font-face {
             font-family: 'Toast_icons';
             src: url(data:application/x-font-ttf;charset=utf-8;base64,AAEAAAAKAIAAAwAgT1MvMj0gSRkAAAEoAAAAVmNtYXDnM+eRAAABsAAAAEpnbHlmzVnmlwAAAhgAAAZAaGVhZBEYIl8AAADQAAAANmhoZWEHlgN3AAAArAAAACRobXR4LvgAAAAAAYAAAAAwbG9jYQnUCGIAAAH8AAAAGm1heHABHQBcAAABCAAAACBuYW1lfUUTYwAACFgAAAKpcG9zdAxfTDgAAAsEAAAAggABAAADUv9qAFoEAAAAAAAD6AABAAAAAAAAAAAAAAAAAAAADAABAAAAAQAACcU5MF8PPPUACwPoAAAAANcI7skAAAAA1wjuyQAAAAAD6APoAAAACAACAAAAAAAAAAEAAAAMAFAABwAAAAAAAgAAAAoACgAAAP8AAAAAAAAAAQPqAZAABQAAAnoCvAAAAIwCegK8AAAB4AAxAQIAAAIABQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGZFZABA5wDnCgNS/2oAWgPoAJYAAAABAAAAAAAABAAAAAPoAAAD6AAAA+gAAAPoAAAD6AAAA+gAAAPoAAAD6AAAA+gAAAPoAAAD6AAAAAAAAgAAAAMAAAAUAAMAAQAAABQABAA2AAAABAAEAAEAAOcK//8AAOcA//8AAAABAAQAAAABAAIAAwAEAAUABgAHAAgACQAKAAsAAAAAAAAAQgB8AMIA4gEcAZQCBgJwAo4DAAMgAAAAAwAAAAADlAOUAAsAFwAjAAABFwcXNxc3JzcnBycFDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgEBTXh4L3h4L3h4L3h4AbwDt4qKtwMDt4qKt/0eBeuxsesFBeuxsesCbHh4L3h4L3h4L3h4p4q3AwO3ioq3AwO3irHrBQXrsbHrBQXrAAAAAwAAAAADlAOUAAUAEQAdAAABJwcXAScXDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgEBr2UylwEbMqADt4qKtwMDt4qKt/0eBeuxsesFBeuxsesBrGQylgEcMqKKtwMDt4qKtwMDt4qx6wUF67Gx6wUF6wAAAAAFAAAAAAOUA5cABQARAB0AIQAlAAABFzcnNSMFDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgElFzcnBRc3JwHKxiCnPwFOA6V8fKUDA6V8fKX9aATToJ/UBATUn5/UAh7ANsD9fja/NQGedzNj29F8pAMDpHx8pQMDpXyf1AQE1J+g0wQE0/GhQKGhQKFAAAQAAAAAA74DfgADAAcACgANAAAlMzUjNTM1IwEhCQEhAQHLUlJSUgFj/YwBOv42A5T+NuZUUqf+igIc/ZADFgAEAAAAAAOUA5QAAwAHABMAHwAAATM1IzUzNSMFDgEHLgEnPgE3HgEFHgEXPgE3LgEnDgEBylRUVFQBbgO3ioq3AwO3ioq3/R4F67Gx6wUF67Gx6wEk+lNT0Iq3AwO3ioq3AwO3irHrBQXrsbHrBQXrAAAAAAcAAAAAA+gDMQALABUAJQAuADcAQQBLAAABERQfARYfAzMVHgE7ATI2NRE0JisBNTEWOwEyNjQmJyMiJi8BLgErAQ4BAxUzNTQ2NzMeARcVMzUuAScjIgcjESM1HgEXPgE3LgEnDgEBVQEBAwQCCAjXARENOg0REQ2zDROVExoaE2UQGAQfAxAKYg0RPR8RDZcNEQEeASIalxANAR8CTTo6TQEBTTo6TQJ8/nYEBQIGBAIFArYNERENARENEUoNGicZARMPfQoNARH98Hl5DREBARENeXkaIgEIAe3FOk0CAk06Ok0BAU0AAAAAAgAAAAAC5gMyAAkAEQAAJRQWMyEyNjURITcjFSE1IycjASApHgEaHin+WFBuAeR+JLD8HigoHgGfeT09HgAAAAAAEgDeAAEAAAAAAAAAAQAAAAEAAAAAAAEAEgABAAEAAAAAAAIABwATAAEAAAAAAAMAEgAaAAEAAAAAAAQAEgAsAAEAAAAAAAUACwA+AAEAAAAAAAYAEgBJAAEAAAAAAAoALABbAAEAAAAAAAsAEgCHAAMAAQQJAAAAAgCZAAMAAQQJAAEAJACbAAMAAQQJAAIADgC/AAMAAQQJAAMAJADNAAMAAQQJAAQAJADxAAMAAQQJAAUAFgEVAAMAAQQJAAYAJAErAAMAAQQJAAoAWAFPAAMAAQQJAAsAJAGnIEZpbmFsIFRvYXN0IE1ldHJvcFJlZ3VsYXJGaW5hbCBUb2FzdCBNZXRyb3BGaW5hbCBUb2FzdCBNZXRyb3BWZXJzaW9uIDEuMEZpbmFsIFRvYXN0IE1ldHJvcEZvbnQgZ2VuZXJhdGVkIHVzaW5nIFN5bmNmdXNpb24gTWV0cm8gU3R1ZGlvd3d3LnN5bmNmdXNpb24uY29tACAARgBpAG4AYQBsACAAVABvAGEAcwB0ACAATQBlAHQAcgBvAHAAUgBlAGcAdQBsAGEAcgBGAGkAbgBhAGwAIABUAG8AYQBzAHQAIABNAGUAdAByAG8AcABGAGkAbgBhAGwAIABUAG8AYQBzAHQAIABNAGUAdAByAG8AcABWAGUAcgBzAGkAbwBuACAAMQAuADAARgBpAG4AYQBsACAAVABvAGEAcwB0ACAATQBlAHQAcgBvAHAARgBvAG4AdAAgAGcAZQBuAGUAcgBhAHQAZQBkACAAdQBzAGkAbgBnACAAUwB5AG4AYwBmAHUAcwBpAG8AbgAgAE0AZQB0AHIAbwAgAFMAdAB1AGQAaQBvAHcAdwB3AC4AcwB5AG4AYwBmAHUAcwBpAG8AbgAuAGMAbwBtAAAAAAIAAAAAAAAACgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAECAQMBBAEFAQYBBwEIAQkBCgELAQwBDQAFRXJyb3IHU3VjY2VzcwVBbGFybQdXYXJuaW5nBEluZm8HTWVldGluZwVCbGluawdTdHJldGNoA1NpcANTaXQFVHJhc2gAAAAA) format('truetype');
             font-weight: normal;
             font-style: normal;
-        }
+        } *@
 
         .toast-icons {
             font-family: 'Toast_icons' !important;
@@ -493,6 +495,35 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Sortable columns styles for export modal */
+        .sortable-columns { display: flex; flex-direction: column; gap: 8px; }
+        .column-item { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
+        .column-item.dragging { opacity: 0.6; }
+        .column-handle { cursor: grab; margin-right: 2px; color: #6c757d; }
+        .column-handle i { pointer-events: none; }
+        .column-item .form-check { display: flex; align-items: center; gap: 8px; margin: 0; }
+
+        /* Ensure dialogs use Bootstrap body font (match rest of site) */
+        #exportGvDialog .e-dlg-header-content,
+        #exportGvDialog .e-dlg-content,
+        #exportGvDialog .e-footer-content,
+        #exportGvDialog label,
+        #exportGvDialog input,
+        #exportGvDialog .form-check-label,
+        #exportGvDialog .btn,
+        #exportGvDialog .column-item,
+        #importGvDialog .e-dlg-header-content,
+        #importGvDialog .e-dlg-content,
+        #importGvDialog .e-footer-content,
+        #importGvDialog label,
+        #importGvDialog input,
+        #importGvDialog .form-check-label,
+        #importGvDialog .btn {
+            font-family: var(--bs-body-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif) !important;
+            font-size: var(--bs-body-font-size, 1rem);
+            line-height: var(--bs-body-line-height, 1.5);
         }
     </style>
 
@@ -688,7 +719,7 @@
 
             let filterText = '';
             if (keyword || maKhoa || luongMin || luongMax) {
-                filterText = '<br/><strong>Điều kiện lọc hiện tại:</strong>';
+                filterText = '<br/><strong>Bộ lọc đang áp dụng</strong>';
 
                 if (keyword) {
                     filterText += '<br/>- Từ khóa: ' + keyword;
@@ -709,7 +740,7 @@
                     }
                 }
             } else {
-                filterText = '<br/>Không có điều kiện lọc - sẽ export toàn bộ giảng viên.';
+                filterText = '<br/><em>Không áp dụng bộ lọc</em>: xuất toàn bộ giảng viên.';
             }
 
             filterInfo.innerHTML = filterText;
@@ -1043,5 +1074,51 @@
                 orderInput.value = columnOrder.join(',');
             })();
         });
+
+        // Simple drag-and-drop sorting for export columns
+        (function initSortableColumns() {
+            const container = document.getElementById('sortableColumns');
+            if (!container) return;
+
+            let draggingEl = null;
+
+            container.querySelectorAll('.column-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+                item.addEventListener('dragstart', function (e) {
+                    draggingEl = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    try { e.dataTransfer.setData('text/plain', this.getAttribute('data-column') || ''); } catch {}
+                });
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('dragging');
+                    draggingEl = null;
+                });
+            });
+
+            container.addEventListener('dragover', function (e) {
+                if (!draggingEl) return;
+                e.preventDefault();
+                const afterElement = getDragAfterElement(container, e.clientY);
+                if (afterElement == null) {
+                    container.appendChild(draggingEl);
+                } else if (afterElement !== draggingEl) {
+                    container.insertBefore(draggingEl, afterElement);
+                }
+            });
+
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.column-item:not(.dragging)')];
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element || null;
+            }
+        })();
         </script>
     }

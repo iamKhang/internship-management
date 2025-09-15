@@ -409,53 +409,68 @@ namespace InternshipManagement.Controllers
                 // Sheet dữ liệu chính
                 var worksheet = package.Workbook.Worksheets.Add("DanhSachGiangVien");
 
-                // Định dạng header
-                string[] headers = { "STT", "Họ và tên", "Lương", "Mã khoa" };
+                // Tiêu đề nội dung
+                worksheet.Cells[1, 1].Value = "DANH SÁCH NHẬP THÔNG TIN GIẢNG VIÊN";
+                worksheet.Cells[1, 1].Style.Font.Bold = true;
+                worksheet.Cells[1, 1].Style.Font.Size = 16;
+                worksheet.Cells[1, 1, 1, 5].Merge = true;
+                worksheet.Cells[1, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                // Định dạng header (bắt đầu từ dòng 3)
+                string[] headers = { "STT", "Mã giảng viên", "Họ và tên", "Lương", "Mã khoa" };
+                var headerRowIndex = 3;
                 for (int i = 0; i < headers.Length; i++)
                 {
-                    worksheet.Cells[1, i + 1].Value = headers[i];
-                    worksheet.Cells[1, i + 1].Style.Font.Bold = true;
-                    worksheet.Cells[1, i + 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                    worksheet.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                    worksheet.Cells[headerRowIndex, i + 1].Value = headers[i];
+                    worksheet.Cells[headerRowIndex, i + 1].Style.Font.Bold = true;
+                    worksheet.Cells[headerRowIndex, i + 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    worksheet.Cells[headerRowIndex, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
                 }
 
-                // Thêm dữ liệu mẫu (lương đơn vị triệu)
-                worksheet.Cells[2, 1].Value = "1";
-                worksheet.Cells[2, 2].Value = "Nguyễn Văn A";
-                worksheet.Cells[2, 3].Value = "15";
-                worksheet.Cells[2, 4].Value = "CNTT";
+                // Thêm dữ liệu mẫu (lương đơn vị triệu) ở dòng 4
+                worksheet.Cells[headerRowIndex + 1, 1].Value = "1";          // STT
+                worksheet.Cells[headerRowIndex + 1, 2].Value = "1001";       // Mã GV (có thể để trống)
+                worksheet.Cells[headerRowIndex + 1, 3].Value = "Nguyễn Văn A"; // Họ tên
+                worksheet.Cells[headerRowIndex + 1, 4].Value = "15";         // Lương
+                worksheet.Cells[headerRowIndex + 1, 5].Value = "CNTT";       // Mã khoa
 
                 // Căn chỉnh cột
                 worksheet.Column(1).Width = 8;  // STT
-                worksheet.Column(2).Width = 30; // Họ tên
-                worksheet.Column(3).Width = 15; // Lương
-                worksheet.Column(4).Width = 15; // Mã khoa
+                worksheet.Column(2).Width = 15; // Mã GV
+                worksheet.Column(3).Width = 30; // Họ tên
+                worksheet.Column(4).Width = 15; // Lương
+                worksheet.Column(5).Width = 15; // Mã khoa
 
-                // Sheet hướng dẫn
-                var guideSheet = package.Workbook.Worksheets.Add("HuongDan");
-                guideSheet.Cells[1, 1].Value = "Hướng dẫn nhập liệu:";
-                guideSheet.Cells[1, 1].Style.Font.Bold = true;
-                guideSheet.Cells[1, 1].Style.Font.Size = 14;
+                // Hướng dẫn ngay trên cùng sheet, lệch 3 cột so với bảng chính (bắt đầu cột 9)
+                var guideStartCol = 9; // cột 5 (cuối bảng) + 3 cột trống => cột 9
+                worksheet.Cells[1, guideStartCol].Value = "Hướng dẫn nhập liệu:";
+                worksheet.Cells[1, guideStartCol].Style.Font.Bold = true;
+                worksheet.Cells[1, guideStartCol].Style.Font.Size = 14;
 
                 var row = 3;
-                guideSheet.Cells[row++, 1].Value = "1. STT: Số thứ tự bắt đầu từ 1";
-                guideSheet.Cells[row++, 1].Value = "2. Họ và tên: Nhập đầy đủ họ tên giảng viên";
-                guideSheet.Cells[row++, 1].Value = "3. Lương: Nhập lương theo đơn vị triệu (VD: 15 = 15 triệu), có thể để trống";
-                guideSheet.Cells[row++, 1].Value = "4. Mã khoa: Nhập một trong các mã khoa sau:";
+                worksheet.Cells[row++, guideStartCol].Value = "1. STT: Số thứ tự bắt đầu từ 1";
+                worksheet.Cells[row++, guideStartCol].Value = "2. Mã giảng viên: Có thể để trống. Nếu nhập và tồn tại, hệ thống sẽ cập nhật; nếu để trống hệ thống sẽ tạo mới.";
+                worksheet.Cells[row++, guideStartCol].Value = "3. Họ và tên: Nhập đầy đủ họ tên giảng viên";
+                worksheet.Cells[row++, guideStartCol].Value = "4. Lương: Nhập lương theo đơn vị triệu (VD: 15 = 15 triệu), có thể để trống";
+                worksheet.Cells[row++, guideStartCol].Value = "5. Mã khoa: Nhập một trong các mã khoa sau:";
 
                 row++;
-                guideSheet.Cells[row, 1].Value = "Danh sách mã khoa:";
-                guideSheet.Cells[row, 1].Style.Font.Bold = true;
+                worksheet.Cells[row++, guideStartCol].Value = "Lưu ý quan trọng:";
+                worksheet.Cells[row++, guideStartCol].Value = "- Nếu import cùng một file nhiều lần: hàng có cùng Mã giảng viên sẽ được cập nhật; hàng trùng Họ tên + Khoa + Lương sẽ được bỏ qua.";
+
+                row++;
+                worksheet.Cells[row, guideStartCol].Value = "Danh sách mã khoa:";
+                worksheet.Cells[row, guideStartCol].Style.Font.Bold = true;
                 row++;
 
-                // Thêm danh sách khoa
+                // Thêm danh sách khoa ở cùng sheet
                 foreach (var khoa in khoaList)
                 {
-                    guideSheet.Cells[row, 1].Value = $"- {khoa.MaKhoa}: {khoa.TenKhoa}";
+                    worksheet.Cells[row, guideStartCol].Value = $"- {khoa.MaKhoa}: {khoa.TenKhoa}";
                     row++;
                 }
 
-                guideSheet.Column(1).Width = 60;
+                worksheet.Column(guideStartCol).Width = 60;
 
                 // Trả về file
                 var content = package.GetAsByteArray();
@@ -484,6 +499,7 @@ namespace InternshipManagement.Controllers
 
                 var errors = new List<string>();
                 var importedRows = new List<GiangVienImportRow>();
+                var seenIds = new HashSet<int>();
 
                 if (model.ExcelFile == null || model.ExcelFile.Length <= 0)
                 {
@@ -540,24 +556,44 @@ namespace InternshipManagement.Controllers
                             return RedirectToAction(nameof(Index));
                         }
 
-                        // Skip header row, start from row 2
-                        for (int row = 2; row <= rowCount; row++)
+                        // Determine start row: support title row (1), optional spacer (2), header at row 3
+                        int startRow = 2;
+                        var possibleHeader = worksheet.Cells[3, 1]?.Text;
+                        if (!string.IsNullOrWhiteSpace(possibleHeader) && possibleHeader.Trim().Equals("STT", StringComparison.OrdinalIgnoreCase))
+                        {
+                            startRow = 4; // data starts after header row
+                        }
+
+                        for (int row = startRow; row <= rowCount; row++)
                         {
                             var importRow = new GiangVienImportRow
                             {
-                                STT = row - 1,
-                                HoTen = worksheet.Cells[row, 2].Text?.Trim(),
-                                Luong = decimal.TryParse(worksheet.Cells[row, 3].Text?.Trim(), out decimal luong) ? luong : null,
-                                MaKhoa = worksheet.Cells[row, 4].Text?.Trim()
+                                STT = row, // use real Excel row for clearer error messages
+                                MaGv = int.TryParse(worksheet.Cells[row, 2].Text?.Trim(), out int mgvVal) ? mgvVal : (int?)null,
+                                HoTen = worksheet.Cells[row, 3].Text?.Trim(),
+                                Luong = decimal.TryParse(worksheet.Cells[row, 4].Text?.Trim(), out decimal luong) ? luong : null,
+                                MaKhoa = worksheet.Cells[row, 5].Text?.Trim()
                             };
 
                             // Skip empty rows
-                            if (string.IsNullOrWhiteSpace(importRow.HoTen) &&
+                            if (!importRow.MaGv.HasValue &&
+                                string.IsNullOrWhiteSpace(importRow.HoTen) &&
                                 !importRow.Luong.HasValue &&
                                 string.IsNullOrWhiteSpace(importRow.MaKhoa))
                                 continue;
 
                             var rowErrors = importRow.Validate(validKhoaCodes);
+                            if (importRow.MaGv.HasValue)
+                            {
+                                if (seenIds.Contains(importRow.MaGv.Value))
+                                {
+                                    rowErrors.Add($"Dòng {importRow.STT}: Trùng Mã giảng viên {importRow.MaGv.Value} trong file import");
+                                }
+                                else
+                                {
+                                    seenIds.Add(importRow.MaGv.Value);
+                                }
+                            }
                             if (rowErrors.Any())
                             {
                                 errors.AddRange(rowErrors);
@@ -567,19 +603,7 @@ namespace InternshipManagement.Controllers
                             importedRows.Add(importRow);
                         }
 
-                        // If there are any validation errors, return them
-                        if (errors.Any())
-                        {
-                            var errorMessage = string.Join("\n", errors);
-                            if (IsAjaxRequest(Request))
-                            {
-                                return Json(new { success = false, message = errorMessage });
-                            }
-                            TempData["Error"] = string.Join("<br/>", errors);
-                            return RedirectToAction(nameof(Index));
-                        }
-
-                        if (!importedRows.Any())
+                        if (!importedRows.Any() && !errors.Any())
                         {
                             if (IsAjaxRequest(Request))
                             {
@@ -589,28 +613,75 @@ namespace InternshipManagement.Controllers
                             return RedirectToAction(nameof(Index));
                         }
 
-                        // Import valid rows
+                        // Import valid rows - create only with explicit MaGv; duplicate MaGv => error
+                        int createdCount = 0;
                         foreach (var row in importedRows)
                         {
-                            var giangVien = new GiangVien
+                            try
                             {
-                                HoTenGv = NormalizeName(row.HoTen?.Trim()),
-                                Luong = row.Luong,
-                                MaKhoa = row.MaKhoa
-                            };
+                                var normalizedName = NormalizeName(row.HoTen?.Trim());
 
-                            await _repo.CreateAsync(giangVien);
+                                var exists = await _db.GiangViens.AnyAsync(g => g.MaGv == row.MaGv!.Value);
+                                if (exists)
+                                {
+                                    errors.Add($"Dòng {row.STT}: Mã giảng viên {row.MaGv} đã tồn tại, không thể thêm mới.");
+                                    continue;
+                                }
 
-                            // Tạo tài khoản đăng nhập cho giảng viên
-                            await _userAccountService.CreateTeacherAccountAsync(giangVien.MaGv);
+                                {
+                                    // Create new with explicit MaGv from file
+                                    var giangVien = new GiangVien
+                                    {
+                                        MaGv = row.MaGv!.Value,
+                                        HoTenGv = normalizedName,
+                                        Luong = row.Luong,
+                                        MaKhoa = row.MaKhoa!
+                                    };
+
+                                    var strategy2 = _db.Database.CreateExecutionStrategy();
+                                    await strategy2.ExecuteAsync(async () =>
+                                    {
+                                        using var tx2 = await _db.Database.BeginTransactionAsync();
+                                        try
+                                        {
+                                            await _db.Database.OpenConnectionAsync();
+                                            await _db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [GiangVien] ON");
+                                            _db.GiangViens.Add(giangVien);
+                                            await _db.SaveChangesAsync();
+                                            await _db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [GiangVien] OFF");
+                                            await tx2.CommitAsync();
+                                        }
+                                        catch
+                                        {
+                                            await tx2.RollbackAsync();
+                                            throw;
+                                        }
+                                        finally
+                                        {
+                                            await _db.Database.CloseConnectionAsync();
+                                        }
+                                    });
+                                    await _userAccountService.CreateTeacherAccountAsync(giangVien.MaGv);
+                                    createdCount++;
+                                }
+                            }
+                            catch (Exception rex)
+                            {
+                                errors.Add($"Dòng {row.STT}: Lỗi khi import - {rex.Message}");
+                            }
                         }
 
-                        var successMessage = $"Đã import thành công {importedRows.Count} giảng viên.";
+                        var successMessage = $"Import xong: tạo mới {createdCount}.";
+                        if (errors.Any())
+                        {
+                            successMessage += "\nCác lỗi: ";
+                            successMessage += string.Join("\n", errors);
+                        }
                         if (IsAjaxRequest(Request))
                         {
                             return Json(new { success = true, message = successMessage });
                         }
-                        TempData["Success"] = successMessage;
+                        TempData["Success"] = successMessage.Replace("\n", "<br/>");
                         return RedirectToAction(nameof(Index));
                     }
                 }

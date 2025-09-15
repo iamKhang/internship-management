@@ -70,6 +70,13 @@
         <e-toast-position X="Right" Y="Top"></e-toast-position>
     </ejs-toast>
 
+    @* Server messages bridge for toasts *@
+    <div id="serverMessages"
+         data-success="@TempData["Success"]"
+         data-warning="@TempData["Warning"]"
+         data-error="@TempData["Error"]"
+         style="display:none;"></div>
+
     <script>
         // Toast functions must be defined BEFORE the tag helper renders
         var toastObj;
@@ -180,6 +187,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>STT</th>
+                                        <th>Mã sinh viên</th>
                                         <th>Họ và tên</th>
                                         <th>Năm sinh</th>
                                         <th>Quê quán</th>
@@ -189,6 +197,7 @@
                                 <tbody>
                                     <tr>
                                         <td>1</td>
+                                        <td>20</td>
                                         <td>Nguyễn Văn A</td>
                                         <td>2000</td>
                                         <td>Hà Nội</td>
@@ -254,8 +263,8 @@
                         <div class="col-12">
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle me-1"></i>
-                                <strong>Thông tin export:</strong><br/>
-                                File Excel sẽ được tạo với các điều kiện lọc hiện tại và các trường được chọn bên dưới.
+                                <strong>Cấu hình xuất dữ liệu</strong><br/>
+                                Tệp Excel sẽ bao gồm các cột bạn chọn và dữ liệu theo bộ lọc hiện tại.
                                 <div id="filterInfo">
                                     <!-- Filter info sẽ được hiển thị bằng JavaScript -->
                                 </div>
@@ -399,9 +408,12 @@
                         <label class="form-label">Khoa <span class="text-danger">*</span></label>
                         <select class="form-select" id="MaKhoa" name="MaKhoa" required>
                             <option value="">-- Chọn khoa --</option>
-                            @foreach (var khoa in Model.KhoaOptions)
+                            @if (Model?.KhoaOptions != null)
                             {
-                                <option value="@khoa.Value">@khoa.Text</option>
+                                foreach (var khoa in Model.KhoaOptions)
+                                {
+                                    <option value="@khoa.Value">@khoa.Text</option>
+                                }
                             }
                         </select>
                         <div class="invalid-feedback" id="maKhoaError"></div>
@@ -959,7 +971,7 @@
 
             let filterText = '';
             if (keyword || maKhoa || namSinhMin || namSinhMax) {
-                filterText = '<br/><strong>Điều kiện lọc hiện tại:</strong>';
+                filterText = '<br/><strong>Bộ lọc đang áp dụng</strong>';
                 
                 if (keyword) {
                     filterText += '<br/>- Từ khóa: ' + keyword;
@@ -980,7 +992,7 @@
                     }
                 }
             } else {
-                filterText = '<br/>Không có điều kiện lọc - sẽ export toàn bộ sinh viên.';
+                filterText = '<br/><em>Không áp dụng bộ lọc</em>: xuất toàn bộ sinh viên.';
             }
             
             filterInfo.innerHTML = filterText;
@@ -1005,6 +1017,19 @@
 
             // Make modal globally accessible
             window.modal = modal;
+
+            // Show server messages (from TempData) as toasts
+            try {
+                const bridge = document.getElementById('serverMessages');
+                if (bridge) {
+                    const success = bridge.dataset.success;
+                    const warning = bridge.dataset.warning;
+                    const error = bridge.dataset.error;
+                    if (success) showMessage(success, 'Success');
+                    if (warning) showMessage(warning, 'Warning');
+                    if (error) showMessage(error, 'Error');
+                }
+            } catch {}
         });
 
         // Global function for edit button
