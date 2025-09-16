@@ -246,7 +246,8 @@ namespace InternshipManagement.Controllers
             bool includeKinhPhi = true, bool includeNoiThucTap = true,
             bool includeSvMaSv = true, bool includeSvHoTen = true, bool includeSvTrangThai = true,
             bool includeSvNgayDK = true, bool includeSvKetQua = true, bool includeSvGhiChu = true,
-            string? columnOrder = null)
+            string? columnOrder = null,
+            string? studentColumnOrder = null)
         {
             var rows = await _repo.GetChiTietForExportAsync(filter);
 
@@ -284,52 +285,58 @@ namespace InternshipManagement.Controllers
             var c = 1;
             var columnMap = new Dictionary<string, int>();
 
-            // Header nhóm Đề tài
+            // Header nhóm Đề tài (bao gồm cả cột STT)
             ws.Cell(r, c).Value = "THÔNG TIN ĐỀ TÀI";
             var startCol = c;
-            c++;
-
-            if (includeMaDt) c++;
-            if (includeTenDt) c++;
-            if (includeGiangVien) c++;
-            if (includeKhoa) c++;
-            if (includeHocKy) c++;
-            if (includeSoLuong) c += 2;
-            if (includeKinhPhi) c++;
-            if (includeNoiThucTap) c++;
-
-            var endCol = c - 1;
+            var groupDtCols = 1; // +1 cho cột STT
+            if (includeMaDt) groupDtCols++;
+            if (includeTenDt) groupDtCols++;
+            if (includeGiangVien) groupDtCols++;
+            if (includeKhoa) groupDtCols++;
+            if (includeHocKy) groupDtCols++;
+            if (includeSoLuong) groupDtCols += 2; // SoLuong + DaDu
+            if (includeKinhPhi) groupDtCols++;
+            if (includeNoiThucTap) groupDtCols++;
+            var endCol = startCol + groupDtCols - 1;
             if (endCol >= startCol)
             {
-                ws.Range(r, startCol, r, endCol).Merge();
-                ws.Range(r, startCol, r, endCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                var rangeDt = ws.Range(r, startCol, r, endCol);
+                rangeDt.Merge();
+                rangeDt.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                rangeDt.Style.Font.Bold = true;
+                rangeDt.Style.Font.FontSize = 12;
+                rangeDt.Style.Fill.BackgroundColor = XLColor.FromHtml("#E8F3FF");
             }
+            c = endCol + 1;
 
             // Header nhóm Sinh viên
             if (includeSvMaSv || includeSvHoTen || includeSvTrangThai || includeSvNgayDK || includeSvKetQua || includeSvGhiChu)
             {
                 startCol = c;
                 ws.Cell(r, c).Value = "THÔNG TIN SINH VIÊN";
-                c++;
+                // tính số cột nhóm SV theo includes
+                var groupSvCols = 0;
+                if (includeSvMaSv) groupSvCols++;
+                if (includeSvHoTen) groupSvCols++;
+                if (includeSvTrangThai) groupSvCols++;
+                if (includeSvNgayDK) groupSvCols++;
+                if (includeSvKetQua) groupSvCols++;
+                if (includeSvGhiChu) groupSvCols++;
 
-                if (includeSvMaSv) c++;
-                if (includeSvHoTen) c++;
-                if (includeSvTrangThai) c++;
-                if (includeSvNgayDK) c++;
-                if (includeSvKetQua) c++;
-                if (includeSvGhiChu) c++;
-
-                endCol = c - 1;
+                endCol = startCol + groupSvCols - 1;
                 if (endCol >= startCol)
                 {
-                    ws.Range(r, startCol, r, endCol).Merge();
-                    ws.Range(r, startCol, r, endCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    var rangeSv = ws.Range(r, startCol, r, endCol);
+                    rangeSv.Merge();
+                    rangeSv.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    rangeSv.Style.Font.Bold = true;
+                    rangeSv.Style.Font.FontSize = 12;
+                    rangeSv.Style.Fill.BackgroundColor = XLColor.FromHtml("#E8F3FF");
                 }
+                c = endCol + 1;
             }
 
-            // Định dạng header nhóm
-            ws.Row(r).Style.Font.Bold = true;
-            ws.Row(r).Style.Fill.BackgroundColor = XLColor.FromHtml("#E8F3FF");
+            // Không tô cả hàng để tránh tràn nền ngoài phạm vi nhóm
             r++;
 
             // STT luôn là cột đầu tiên
@@ -385,17 +392,41 @@ namespace InternshipManagement.Controllers
                 }
             }
 
-            // Header sinh viên (always in fixed order)
-            AddHeader("MaSv", "Mã SV", includeSvMaSv);
-            AddHeader("HoTenSv", "Họ tên SV", includeSvHoTen);
-            AddHeader("TrangThai", "Trạng thái", includeSvTrangThai);
-            AddHeader("NgayDK", "Ngày đăng ký", includeSvNgayDK);
-            AddHeader("KetQua", "Kết quả", includeSvKetQua);
-            AddHeader("GhiChu", "Ghi chú", includeSvGhiChu);
+            // Header sinh viên theo thứ tự được chỉ định
+            var svColumnConfigs = new Dictionary<string, (bool include, string header, string key)>
+            {
+                ["includeSvMaSv"] = (includeSvMaSv, "Mã SV", "MaSv"),
+                ["includeSvHoTen"] = (includeSvHoTen, "Họ tên SV", "HoTenSv"),
+                ["includeSvTrangThai"] = (includeSvTrangThai, "Trạng thái", "TrangThai"),
+                ["includeSvNgayDK"] = (includeSvNgayDK, "Ngày đăng ký", "NgayDK"),
+                ["includeSvKetQua"] = (includeSvKetQua, "Kết quả", "KetQua"),
+                ["includeSvGhiChu"] = (includeSvGhiChu, "Ghi chú", "GhiChu"),
+            };
+            var orderedSvColumns = new List<string>();
+            if (!string.IsNullOrEmpty(studentColumnOrder))
+            {
+                orderedSvColumns = studentColumnOrder.Split(',').ToList();
+            }
+            else
+            {
+                orderedSvColumns = svColumnConfigs.Keys.ToList();
+            }
+            foreach (var svCol in orderedSvColumns)
+            {
+                if (svColumnConfigs.TryGetValue(svCol, out var cfg) && cfg.include)
+                {
+                    AddHeader(cfg.key, cfg.header, true);
+                }
+            }
 
-            // Định dạng header
-            ws.Row(r).Style.Font.Bold = true;
-            ws.Row(r).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
+            // Định dạng header chỉ trong phạm vi cột thực tế
+            if (columnMap.Count > 0)
+            {
+                var maxCol = columnMap.Values.Max();
+                var headerRangeAll = ws.Range(r, 1, r, maxCol);
+                headerRangeAll.Style.Font.Bold = true;
+                headerRangeAll.Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F4F7");
+            }
 
             // Body
             string StatusVi(byte? st) => st switch
@@ -493,28 +524,44 @@ namespace InternshipManagement.Controllers
                         }
                     }
 
-                    // Thông tin sinh viên (không gộp ô, luôn theo thứ tự cố định)
-                    if (includeSvMaSv)
-                        ws.Cell(r, columnMap["MaSv"]).Value = x.MaSv.HasValue ? x.MaSv.Value.ToString() : "";
-                    
-                    if (includeSvHoTen)
-                        ws.Cell(r, columnMap["HoTenSv"]).Value = x.HoTenSv ?? "";
-                    
-                    if (includeSvTrangThai)
-                        ws.Cell(r, columnMap["TrangThai"]).Value = StatusVi(x.TrangThai);
-                    
-                    if (includeSvNgayDK && x.NgayDangKy.HasValue)
+                    // Thông tin sinh viên theo thứ tự chỉ định
+                    foreach (var svCol in orderedSvColumns)
                     {
-                        var cNgayDK = ws.Cell(r, columnMap["NgayDK"]);
-                        cNgayDK.Value = x.NgayDangKy.Value;
-                        cNgayDK.Style.DateFormat.Format = "dd/MM/yyyy";
+                        if (svColumnConfigs.TryGetValue(svCol, out var cfg) && cfg.include)
+                        {
+                            switch (cfg.key)
+                            {
+                                case "MaSv":
+                                    if (columnMap.ContainsKey("MaSv"))
+                                        ws.Cell(r, columnMap["MaSv"]).Value = x.MaSv.HasValue ? x.MaSv.Value.ToString() : "";
+                                    break;
+                                case "HoTenSv":
+                                    if (columnMap.ContainsKey("HoTenSv"))
+                                        ws.Cell(r, columnMap["HoTenSv"]).Value = x.HoTenSv ?? "";
+                                    break;
+                                case "TrangThai":
+                                    if (columnMap.ContainsKey("TrangThai"))
+                                        ws.Cell(r, columnMap["TrangThai"]).Value = StatusVi(x.TrangThai);
+                                    break;
+                                case "NgayDK":
+                                    if (columnMap.ContainsKey("NgayDK") && x.NgayDangKy.HasValue)
+                                    {
+                                        var cNgayDK = ws.Cell(r, columnMap["NgayDK"]);
+                                        cNgayDK.Value = x.NgayDangKy.Value;
+                                        cNgayDK.Style.DateFormat.Format = "dd/MM/yyyy";
+                                    }
+                                    break;
+                                case "KetQua":
+                                    if (columnMap.ContainsKey("KetQua") && x.KetQua.HasValue)
+                                        ws.Cell(r, columnMap["KetQua"]).Value = (double)x.KetQua.Value;
+                                    break;
+                                case "GhiChu":
+                                    if (columnMap.ContainsKey("GhiChu"))
+                                        ws.Cell(r, columnMap["GhiChu"]).Value = x.GhiChu ?? "";
+                                    break;
+                            }
+                        }
                     }
-                    
-                    if (includeSvKetQua && x.KetQua.HasValue)
-                        ws.Cell(r, columnMap["KetQua"]).Value = (double)x.KetQua.Value;
-                    
-                    if (includeSvGhiChu)
-                        ws.Cell(r, columnMap["GhiChu"]).Value = x.GhiChu ?? "";
                 }
 
                 // Gộp ô STT

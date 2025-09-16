@@ -189,7 +189,7 @@
 
                 <div class="row">
                     <div class="col-12">
-                        <div id="sortableColumns" class="sortable-columns">
+                        <div id="sortableColumnsDt" class="sortable-columns">
                             <div class="column-item" data-column="includeMaDt">
                                 <div class="column-handle">
                                     <i class="bi bi-grip-vertical"></i>
@@ -306,47 +306,84 @@
                         </label>
                     </div>
                     <div class="ps-4 mt-2" id="sinhVienOptions" style="display: none;">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvHoTen" value="true" id="chkSvHoTen" checked disabled>
-                            <input type="hidden" name="includeSvHoTen" value="false">
-                            <label class="form-check-label" for="chkSvHoTen">
-                                <i class="bi bi-person me-1"></i> Họ tên sinh viên
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvMaSv" value="true" id="chkSvMaSv" checked disabled>
-                            <input type="hidden" name="includeSvMaSv" value="false">
-                            <label class="form-check-label" for="chkSvMaSv">
-                                <i class="bi bi-person-badge me-1"></i> Mã sinh viên
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvTrangThai" value="true" id="chkSvTrangThai" checked disabled>
-                            <input type="hidden" name="includeSvTrangThai" value="false">
-                            <label class="form-check-label" for="chkSvTrangThai">
-                                <i class="bi bi-info-circle me-1"></i> Trạng thái
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvNgayDK" value="true" id="chkSvNgayDK" checked disabled>
-                            <input type="hidden" name="includeSvNgayDK" value="false">
-                            <label class="form-check-label" for="chkSvNgayDK">
-                                <i class="bi bi-calendar-check me-1"></i> Ngày đăng ký
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvKetQua" value="true" id="chkSvKetQua" checked disabled>
-                            <input type="hidden" name="includeSvKetQua" value="false">
-                            <label class="form-check-label" for="chkSvKetQua">
-                                <i class="bi bi-trophy me-1"></i> Kết quả
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvGhiChu" value="true" id="chkSvGhiChu" checked disabled>
-                            <input type="hidden" name="includeSvGhiChu" value="false">
-                            <label class="form-check-label" for="chkSvGhiChu">
-                                <i class="bi bi-chat-text me-1"></i> Ghi chú
-                            </label>
+                        <div id="sortableColumnsSv" class="sortable-columns">
+                            <div class="column-item" data-column="includeSvHoTen">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvHoTen" value="true" id="chkSvHoTen" checked>
+                                    <input type="hidden" name="includeSvHoTen" value="false">
+                                    <label class="form-check-label" for="chkSvHoTen">
+                                        <i class="bi bi-person me-1"></i> Họ tên sinh viên
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvMaSv">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvMaSv" value="true" id="chkSvMaSv" checked>
+                                    <input type="hidden" name="includeSvMaSv" value="false">
+                                    <label class="form-check-label" for="chkSvMaSv">
+                                        <i class="bi bi-person-badge me-1"></i> Mã sinh viên
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvTrangThai">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvTrangThai" value="true" id="chkSvTrangThai" checked>
+                                    <input type="hidden" name="includeSvTrangThai" value="false">
+                                    <label class="form-check-label" for="chkSvTrangThai">
+                                        <i class="bi bi-info-circle me-1"></i> Trạng thái
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvNgayDK">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvNgayDK" value="true" id="chkSvNgayDK" checked>
+                                    <input type="hidden" name="includeSvNgayDK" value="false">
+                                    <label class="form-check-label" for="chkSvNgayDK">
+                                        <i class="bi bi-calendar-check me-1"></i> Ngày đăng ký
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvKetQua">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvKetQua" value="true" id="chkSvKetQua" checked>
+                                    <input type="hidden" name="includeSvKetQua" value="false">
+                                    <label class="form-check-label" for="chkSvKetQua">
+                                        <i class="bi bi-trophy me-1"></i> Kết quả
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvGhiChu">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvGhiChu" value="true" id="chkSvGhiChu" checked>
+                                    <input type="hidden" name="includeSvGhiChu" value="false">
+                                    <label class="form-check-label" for="chkSvGhiChu">
+                                        <i class="bi bi-chat-text me-1"></i> Ghi chú
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -497,8 +534,8 @@
             });
 
             // Initialize sortable columns
-            const sortableColumns = document.getElementById('sortableColumns');
-            const sortable = new Sortable(sortableColumns, {
+            const sortableColumnsDt = document.getElementById('sortableColumnsDt');
+            const sortableDt = new Sortable(sortableColumnsDt, {
                 handle: '.column-handle',
                 animation: 150,
                 ghostClass: 'sortable-ghost',
@@ -508,6 +545,18 @@
                     updateColumnOrder();
                 }
             });
+
+            // Sortable for student columns
+            const sortableColumnsSv = document.getElementById('sortableColumnsSv');
+            if (sortableColumnsSv) {
+                const sortableSv = new Sortable(sortableColumnsSv, {
+                    handle: '.column-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function() { updateColumnOrder(); }
+                });
+            }
 
             // Export modal logic with separate actions for student details
             const exportModalEl = document.getElementById('exportModal');
@@ -537,19 +586,33 @@
 
             // Function to update column order
             function updateColumnOrder() {
-                const columnItems = document.querySelectorAll('#sortableColumns .column-item');
-                const columnOrder = Array.from(columnItems).map(item => item.getAttribute('data-column'));
-                
-                // Store column order in hidden input
-                let orderInput = document.getElementById('columnOrder');
-                if (!orderInput) {
-                    orderInput = document.createElement('input');
-                    orderInput.type = 'hidden';
-                    orderInput.name = 'columnOrder';
-                    orderInput.id = 'columnOrder';
-                    document.getElementById('exportModal').appendChild(orderInput);
+                // DeTai columns order
+                const dtItems = document.querySelectorAll('#sortableColumnsDt .column-item');
+                const dtOrder = Array.from(dtItems).map(item => item.getAttribute('data-column'));
+                // SinhVien columns order
+                const svItems = document.querySelectorAll('#sortableColumnsSv .column-item');
+                const svOrder = Array.from(svItems).map(item => item.getAttribute('data-column'));
+
+                // Store orders in hidden inputs
+                let orderDt = document.getElementById('columnOrder');
+                if (!orderDt) {
+                    orderDt = document.createElement('input');
+                    orderDt.type = 'hidden';
+                    orderDt.name = 'columnOrder';
+                    orderDt.id = 'columnOrder';
+                    document.getElementById('exportModal').appendChild(orderDt);
                 }
-                orderInput.value = columnOrder.join(',');
+                orderDt.value = dtOrder.join(',');
+
+                let orderSv = document.getElementById('studentColumnOrder');
+                if (!orderSv) {
+                    orderSv = document.createElement('input');
+                    orderSv.type = 'hidden';
+                    orderSv.name = 'studentColumnOrder';
+                    orderSv.id = 'studentColumnOrder';
+                    document.getElementById('exportModal').appendChild(orderSv);
+                }
+                orderSv.value = svOrder.join(',');
             }
 
             // Select all fields button
@@ -597,11 +660,11 @@
                     }
                 });
 
-                // Add column order parameter
+                // Add column order parameters (DeTai + SinhVien)
                 const columnOrder = document.getElementById('columnOrder')?.value;
-                if (columnOrder) {
-                    queryParams.append('columnOrder', columnOrder);
-                }
+                if (columnOrder) queryParams.append('columnOrder', columnOrder);
+                const studentColumnOrder = document.getElementById('studentColumnOrder')?.value;
+                if (studentColumnOrder) queryParams.append('studentColumnOrder', studentColumnOrder);
 
                 // Đóng modal và export
                 modal.hide();
