@@ -16,6 +16,7 @@ namespace InternshipManagement.Models.ViewModels
     public class SinhVienImportRow
     {
         public int STT { get; set; }
+        public int? MaSv { get; set; }
         public string? HoTen { get; set; }
         public int? NamSinh { get; set; }
         public string? QueQuan { get; set; }
@@ -25,6 +26,11 @@ namespace InternshipManagement.Models.ViewModels
         {
             var errors = new List<string>();
             
+            if (!MaSv.HasValue)
+                errors.Add($"Dòng {STT}: Mã sinh viên không được để trống");
+            else if (MaSv.Value <= 0)
+                errors.Add($"Dòng {STT}: Mã sinh viên phải là số nguyên dương");
+
             // Kiểm tra họ tên
             if (string.IsNullOrWhiteSpace(HoTen))
                 errors.Add($"Dòng {STT}: Họ tên không được để trống");
@@ -37,13 +43,11 @@ namespace InternshipManagement.Models.ViewModels
             int namHienTai = DateTime.Now.Year;
             if (!NamSinh.HasValue)
                 errors.Add($"Dòng {STT}: Năm sinh không được để trống");
-            else if (NamSinh < 1900 || NamSinh > namHienTai - 16) // Giả sử sinh viên phải >= 16 tuổi
-                errors.Add($"Dòng {STT}: Năm sinh không hợp lệ (từ 1900 đến {namHienTai - 16})");
+            else if (NamSinh < 1900 || NamSinh > namHienTai - 17) // Sinh viên phải >= 17 tuổi
+                errors.Add($"Dòng {STT}: Năm sinh không hợp lệ (từ 1900 đến {namHienTai - 17})");
             
-            // Kiểm tra quê quán
-            if (string.IsNullOrWhiteSpace(QueQuan))
-                errors.Add($"Dòng {STT}: Quê quán không được để trống");
-            else if (QueQuan.Length > 200) // Giả sử độ dài tối đa là 200
+            // Kiểm tra quê quán (có thể để trống)
+            if (!string.IsNullOrWhiteSpace(QueQuan) && QueQuan.Length > 200)
                 errors.Add($"Dòng {STT}: Quê quán không được vượt quá 200 ký tự");
             
             // Kiểm tra mã khoa

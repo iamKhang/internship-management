@@ -1,0 +1,108 @@
+/* SearchableDropdown Component Styles */
+
+.searchable-dropdown .dropdown-menu {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    background: white;
+    display: none;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1050;
+    width: 100%;
+}
+
+.searchable-dropdown .dropdown-options .dropdown-item {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #f8f9fa;
+    color: #212529;
+    text-decoration: none;
+    display: block;
+}
+
+.searchable-dropdown .dropdown-options .dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.searchable-dropdown .dropdown-options .dropdown-item.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.searchable-dropdown .dropdown-options .dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.searchable-dropdown {
+    position: relative;
+}
+
+.searchable-dropdown .dropdown-arrow {
+    transition: transform 0.2s ease;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    z-index: 10;
+    line-height: 1;
+}
+
+.searchable-dropdown .dropdown-arrow.rotated {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.searchable-dropdown .form-control {
+    cursor: text;
+    padding-right: 2.5rem; /* Make room for arrow */
+    position: relative;
+    z-index: 1;
+}
+
+.searchable-dropdown .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Loading state */
+.searchable-dropdown .dropdown-item.loading {
+    color: #6c757d;
+    font-style: italic;
+    pointer-events: none;
+}
+
+/* Error state */
+.searchable-dropdown .dropdown-item.error {
+    color: #dc3545;
+    pointer-events: none;
+}
+
+/* No results state */
+.searchable-dropdown .dropdown-item.no-results {
+    color: #6c757d;
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .searchable-dropdown .dropdown-menu {
+        max-height: 250px;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .searchable-dropdown .dropdown-menu {
+        background: #212529;
+        border-color: #495057;
+    }
+    
+    .searchable-dropdown .dropdown-options .dropdown-item {
+        color: #f8f9fa;
+        border-bottom-color: #495057;
+    }
+    
+    .searchable-dropdown .dropdown-options .dropdown-item:hover {
+        background-color: #495057;
+    }
+}

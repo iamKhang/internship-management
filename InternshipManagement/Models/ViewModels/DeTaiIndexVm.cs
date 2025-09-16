@@ -6,7 +6,6 @@ namespace InternshipManagement.Models.ViewModels
     public class DeTaiIndexVm
     {
         public DeTaiFilterVm Filter { get; set; } = new();
-        public PagingRequest Paging { get; set; } = new();
         public List<DeTaiListItemVm> Items { get; set; } = new();
 
         // Dữ liệu combobox filter

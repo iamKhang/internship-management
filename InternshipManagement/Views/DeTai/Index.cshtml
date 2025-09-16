@@ -4,10 +4,11 @@
     ViewData["Title"] = "Danh sách Đề tài";
 }
 
+
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
         <h5 class="mb-0">Danh sách Đề tài</h5>
-        <div class="small text-muted">Tổng: <strong>@Model.Paging.TotalRows</strong> bản ghi</div>
+        <div class="small text-muted">Tổng: <strong>@Model.Items.Count</strong> bản ghi</div>
     </div>
 
     <div class="card shadow-sm mb-3">
@@ -43,15 +44,29 @@
                 <!-- Hàng 1 -->
                 <div class="col-md-4">
                     <label class="form-label">Khoa</label>
-                    <select class="form-select" asp-for="Filter.MaKhoa" asp-items="Model.KhoaOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
+                    <div class="searchable-dropdown" id="khoaDropdown">
+                        <input type="hidden" asp-for="Filter.MaKhoa" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Giảng viên</label>
-                    <select class="form-select" asp-for="Filter.MaGv" asp-items="Model.GiangVienOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
+                    <div class="searchable-dropdown" id="giangVienDropdown">
+                        <input type="hidden" asp-for="Filter.MaGv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Học kỳ</label>
@@ -88,138 +103,59 @@
                     </a>
                 </div>
                 </div>
-        
-       
-                <!-- Hàng 2 -->
-               
-               
-                  
-
-
             </form>
         </div>
     </div>
 
 
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-            <thead class="table-primary">
-                <tr>
-                    <th class="text-nowrap fw-bold">Mã</th>
-                    <th class="text-nowrap fw-bold">Tên đề tài</th>
-                    <th class="text-nowrap fw-bold">Khoa</th>
-                    <th class="text-nowrap fw-bold text-center">Số lượng</th>
-                    <th class="text-nowrap fw-bold">Học kỳ</th>
-                    <th class="text-nowrap fw-bold text-end">Kinh phí</th>
-                    <th class="text-nowrap fw-bold text-center">Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Items.Any())
-                {
-                    foreach (var d in Model.Items)
-                    {
-                        <tr>
-                            <td><code class="text-monospace">@d.MaDt</code></td>
-                            <td>@d.TenDt</td>
-                            <td>@d.KhoaOptionVm.TenKhoa</td>
-                            <td class="text-center">@d.SoChapNhan/@d.SoLuongToiDa</td>
-                            <td>@d.HocKy/@d.NamHoc</td>
-                            <td class="text-end text-success">@d.KinhPhi triệu</td>
-                            <td class="text-center">
-                                <a class="btn btn-sm btn-primary text-white"
-                                   asp-action="Details"
-                                   asp-route-id="@d.MaDt"
-                                   title="Xem chi tiết">
+    <!-- Responsive Grid Container -->
+    <div class="grid-responsive">
+        <div class="grid-container">
+            <ejs-grid id="DeTaiGrid" dataSource="@Model.Items" allowPaging="true" allowSorting="true" allowMultiSorting="true" allowFiltering="false" allowResizing="true" gridLines="Both" height="600" width="100%" grid-lines="Both" enable-hover="false" enable-alt-row="true">
+                <e-grid-pagesettings pageSize="20" pageSizes="new List<int>{10,20,50,100,500}"></e-grid-pagesettings> 
+                <e-grid-columns>
+                <e-grid-column field="MaDt" headerText="Mã đề tài" width="120" template="#maDtTemplate"></e-grid-column>
+                <e-grid-column field="TenDt" headerText="Tên đề tài" width="300"></e-grid-column>
+                <e-grid-column headerText="Khoa" width="150" template="#khoaTemplate"></e-grid-column>
+                <e-grid-column headerText="Số lượng" width="120" textAlign="Center" template="#soLuongTemplate"></e-grid-column>
+                <e-grid-column headerText="Học kỳ" width="120" template="#hocKyTemplate"></e-grid-column>
+                <e-grid-column headerText="Kinh phí" width="120" textAlign="Right" template="#kinhPhiTemplate"></e-grid-column>
+                <e-grid-column headerText="Hành động" width="120" textAlign="Center" template="#actionTemplate"></e-grid-column>
+            </e-grid-columns>
+        </ejs-grid>
+    </div>
+
+
+    @* Templates for custom column rendering *@
+    <script id="maDtTemplate" type="text/x-template">
+        <span class="ma-dt-code">${MaDt}</span>
+    </script>
+
+    <script id="khoaTemplate" type="text/x-template">
+        ${KhoaOptionVm.TenKhoa}
+    </script>
+
+    <script id="soLuongTemplate" type="text/x-template">
+        <span class="so-luong-badge">${SoChapNhan}/${SoLuongToiDa}</span>
+    </script>
+
+    <script id="hocKyTemplate" type="text/x-template">
+        HK${HocKy} / ${NamHoc}
+    </script>
+
+    <script id="kinhPhiTemplate" type="text/x-template">
+        <span class="kinh-phi-text">${KinhPhi} triệu</span>
+    </script>
+
+    <script id="actionTemplate" type="text/x-template">
+        <a class="btn btn-sm btn-primary text-white" href="/DeTai/Details/${MaDt}" title="Xem chi tiết">
                                     <i class="bi bi-eye"></i> Xem
                                 </a>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-5 fs-5">
-                            <i class="bi bi-info-circle me-2"></i>Không có dữ liệu
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <div class="card-footer bg-white">
-        @{
-            var total = Model.Paging.TotalRows;
-            var pageIndex = Model.Paging.PageIndex <= 0 ? 1 : Model.Paging.PageIndex;
-            var pageSize = Model.Paging.PageSize <= 0 ? 20 : Model.Paging.PageSize;
-            var totalPages = (int)Math.Ceiling((double)total / pageSize);
-        }
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div class="text-muted">
-                Trang <strong>@pageIndex</strong> / <strong>@(totalPages == 0 ? 1 : totalPages)</strong>
-            </div>
-            <nav aria-label="pagination">
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item @(pageIndex <= 1 ? "disabled" : "")">
-                        <a class="page-link bg-primary text-white border-primary"
-                           asp-action="Index"
-                           asp-route-PageIndex="@(pageIndex - 1)"
-                           asp-route-PageSize="@pageSize"
-                           asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
-                           asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
-                           asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
-                           asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                           asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
-                           asp-route-Filter.Keyword="@Model.Filter.Keyword"
-                           asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())"
-                           aria-label="Previous">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                    </li>
-                    @for (int i = Math.Max(1, pageIndex - 2); i <= Math.Min(totalPages == 0 ? 1 : totalPages, pageIndex + 2); i++)
-                    {
-                        <li class="page-item @(i == pageIndex ? "active" : "")">
-                            <a class="page-link @(i == pageIndex ? "bg-primary text-white border-primary" : "bg-white border-primary text-dark")"
-                               asp-action="Index"
-                               asp-route-PageIndex="@i"
-                               asp-route-PageSize="@pageSize"
-                               asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
-                               asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
-                               asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
-                               asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                               asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
-                               asp-route-Filter.Keyword="@Model.Filter.Keyword"
-                               asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                               asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())">
-                                @i
-                            </a>
-                        </li>
-                    }
-                    <li class="page-item @(pageIndex >= (totalPages == 0 ? 1 : totalPages) ? "disabled" : "")">
-                        <a class="page-link bg-primary text-white border-primary"
-                           asp-action="Index"
-                           asp-route-PageIndex="@(pageIndex + 1)"
-                           asp-route-PageSize="@pageSize"
-                           asp-route-Filter.MaKhoa="@Model.Filter.MaKhoa"
-                           asp-route-Filter.MaGv="@(Model.Filter.MaGv?.ToString())"
-                           asp-route-Filter.HocKy="@(Model.Filter.HocKy?.ToString())"
-                           asp-route-Filter.NamHoc="@(Model.Filter.NamHoc?.ToString())"
-                           asp-route-Filter.TinhTrang="@(Model.Filter.TinhTrang.ToString())"
-                           asp-route-Filter.Keyword="@Model.Filter.Keyword"
-                           asp-route-Filter.MinKinhPhi="@(Model.Filter.MinKinhPhi?.ToString())"
-                           asp-route-Filter.MaxKinhPhi="@(Model.Filter.MaxKinhPhi?.ToString())"
-                           aria-label="Next">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    </div>
+    </script>
+    @* EJ2 Grid component *@
 </div>
 
+@* Export Modal *@
 <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0">
@@ -243,71 +179,120 @@
 
                 <div class="row">
                     <div class="col-12">
-                        <label class="form-label fw-bold">Chọn các trường cần export:</label>
+                        <label class="form-label fw-bold">Chọn và sắp xếp thứ tự các cột:</label>
+                        <div class="small text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Kéo thả để sắp xếp thứ tự hiển thị. Bỏ chọn để ẩn cột.
+                        </div>
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeMaDt" value="true" id="chkMaDt" checked>
-                            <input type="hidden" name="includeMaDt" value="false">
-                            <label class="form-check-label" for="chkMaDt">
-                                <i class="bi bi-tag me-1"></i> Mã đề tài
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeTenDt" value="true" id="chkTenDt" checked>
-                            <input type="hidden" name="includeTenDt" value="false">
-                            <label class="form-check-label" for="chkTenDt">
-                                <i class="bi bi-file-text me-1"></i> Tên đề tài
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeGiangVien" value="true" id="chkGiangVien" checked>
-                            <input type="hidden" name="includeGiangVien" value="false">
-                            <label class="form-check-label" for="chkGiangVien">
-                                <i class="bi bi-person me-1"></i> Giảng viên
-                            </label>
-                        </div>
-                            <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeKhoa" value="true" id="chkKhoa" checked>
-                            <input type="hidden" name="includeKhoa" value="false">
-                            <label class="form-check-label" for="chkKhoa">
-                                <i class="bi bi-building me-1"></i> Khoa
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                    
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeHocKy" value="true" id="chkHocKy" checked>
-                            <input type="hidden" name="includeHocKy" value="false">
-                            <label class="form-check-label" for="chkHocKy">
-                                <i class="bi bi-calendar me-1"></i> Học kỳ/Năm học
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSoLuong" value="true" id="chkSoLuong" checked>
-                            <input type="hidden" name="includeSoLuong" value="false">
-                            <label class="form-check-label" for="chkSoLuong">
-                                <i class="bi bi-hash me-1"></i> Số lượng
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeKinhPhi" value="true" id="chkKinhPhi" checked>
-                            <input type="hidden" name="includeKinhPhi" value="false">
-                            <label class="form-check-label" for="chkKinhPhi">
-                                <i class="bi bi-currency-dollar me-1"></i> Kinh phí
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeNoiThucTap" value="true" id="chkNoiThucTap" checked>
-                            <input type="hidden" name="includeNoiThucTap" value="false">
-                            <label class="form-check-label" for="chkNoiThucTap">
-                                <i class="bi bi-geo-alt me-1"></i> Nơi thực tập
-                            </label>
+                    <div class="col-12">
+                        <div id="sortableColumnsDt" class="sortable-columns">
+                            <div class="column-item" data-column="includeMaDt">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeMaDt" value="true" id="chkMaDt" checked>
+                                    <input type="hidden" name="includeMaDt" value="false">
+                                    <label class="form-check-label" for="chkMaDt">
+                                        <i class="bi bi-tag me-1"></i> Mã đề tài
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeTenDt">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeTenDt" value="true" id="chkTenDt" checked>
+                                    <input type="hidden" name="includeTenDt" value="false">
+                                    <label class="form-check-label" for="chkTenDt">
+                                        <i class="bi bi-file-text me-1"></i> Tên đề tài
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeGiangVien">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeGiangVien" value="true" id="chkGiangVien" checked>
+                                    <input type="hidden" name="includeGiangVien" value="false">
+                                    <label class="form-check-label" for="chkGiangVien">
+                                        <i class="bi bi-person me-1"></i> Giảng viên
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeKhoa">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeKhoa" value="true" id="chkKhoa" checked>
+                                    <input type="hidden" name="includeKhoa" value="false">
+                                    <label class="form-check-label" for="chkKhoa">
+                                        <i class="bi bi-building me-1"></i> Khoa
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeHocKy">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeHocKy" value="true" id="chkHocKy" checked>
+                                    <input type="hidden" name="includeHocKy" value="false">
+                                    <label class="form-check-label" for="chkHocKy">
+                                        <i class="bi bi-calendar me-1"></i> Học kỳ/Năm học
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeSoLuong">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSoLuong" value="true" id="chkSoLuong" checked>
+                                    <input type="hidden" name="includeSoLuong" value="false">
+                                    <label class="form-check-label" for="chkSoLuong">
+                                        <i class="bi bi-hash me-1"></i> Số lượng
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeKinhPhi">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeKinhPhi" value="true" id="chkKinhPhi" checked>
+                                    <input type="hidden" name="includeKinhPhi" value="false">
+                                    <label class="form-check-label" for="chkKinhPhi">
+                                        <i class="bi bi-currency-dollar me-1"></i> Kinh phí
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="column-item" data-column="includeNoiThucTap">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeNoiThucTap" value="true" id="chkNoiThucTap" checked>
+                                    <input type="hidden" name="includeNoiThucTap" value="false">
+                                    <label class="form-check-label" for="chkNoiThucTap">
+                                        <i class="bi bi-geo-alt me-1"></i> Nơi thực tập
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -321,47 +306,84 @@
                         </label>
                     </div>
                     <div class="ps-4 mt-2" id="sinhVienOptions" style="display: none;">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvHoTen" value="true" id="chkSvHoTen" checked disabled>
-                            <input type="hidden" name="includeSvHoTen" value="false">
-                            <label class="form-check-label" for="chkSvHoTen">
-                                <i class="bi bi-person me-1"></i> Họ tên sinh viên
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvMaSv" value="true" id="chkSvMaSv" checked disabled>
-                            <input type="hidden" name="includeSvMaSv" value="false">
-                            <label class="form-check-label" for="chkSvMaSv">
-                                <i class="bi bi-person-badge me-1"></i> Mã sinh viên
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvTrangThai" value="true" id="chkSvTrangThai" checked disabled>
-                            <input type="hidden" name="includeSvTrangThai" value="false">
-                            <label class="form-check-label" for="chkSvTrangThai">
-                                <i class="bi bi-info-circle me-1"></i> Trạng thái
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvNgayDK" value="true" id="chkSvNgayDK" checked disabled>
-                            <input type="hidden" name="includeSvNgayDK" value="false">
-                            <label class="form-check-label" for="chkSvNgayDK">
-                                <i class="bi bi-calendar-check me-1"></i> Ngày đăng ký
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvKetQua" value="true" id="chkSvKetQua" checked disabled>
-                            <input type="hidden" name="includeSvKetQua" value="false">
-                            <label class="form-check-label" for="chkSvKetQua">
-                                <i class="bi bi-trophy me-1"></i> Kết quả
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="includeSvGhiChu" value="true" id="chkSvGhiChu" checked disabled>
-                            <input type="hidden" name="includeSvGhiChu" value="false">
-                            <label class="form-check-label" for="chkSvGhiChu">
-                                <i class="bi bi-chat-text me-1"></i> Ghi chú
-                            </label>
+                        <div id="sortableColumnsSv" class="sortable-columns">
+                            <div class="column-item" data-column="includeSvHoTen">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvHoTen" value="true" id="chkSvHoTen" checked>
+                                    <input type="hidden" name="includeSvHoTen" value="false">
+                                    <label class="form-check-label" for="chkSvHoTen">
+                                        <i class="bi bi-person me-1"></i> Họ tên sinh viên
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvMaSv">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvMaSv" value="true" id="chkSvMaSv" checked>
+                                    <input type="hidden" name="includeSvMaSv" value="false">
+                                    <label class="form-check-label" for="chkSvMaSv">
+                                        <i class="bi bi-person-badge me-1"></i> Mã sinh viên
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvTrangThai">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvTrangThai" value="true" id="chkSvTrangThai" checked>
+                                    <input type="hidden" name="includeSvTrangThai" value="false">
+                                    <label class="form-check-label" for="chkSvTrangThai">
+                                        <i class="bi bi-info-circle me-1"></i> Trạng thái
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvNgayDK">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvNgayDK" value="true" id="chkSvNgayDK" checked>
+                                    <input type="hidden" name="includeSvNgayDK" value="false">
+                                    <label class="form-check-label" for="chkSvNgayDK">
+                                        <i class="bi bi-calendar-check me-1"></i> Ngày đăng ký
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvKetQua">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvKetQua" value="true" id="chkSvKetQua" checked>
+                                    <input type="hidden" name="includeSvKetQua" value="false">
+                                    <label class="form-check-label" for="chkSvKetQua">
+                                        <i class="bi bi-trophy me-1"></i> Kết quả
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="column-item" data-column="includeSvGhiChu">
+                                <div class="column-handle">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="includeSvGhiChu" value="true" id="chkSvGhiChu" checked>
+                                    <input type="hidden" name="includeSvGhiChu" value="false">
+                                    <label class="form-check-label" for="chkSvGhiChu">
+                                        <i class="bi bi-chat-text me-1"></i> Ghi chú
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -392,129 +414,270 @@
 </div>
 
 @section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        .sortable-columns {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+        }
+        
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            background-color: white;
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+        
+        .column-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        .column-item.sortable-ghost {
+            opacity: 0.4;
+            background-color: #e3f2fd;
+        }
+        
+        .column-item.sortable-chosen {
+            background-color: #e3f2fd;
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        
+        .column-handle {
+            margin-right: 0.75rem;
+            color: #6c757d;
+            cursor: grab;
+        }
+        
+        .column-handle:active {
+            cursor: grabbing;
+        }
+        
+        .column-item .form-check {
+            flex: 1;
+            margin: 0;
+        }
+        
+        .column-item .form-check-label {
+            cursor: pointer;
+            margin: 0;
+        }
+    </style>
     <script>
-(function () {
-  const form = document.getElementById('filterForm');
-  const btnExport = document.getElementById('btnExport');
-  const tinhTrang = document.getElementById('Filter_TinhTrang');
-  const chkSinhVien = document.getElementById('chkSinhVien');
-  const sinhVienOptions = document.getElementById('sinhVienOptions');
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle filter form submission
+            const filterForm = document.getElementById('filterForm');
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
 
-  const urlExport = '@Url.Action("Export","DeTai")';
-  const urlExportDetail = '@Url.Action("ExportChiTiet","DeTai")';
-  const urlGetLecturers = '@Url.Action("GetLecturersByDepartment","DeTai")';
+                // Build query string with filter parameters (no paging)
+                var formData = new FormData(this);
+                var queryParams = new URLSearchParams();
 
-  // Lấy các dropdown
-  const khoaSelect = document.getElementById('Filter_MaKhoa');
-  const giangVienSelect = document.getElementById('Filter_MaGv');
+                for (var pair of formData.entries()) {
+                    queryParams.append(pair[0], pair[1]);
+                }
 
-  // Hàm cập nhật danh sách giảng viên theo khoa
-  function updateLecturers(maKhoa) {
-    fetch(`${urlGetLecturers}?maKhoa=${encodeURIComponent(maKhoa || '')}`)
-      .then(response => response.json())
-      .then(data => {
-        // Xóa tất cả options hiện tại
-        giangVienSelect.innerHTML = '';
+                window.location.href = '@Url.Action("Index", "DeTai")?' + queryParams.toString();
+            });
 
-        // Thêm option mặc định
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.text = '-- Tất cả --';
-        giangVienSelect.appendChild(defaultOption);
+            // Initialize SearchableDropdown for khoa
+            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                placeholder: 'Tìm kiếm khoa...',
+                searchUrl: '@Url.Action("Search", "Khoa")',
+                searchParam: 'q',
+                debounceDelay: 300,
+                allowClear: true
+            });
 
-        // Thêm các options mới
-        data.options.forEach(option => {
-          const opt = document.createElement('option');
-          opt.value = option.value;
-          opt.text = option.text;
-          giangVienSelect.appendChild(opt);
-        });
-      })
-      .catch(error => {
-        console.error('Error updating lecturers:', error);
-      });
-  }
+            // Initialize SearchableDropdown for giảng viên
+            const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
+                placeholder: 'Tìm kiếm giảng viên...',
+                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+                searchParam: 'q',
+                filterParam: 'maKhoa',
+                debounceDelay: 300,
+                allowClear: true,
+                labelFormatter: function(item) {
+                    // Expect API returns {MaGv, HoTenGv}
+                    if (item) {
+                        const mgv = item.MaGv ?? item.maGv;
+                        const hten = item.HoTenGv ?? item.hoTenGv;
+                        if (mgv !== undefined && hten !== undefined) {
+                            return { value: String(mgv), text: `${mgv} - ${hten}` };
+                        }
+                    }
+                    // Fallback to default parser
+                    return null;
+                }
+            });
 
-  // Xử lý khi thay đổi khoa
-  khoaSelect.addEventListener('change', function() {
-    const selectedMaKhoa = this.value;
-    updateLecturers(selectedMaKhoa);
-    // Reset giảng viên về "tất cả" khi thay đổi khoa để tránh conflict
-    giangVienSelect.value = '';
+            // Handle khoa change to update lecturers
+            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
+                const selectedMaKhoa = e.detail.value;
+                giangVienDropdown.setFilterValue(selectedMaKhoa);
+            });
+
+            // Listen for selection changes
+            document.getElementById('giangVienDropdown').addEventListener('selectionChanged', function(e) {
+                console.log('Giảng viên selected:', e.detail);
+            });
+
+            // Initialize sortable columns
+            const sortableColumnsDt = document.getElementById('sortableColumnsDt');
+            const sortableDt = new Sortable(sortableColumnsDt, {
+                handle: '.column-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onEnd: function(evt) {
+                    // Update column order when drag ends
+                    updateColumnOrder();
+                }
+            });
+
+            // Sortable for student columns
+            const sortableColumnsSv = document.getElementById('sortableColumnsSv');
+            if (sortableColumnsSv) {
+                const sortableSv = new Sortable(sortableColumnsSv, {
+                    handle: '.column-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function() { updateColumnOrder(); }
+                });
+            }
+
+            // Export modal logic with separate actions for student details
+            const exportModalEl = document.getElementById('exportModal');
+            const modal = new bootstrap.Modal(exportModalEl);
+            const urlExport = '@Url.Action("Export","DeTai")';
+            const urlExportChiTiet = '@Url.Action("ExportChiTiet","DeTai")';
+
+            // Handle "Kèm thông tin sinh viên" checkbox
+            document.getElementById('chkSinhVien')?.addEventListener('change', function() {
+                const sinhVienOptions = document.getElementById('sinhVienOptions');
+                const svCheckboxes = sinhVienOptions.querySelectorAll('input[type="checkbox"]');
+
+                if (this.checked) {
+                    sinhVienOptions.style.display = 'block';
+                    svCheckboxes.forEach(cb => {
+                        cb.disabled = false;
+                        cb.checked = true;
+                    });
+                } else {
+                    sinhVienOptions.style.display = 'none';
+                    svCheckboxes.forEach(cb => {
+                        cb.disabled = true;
+                        cb.checked = false;
+                    });
+                }
+            });
+
+            // Function to update column order
+            function updateColumnOrder() {
+                // DeTai columns order
+                const dtItems = document.querySelectorAll('#sortableColumnsDt .column-item');
+                const dtOrder = Array.from(dtItems).map(item => item.getAttribute('data-column'));
+                // SinhVien columns order
+                const svItems = document.querySelectorAll('#sortableColumnsSv .column-item');
+                const svOrder = Array.from(svItems).map(item => item.getAttribute('data-column'));
+
+                // Store orders in hidden inputs
+                let orderDt = document.getElementById('columnOrder');
+                if (!orderDt) {
+                    orderDt = document.createElement('input');
+                    orderDt.type = 'hidden';
+                    orderDt.name = 'columnOrder';
+                    orderDt.id = 'columnOrder';
+                    document.getElementById('exportModal').appendChild(orderDt);
+                }
+                orderDt.value = dtOrder.join(',');
+
+                let orderSv = document.getElementById('studentColumnOrder');
+                if (!orderSv) {
+                    orderSv = document.createElement('input');
+                    orderSv.type = 'hidden';
+                    orderSv.name = 'studentColumnOrder';
+                    orderSv.id = 'studentColumnOrder';
+                    document.getElementById('exportModal').appendChild(orderSv);
+                }
+                orderSv.value = svOrder.join(',');
+            }
+
+            // Select all fields button
+            document.getElementById('selectAllFields')?.addEventListener('click', function() {
+                const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
+                checkboxes.forEach(cb => cb.checked = true);
+            });
+
+            // Clear all fields button
+            document.getElementById('clearAllFields')?.addEventListener('click', function() {
+                const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
+                checkboxes.forEach(cb => cb.checked = false);
+                // Also uncheck the main sinh vien checkbox
+                document.getElementById('chkSinhVien').checked = false;
+                document.getElementById('sinhVienOptions').style.display = 'none';
+            });
+
+            // Export button with conditional action selection
+            document.getElementById('btnExport')?.addEventListener('click', function(e) {
+                // Validate at least one column is selected (excluding hidden inputs)
+                const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:checked:not([type="hidden"]):not([disabled])');
+                if (checkboxes.length === 0) {
+                    alert('Vui lòng chọn ít nhất một cột để export!');
+                    return;
+                }
+
+                // Update column order before export
+                updateColumnOrder();
+
+                // Get current filter parameters
+                var form = document.getElementById('filterForm');
+                var formData = new FormData(form);
+                var queryParams = new URLSearchParams();
+
+                // Add filter parameters
+                for (var pair of formData.entries()) {
+                    queryParams.append(pair[0], pair[1]);
+                }
+
+                // Add column selection parameters from modal
+                const modalCheckboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([type="hidden"])');
+                modalCheckboxes.forEach(cb => {
+                    if (!cb.disabled) {
+                        queryParams.append(cb.name, cb.checked ? 'true' : 'false');
+                    }
+                });
+
+                // Add column order parameters (DeTai + SinhVien)
+                const columnOrder = document.getElementById('columnOrder')?.value;
+                if (columnOrder) queryParams.append('columnOrder', columnOrder);
+                const studentColumnOrder = document.getElementById('studentColumnOrder')?.value;
+                if (studentColumnOrder) queryParams.append('studentColumnOrder', studentColumnOrder);
+
+                // Đóng modal và export
+                modal.hide();
+                document.querySelector('.modal-backdrop')?.remove();
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('padding-right');
+
+                // Choose export action based on whether student info is included
+                const includeSinhVien = document.getElementById('chkSinhVien').checked;
+                const exportUrl = includeSinhVien ? urlExportChiTiet : urlExport;
+
+                window.location.href = exportUrl + '?' + queryParams.toString();
+            });
   });
-
-  // Khởi tạo danh sách giảng viên khi trang load
-  // Chỉ update nếu có khoa được chọn nhưng không có giảng viên được chọn
-  const initialMaKhoa = khoaSelect.value;
-  const initialMaGv = giangVienSelect.value;
-  if (initialMaKhoa && !initialMaGv) {
-    updateLecturers(initialMaKhoa);
-  }
-
-  // Tạo URL với query string từ form và các checkbox
-  function exportWith(url) {
-    // Lấy các tham số từ form filter
-    const params = new URLSearchParams(new FormData(form));
-
-    window.location.href = url + '?' + params.toString();
-  }
-
-  // Modal Bootstrap 5
-  const exportModalEl = document.getElementById('exportModal');
-  const modal = new bootstrap.Modal(exportModalEl);
-
-  // Xử lý khi mở modal export
-  exportModalEl.addEventListener('show.bs.modal', function () {
-    // Nếu chọn "Chưa có sinh viên đăng ký" -> ẩn phần sinh viên
-    if (tinhTrang && tinhTrang.value === 'OnlyNoStudent') {
-      chkSinhVien.checked = false;
-      chkSinhVien.disabled = true;
-      sinhVienOptions.style.display = 'none';
-    } else {
-      chkSinhVien.disabled = false;
-    }
-  });
-
-  // Xử lý hiện/ẩn tùy chọn sinh viên
-  chkSinhVien.addEventListener('change', function() {
-    sinhVienOptions.style.display = this.checked ? 'block' : 'none';
-    const svCheckboxes = sinhVienOptions.querySelectorAll('input[type="checkbox"]');
-    svCheckboxes.forEach(cb => {
-      cb.disabled = !this.checked;
-    });
-  });
-
-  // Xử lý nút chọn tất cả
-  document.getElementById('selectAllFields')?.addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
-    checkboxes.forEach(cb => cb.checked = true);
-  });
-
-  // Xử lý nút bỏ chọn tất cả
-  document.getElementById('clearAllFields')?.addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:not([disabled])');
-    checkboxes.forEach(cb => cb.checked = false);
-  });
-
-  // Validation cho export
-  document.getElementById('btnExport')?.addEventListener('click', function(e) {
-    const checkboxes = document.querySelectorAll('#exportModal input[type="checkbox"]:checked:not([disabled])');
-    if (checkboxes.length === 0) {
-      e.preventDefault();
-      alert('Vui lòng chọn ít nhất một trường để export!');
-      return;
-    }
-
-    // Đóng modal trước khi export
-    modal.hide();
-    document.querySelector('.modal-backdrop')?.remove();
-    document.body.classList.remove('modal-open');
-    document.body.style.removeProperty('padding-right');
-
-    // Export dữ liệu
-    exportWith(chkSinhVien.checked ? urlExportDetail : urlExport);
-  });
-
-})();
     </script>
 }

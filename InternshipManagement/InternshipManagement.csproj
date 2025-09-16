@@ -27,6 +27,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Syncfusion.EJ2.AspNet.Core" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Licensing" Version="29.1.33" />
   </ItemGroup>
 
   <ItemGroup>

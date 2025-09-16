@@ -33,189 +33,55 @@ namespace InternshipManagement.Data
 
         // Removed Random to ensure deterministic seeding for EF Core migrations
 
-        private static List<(string maDt, string maKhoa, int maGv, byte hocKy, string namHoc, int soLuongToiDa)> GetAllTopicsData()
-        {
-            // Đây là danh sách tất cả đề tài được seed trong hệ thống
-            // Dựa trên cấu trúc: mỗi GV có 5 đề tài, GV 1-5 thuộc CNTT, GV 6-10 thuộc CNCK, ...
-            var topics = new List<(string maDt, string maKhoa, int maGv, byte hocKy, string namHoc, int soLuongToiDa)>();
-            
-            for (int i = 1; i <= 450; i++)
-            {
-                var maDt = $"DT{i:D3}";
-                var maGv = ((i - 1) / 5) + 1; // Mỗi GV có 5 đề tài
-                var maKhoa = KhoaMapping.FirstOrDefault(k => maGv >= k.Value.startGv && maGv <= k.Value.endGv).Key ?? "CNTT";
-                
-                // Lấy thông tin từ dữ liệu seed thực tế (sẽ được đọc từ seed data)
-                var (hocKy, namHoc, soLuongToiDa) = GetTopicDetailsFromSeedData(maDt);
-                
-                topics.Add((maDt, maKhoa, maGv, hocKy, namHoc, soLuongToiDa));
-            }
-            
-            return topics;
-        }
-
-        private static (byte hocKy, string namHoc, int soLuongToiDa) GetTopicDetailsFromSeedData(string maDt)
-        {
-            // Deterministic values based on topic ID to ensure EF Core migration stability
-            var topicIndex = int.Parse(maDt.Substring(2));
-
-            // Use deterministic calculations instead of random
-            var hocKy = (byte)((topicIndex % 3) + 1); // Cycles through 1, 2, 3
-            var namHocs = new[] { "2018-2019", "2019-2020", "2020-2021", "2021-2022", "2022-2023", "2023-2024", "2024-2025" };
-            var namHoc = namHocs[topicIndex % namHocs.Length];
-            var soLuongToiDa = 2 + (topicIndex % 3); // Cycles through 2, 3, 4
-
-            return (hocKy, namHoc, soLuongToiDa);
-        }
+        // Removed dynamic topic data generation methods
+        // All DeTai data is now static to prevent EF Core migration conflicts
 
         private static List<HuongDan> GenerateHuongDanData()
         {
-            var huongDans = new List<HuongDan>();
-            var studentActiveTopics = new Dictionary<(int maSv, byte hocKy, string namHoc), string>(); // Theo dõi đề tài active của SV
-            var topicActiveCount = new Dictionary<string, int>(); // Theo dõi số lượng active của đề tài
-
-            // Lấy danh sách tất cả đề tài từ dữ liệu đã seed (đọc từ logic seed thực tế)
-            var allTopics = GetAllTopicsData();
-            
-            // Khởi tạo counter cho các đề tài
-            foreach (var topic in allTopics)
+            // Return completely static, deterministic data instead of generating dynamically
+            // This ensures EF Core migrations don't detect changes on every build
+            var huongDans = new List<HuongDan>
             {
-                topicActiveCount[topic.maDt] = 0;
-            }
-
-            // Tạo hướng dẫn cho từng sinh viên
-            foreach (var khoaInfo in KhoaMapping)
-            {
-                var maKhoa = khoaInfo.Key;
-                var (startSv, endSv, startGv, endGv) = khoaInfo.Value;
-
-                // Lấy đề tài của khoa này
-                var khoaTopics = allTopics.Where(t => t.maKhoa == maKhoa).ToList();
-
-                for (int maSv = startSv; maSv <= endSv; maSv++)
-                {
-                    // Mỗi sinh viên sẽ đăng ký số đề tài deterministic dựa trên maSv
-                    var numRegistrations = 3 + (maSv % 5); // Cycles through 3, 4, 5, 6, 7
-                    var selectedTopics = khoaTopics.OrderBy(x => x.maDt.GetHashCode()).Take(numRegistrations).ToList();
-
-                    foreach (var topic in selectedTopics)
-                    {
-                        var (maDt, _, maGv, hocKy, namHoc, soLuongToiDa) = topic;
-                        
-                        // Kiểm tra ràng buộc sinh viên (chỉ 1 active topic per semester)
-                        var studentKey = (maSv, hocKy, namHoc);
-                        var hasActiveInSemester = studentActiveTopics.ContainsKey(studentKey);
-
-                        // Tạo trạng thái random
-                        var availableStates = new List<HuongDanStatus> { HuongDanStatus.Pending, HuongDanStatus.Rejected, HuongDanStatus.Withdrawn };
-                        
-                        // Chỉ thêm trạng thái active nếu SV chưa có active topic trong kỳ này và đề tài chưa đầy
-                        if (!hasActiveInSemester && topicActiveCount[maDt] < soLuongToiDa)
-                        {
-                            availableStates.AddRange(new[] { HuongDanStatus.Accepted, HuongDanStatus.InProgress, HuongDanStatus.Completed });
-                        }
-
-                        var trangThai = availableStates[maSv % availableStates.Count];
-
-                        // Tạo thời gian phù hợp với học kỳ/năm học
-                        var (createdAt, acceptedAt) = GenerateTimestamps(hocKy, namHoc, trangThai, maSv);
-
-                        var huongDan = new HuongDan
-                        {
-                            MaSv = maSv,
-                            MaDt = maDt,
-                            MaGv = maGv,
-                            TrangThai = trangThai,
-                            CreatedAt = createdAt,
-                            AcceptedAt = acceptedAt,
-                            GhiChu = GenerateGhiChu(trangThai)
-                        };
-
-                        // Nếu completed thì có điểm
-                        if (trangThai == HuongDanStatus.Completed)
-                        {
-                            // Deterministic score based on maSv and maDt
-                            var scoreHash = (maSv + maDt.GetHashCode()) % 41; // 0-40 range
-                            huongDan.KetQua = 6.0m + (scoreHash * 0.1m); // 6.0 - 10.0 range
-                        }
-
-                        // Cập nhật tracking
-                        if (IsActiveStatus(trangThai))
-                        {
-                            studentActiveTopics[studentKey] = maDt;
-                            topicActiveCount[maDt]++;
-                        }
-
-                        huongDans.Add(huongDan);
-                    }
+                // Sample static data - you can add more as needed
+                // Format: MaSv, MaDt, MaGv, TrangThai, CreatedAt, AcceptedAt, KetQua, GhiChu
+                new HuongDan {
+                    MaSv = 1001, MaDt = "DT001", MaGv = 1, TrangThai = HuongDanStatus.Accepted,
+                    CreatedAt = new DateTime(2024, 9, 5), AcceptedAt = new DateTime(2024, 9, 10),
+                    KetQua = null, GhiChu = "Đã được chấp nhận tham gia"
+                },
+                new HuongDan {
+                    MaSv = 1001, MaDt = "DT002", MaGv = 1, TrangThai = HuongDanStatus.Pending,
+                    CreatedAt = new DateTime(2024, 9, 15), AcceptedAt = null,
+                    KetQua = null, GhiChu = "Đang chờ giảng viên duyệt"
+                },
+                new HuongDan {
+                    MaSv = 1002, MaDt = "DT001", MaGv = 1, TrangThai = HuongDanStatus.Completed,
+                    CreatedAt = new DateTime(2024, 9, 3), AcceptedAt = new DateTime(2024, 9, 8),
+                    KetQua = 8.5m, GhiChu = "Đã hoàn thành đề tài"
+                },
+                new HuongDan {
+                    MaSv = 1002, MaDt = "DT003", MaGv = 2, TrangThai = HuongDanStatus.InProgress,
+                    CreatedAt = new DateTime(2024, 9, 12), AcceptedAt = new DateTime(2024, 9, 18),
+                    KetQua = null, GhiChu = "Đang thực hiện đề tài"
+                },
+                new HuongDan {
+                    MaSv = 1003, MaDt = "DT004", MaGv = 2, TrangThai = HuongDanStatus.Rejected,
+                    CreatedAt = new DateTime(2024, 9, 20), AcceptedAt = null,
+                    KetQua = null, GhiChu = "Đề tài không phù hợp"
+                },
+                new HuongDan {
+                    MaSv = 1004, MaDt = "DT005", MaGv = 3, TrangThai = HuongDanStatus.Withdrawn,
+                    CreatedAt = new DateTime(2024, 9, 25), AcceptedAt = null,
+                    KetQua = null, GhiChu = "Sinh viên xin rút đăng ký"
                 }
-            }
+                // Add more static records as needed for testing
+            };
 
             return huongDans;
         }
 
-        private static bool IsActiveStatus(HuongDanStatus status)
-        {
-            return status == HuongDanStatus.Accepted || 
-                   status == HuongDanStatus.InProgress || 
-                   status == HuongDanStatus.Completed;
-        }
-
-        private static (DateTime createdAt, DateTime? acceptedAt) GenerateTimestamps(byte hocKy, string namHoc, HuongDanStatus trangThai, int maSv)
-        {
-            var parts = namHoc.Split('-');
-            var startYear = int.Parse(parts[0]);
-            var endYear = int.Parse(parts[1]);
-
-            DateTime semesterStart, semesterEnd;
-            
-            switch (hocKy)
-            {
-                case 1: // HK1: 9-12 năm đầu
-                    semesterStart = new DateTime(startYear, 9, 1);
-                    semesterEnd = new DateTime(startYear, 12, 31);
-                    break;
-                case 2: // HK2: 1-4 năm sau
-                    semesterStart = new DateTime(endYear, 1, 1);
-                    semesterEnd = new DateTime(endYear, 4, 30);
-                    break;
-                case 3: // HK3: 5-8 năm sau
-                    semesterStart = new DateTime(endYear, 5, 1);
-                    semesterEnd = new DateTime(endYear, 8, 31);
-                    break;
-                default:
-                    semesterStart = new DateTime(startYear, 9, 1);
-                    semesterEnd = new DateTime(startYear, 12, 31);
-                    break;
-            }
-
-            // CreatedAt trong khoảng đầu học kỳ (tháng đầu)
-            var createdStart = semesterStart;
-            var createdEnd = semesterStart.AddDays(30);
-            var createdAt = GenerateDeterministicDate(createdStart, createdEnd, maSv * 100 + (int)hocKy);
-
-            DateTime? acceptedAt = null;
-            if (trangThai == HuongDanStatus.Accepted || trangThai == HuongDanStatus.InProgress || trangThai == HuongDanStatus.Completed)
-            {
-                // AcceptedAt sau CreatedAt 1-14 ngày
-                var acceptStart = createdAt.AddDays(1);
-                var acceptEnd = createdAt.AddDays(14);
-                if (acceptEnd > semesterEnd) acceptEnd = semesterEnd;
-                acceptedAt = GenerateDeterministicDate(acceptStart, acceptEnd, maSv * 1000 + (int)hocKy * 10 + (int)trangThai);
-            }
-
-            return (createdAt, acceptedAt);
-        }
-
-        private static DateTime GenerateDeterministicDate(DateTime start, DateTime end, int seed)
-        {
-            var range = end - start;
-            // Use deterministic calculation based on seed instead of random
-            var normalizedSeed = seed % 100; // 0-99 range
-            var fraction = normalizedSeed / 100.0;
-            var ticks = (long)(fraction * range.Ticks);
-            return start.AddTicks(ticks);
-        }
+        // Removed dynamic timestamp generation methods to ensure deterministic seeding
+        // All HuongDan data is now static to prevent EF Core migration conflicts
 
         private static string GenerateGhiChu(HuongDanStatus trangThai)
         {

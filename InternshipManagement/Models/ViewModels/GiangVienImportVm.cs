@@ -11,6 +11,7 @@ public class GiangVienImportVm
 public class GiangVienImportRow
 {
     public int STT { get; set; }
+    public int? MaGv { get; set; }
     public string? HoTen { get; set; }
     public decimal? Luong { get; set; }
     public string? MaKhoa { get; set; }
@@ -18,6 +19,11 @@ public class GiangVienImportRow
     public List<string> Validate(List<string> validKhoaCodes)
     {
         var errors = new List<string>();
+
+        if (!MaGv.HasValue)
+            errors.Add($"Dòng {STT}: Mã giảng viên không được để trống");
+        else if (MaGv.Value <= 0)
+            errors.Add($"Dòng {STT}: Mã giảng viên phải là số nguyên dương");
 
         if (string.IsNullOrWhiteSpace(HoTen))
             errors.Add($"Dòng {STT}: Họ tên không được để trống");
