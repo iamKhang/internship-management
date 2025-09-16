@@ -62,7 +62,7 @@
     </div>
 
     @* Syncfusion Toast *@
-    <ejs-toast id="toast_type" close="onclose" beforeOpen="onBeforeOpen" created="created" timeOut="5000">
+    <ejs-toast id="toast_type" close="onclose" beforeOpen="onBeforeOpen" created="created" timeOut="10000">
         <e-toast-position X="Right" Y="Top"></e-toast-position>
     </ejs-toast>
 
@@ -74,6 +74,7 @@
             toastObj = this;
             toastObj.target = document.body;
             toastObj.position = { X: 'Right', Y: 'Top' };
+            toastObj.timeOut = 10000;
         };
 
         window.onclose = function(e) {
@@ -1015,22 +1016,54 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    // Thành công
+                const createdCount = data.createdCount || 0;
+                const errors = Array.isArray(data.errors) ? data.errors : [];
+                const errorsFileUrl = data.errorsFileUrl || null;
+                const errorsFileBase64 = data.errorsFileBase64 || null;
+                const errorsFileName = data.errorsFileName || 'Import_GV_Errors.xlsx';
+
+                // Hiển thị toast thành công nếu có ít nhất một bản ghi được tạo
+                if (createdCount > 0) {
+                    showMessage(`Import thành công ${createdCount} giảng viên.`, 'Success');
+                }
+
+                // Hiển thị từng lỗi thành toast riêng
+                if (errors.length > 0) {
+                    errors.forEach(err => showMessage(err, 'Error'));
+                }
+
+                // Cho phép tải về danh sách lỗi nếu có
+                if (errorsFileBase64) {
+                    showMessage('Có danh sách lỗi. Đang tải file các dòng lỗi...', 'Info');
+                    try {
+                        const linkSource = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${errorsFileBase64}`;
+                        const a = document.createElement('a');
+                        a.href = linkSource;
+                        a.download = errorsFileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } catch {}
+                } else if (errorsFileUrl) {
+                    // Fallback (shouldn't be used now)
+                    try {
+                        const a = document.createElement('a');
+                        a.href = errorsFileUrl;
+                        a.download = errorsFileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } catch {}
+                }
+
+                // Reset form sau khi xử lý
+                form.reset();
+                fileInput.classList.remove('is-invalid');
+
+                // Chỉ reload khi có tạo mới
+                if (createdCount > 0) {
                     closeImportDialog();
-                    showMessage(data.message, 'Success');
-
-                    // Reset form
-                    form.reset();
-                    fileInput.classList.remove('is-invalid');
-
-                    // Reload page sau 2 giây để cập nhật danh sách
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    // Lỗi
-                    showMessage(data.message, 'Error');
+                    setTimeout(() => { window.location.reload(); }, 2000);
                 }
             })
             .catch(error => {

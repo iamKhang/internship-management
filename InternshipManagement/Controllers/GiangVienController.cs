@@ -499,6 +499,8 @@ namespace InternshipManagement.Controllers
 
                 var errors = new List<string>();
                 var importedRows = new List<GiangVienImportRow>();
+                var failedRows = new List<GiangVienImportRow>();
+                var errorMap = new Dictionary<int, List<string>>();
                 var seenIds = new HashSet<int>();
 
                 if (model.ExcelFile == null || model.ExcelFile.Length <= 0)
@@ -535,7 +537,8 @@ namespace InternshipManagement.Controllers
                 // Lấy danh sách mã khoa hợp lệ trước khi đọc file
                 var validKhoaCodes = (await _khoaRepo.GetOptionsAsync())
                     .Select(k => k.MaKhoa?.Trim())
-                    .Where(k => !string.IsNullOrEmpty(k))
+                    .Where(k => !string.IsNullOrWhiteSpace(k))
+                    .Select(k => k!)
                     .ToList();
 
                 using (var stream = new MemoryStream())
@@ -597,6 +600,13 @@ namespace InternshipManagement.Controllers
                             if (rowErrors.Any())
                             {
                                 errors.AddRange(rowErrors);
+                                if (!errorMap.ContainsKey(importRow.STT)) errorMap[importRow.STT] = new List<string>();
+                                foreach (var err in rowErrors)
+                                {
+                                    if (!errorMap[importRow.STT].Contains(err))
+                                        errorMap[importRow.STT].Add(err);
+                                }
+                                failedRows.Add(importRow);
                                 continue;
                             }
 
@@ -624,7 +634,11 @@ namespace InternshipManagement.Controllers
                                 var exists = await _db.GiangViens.AnyAsync(g => g.MaGv == row.MaGv!.Value);
                                 if (exists)
                                 {
-                                    errors.Add($"Dòng {row.STT}: Mã giảng viên {row.MaGv} đã tồn tại, không thể thêm mới.");
+                                    var msgDup = $"Dòng {row.STT}: Mã giảng viên {row.MaGv} đã tồn tại, không thể thêm mới.";
+                                    errors.Add(msgDup);
+                                    if (!errorMap.ContainsKey(row.STT)) errorMap[row.STT] = new List<string>();
+                                    if (!errorMap[row.STT].Contains(msgDup)) errorMap[row.STT].Add(msgDup);
+                                    failedRows.Add(row);
                                     continue;
                                 }
 
@@ -667,21 +681,97 @@ namespace InternshipManagement.Controllers
                             }
                             catch (Exception rex)
                             {
-                                errors.Add($"Dòng {row.STT}: Lỗi khi import - {rex.Message}");
+                                var msgEx = $"Dòng {row.STT}: Lỗi khi import - {rex.Message}";
+                                errors.Add(msgEx);
+                                if (!errorMap.ContainsKey(row.STT)) errorMap[row.STT] = new List<string>();
+                                if (!errorMap[row.STT].Contains(msgEx)) errorMap[row.STT].Add(msgEx);
+                                failedRows.Add(row);
                             }
                         }
 
-                        var successMessage = $"Import xong: tạo mới {createdCount}.";
-                        if (errors.Any())
+                        // If there are failed rows, generate an Excel file for user to download (same template format)
+                        string? errorsFileUrl = null; // legacy fallback
+                        string? errorsFileBase64 = null;
+                        string? errorsFileName = null;
+                        if (failedRows.Any())
                         {
-                            successMessage += "\nCác lỗi: ";
-                            successMessage += string.Join("\n", errors);
+                            using var packageErr = new ExcelPackage();
+                            var worksheetErr = packageErr.Workbook.Worksheets.Add("DanhSachGiangVien");
+
+                            // Title
+                            worksheetErr.Cells[1, 1].Value = "DANH SÁCH NHẬP THÔNG TIN GIẢNG VIÊN (HÀNG LỖI)";
+                            worksheetErr.Cells[1, 1].Style.Font.Bold = true;
+                            worksheetErr.Cells[1, 1].Style.Font.Size = 16;
+                            worksheetErr.Cells[1, 1, 1, 5].Merge = true;
+                            worksheetErr.Cells[1, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                            // Header row at 3 (same as template)
+                            var headerRowIndex = 3;
+                            string[] headers = { "STT", "Mã giảng viên", "Họ và tên", "Lương", "Mã khoa", "Lỗi" };
+                            for (int i = 0; i < headers.Length; i++)
+                            {
+                                worksheetErr.Cells[headerRowIndex, i + 1].Value = headers[i];
+                                worksheetErr.Cells[headerRowIndex, i + 1].Style.Font.Bold = true;
+                                worksheetErr.Cells[headerRowIndex, i + 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                worksheetErr.Cells[headerRowIndex, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                            }
+
+                            // Rows start at 4
+                            var writeRow = headerRowIndex + 1;
+                            foreach (var fr in failedRows)
+                            {
+                                worksheetErr.Cells[writeRow, 1].Value = (writeRow - headerRowIndex).ToString();
+                                worksheetErr.Cells[writeRow, 2].Value = fr.MaGv?.ToString() ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 3].Value = fr.HoTen ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 4].Value = fr.Luong?.ToString() ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 5].Value = fr.MaKhoa ?? string.Empty;
+                                if (errorMap.TryGetValue(fr.STT, out var errsRow) && errsRow.Any())
+                                {
+                                    // Gỡ prefix "Dòng X: " để nội dung sạch hơn
+                                    var clean = errsRow.Select(e => e.Replace($"Dòng {fr.STT}: ", string.Empty).Trim());
+                                    worksheetErr.Cells[writeRow, 6].Value = string.Join("; ", clean);
+                                }
+                                writeRow++;
+                            }
+
+                            // Column widths similar to template
+                            worksheetErr.Column(1).Width = 8;
+                            worksheetErr.Column(2).Width = 15;
+                            worksheetErr.Column(3).Width = 30;
+                            worksheetErr.Column(4).Width = 15;
+                            worksheetErr.Column(5).Width = 15;
+                            worksheetErr.Column(6).Width = 60;
+
+                            // Build file content for direct client download (no server-side storage)
+                            var fileBytes = packageErr.GetAsByteArray();
+                            errorsFileBase64 = Convert.ToBase64String(fileBytes);
+                            errorsFileName = $"Import_GV_Errors_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                         }
+
                         if (IsAjaxRequest(Request))
                         {
-                            return Json(new { success = true, message = successMessage });
+                            return Json(new
+                            {
+                                success = createdCount > 0,
+                                createdCount,
+                                errors,
+                                errorsFileUrl,
+                                errorsFileBase64,
+                                errorsFileName
+                            });
                         }
-                        TempData["Success"] = successMessage.Replace("\n", "<br/>");
+
+                        // Non-AJAX fallback: keep previous behavior
+                        var summaryMsg = createdCount > 0
+                            ? $"Import thành công {createdCount} giảng viên."
+                            : "Không có dữ liệu nào được import.";
+                        if (errors.Any())
+                        {
+                            summaryMsg += "<br/>Có lỗi xảy ra ở một số dòng.";
+                            if (!string.IsNullOrEmpty(errorsFileUrl))
+                                summaryMsg += $"<br/><a href=\"{errorsFileUrl}\" target=\"_blank\">Tải danh sách lỗi</a>";
+                        }
+                        TempData["Success"] = summaryMsg;
                         return RedirectToAction(nameof(Index));
                     }
                 }
