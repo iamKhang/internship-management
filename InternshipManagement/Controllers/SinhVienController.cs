@@ -479,25 +479,41 @@ namespace InternshipManagement.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Import(SinhVienImportVm model)
         {
-            if (!ModelState.IsValid)
-            {
-                TempData["Error"] = "Vui lòng chọn file Excel để import";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var errors = new List<string>();
-            var importedRows = new List<SinhVienImportRow>();
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        var modelErrors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                        return Json(new { success = false, message = string.Join("\n", modelErrors) });
+                    }
+                    TempData["Error"] = "Vui lòng chọn file Excel để import";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var errors = new List<string>();
+                var importedRows = new List<SinhVienImportRow>();
+                var failedRows = new List<SinhVienImportRow>();
+                var errorMap = new Dictionary<int, List<string>>();
+                var seenIds = new HashSet<int>();
+
                 if (model.ExcelFile == null || model.ExcelFile.Length <= 0)
                 {
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = false, message = "Vui lòng chọn file Excel để import" });
+                    }
                     TempData["Error"] = "Vui lòng chọn file Excel để import";
                     return RedirectToAction(nameof(Index));
                 }
 
                 if (!Path.GetExtension(model.ExcelFile.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = false, message = "Vui lòng chọn file Excel đúng định dạng (.xlsx)" });
+                    }
                     TempData["Error"] = "Vui lòng chọn file Excel đúng định dạng (.xlsx)";
                     return RedirectToAction(nameof(Index));
                 }
@@ -505,6 +521,10 @@ namespace InternshipManagement.Controllers
                 // Validate file size (e.g., max 10MB)
                 if (model.ExcelFile.Length > 10 * 1024 * 1024)
                 {
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = false, message = "File không được vượt quá 10MB" });
+                    }
                     TempData["Error"] = "File không được vượt quá 10MB";
                     return RedirectToAction(nameof(Index));
                 }
@@ -512,7 +532,7 @@ namespace InternshipManagement.Controllers
                 // Lấy danh sách mã khoa hợp lệ trước khi đọc file
                 var validKhoaCodes = (await _khoaRepo.GetOptionsAsync())
                     .Select(k => k.MaKhoa?.Trim())
-                    .Where(k => !string.IsNullOrEmpty(k))
+                    .Where(k => !string.IsNullOrWhiteSpace(k))
                     .Select(k => k!)
                     .ToList();
 
@@ -526,6 +546,10 @@ namespace InternshipManagement.Controllers
 
                         if (rowCount <= 1)
                         {
+                            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                            {
+                                return Json(new { success = false, message = "File Excel không có dữ liệu" });
+                            }
                             TempData["Error"] = "File Excel không có dữ liệu";
                             return RedirectToAction(nameof(Index));
                         }
@@ -542,7 +566,7 @@ namespace InternshipManagement.Controllers
                         {
                             var importRow = new SinhVienImportRow
                             {
-                                STT = row - 1,
+                                STT = row, // dùng số dòng thực tế
                                 MaSv = int.TryParse(worksheet.Cells[row, 2].Text?.Trim(), out int masvVal) ? masvVal : (int?)null,
                                 HoTen = worksheet.Cells[row, 3].Text?.Trim(),
                                 NamSinh = int.TryParse(worksheet.Cells[row, 4].Text?.Trim(), out int namSinh) ? namSinh : null,
@@ -559,122 +583,198 @@ namespace InternshipManagement.Controllers
                                 continue;
 
                             var rowErrors = importRow.Validate(validKhoaCodes);
+                            if (importRow.MaSv.HasValue)
+                            {
+                                if (seenIds.Contains(importRow.MaSv.Value))
+                                {
+                                    rowErrors.Add($"Dòng {importRow.STT}: Trùng Mã sinh viên {importRow.MaSv.Value} trong file import");
+                                }
+                                else
+                                {
+                                    seenIds.Add(importRow.MaSv.Value);
+                                }
+                            }
                             if (rowErrors.Any())
                             {
                                 errors.AddRange(rowErrors);
+                                if (!errorMap.ContainsKey(importRow.STT)) errorMap[importRow.STT] = new List<string>();
+                                foreach (var err in rowErrors)
+                                {
+                                    if (!errorMap[importRow.STT].Contains(err)) errorMap[importRow.STT].Add(err);
+                                }
+                                failedRows.Add(importRow);
                                 continue;
                             }
 
                             importedRows.Add(importRow);
                         }
 
-                        // If there are any validation errors, return them
-                        if (errors.Any())
+                        if (!importedRows.Any() && !errors.Any())
                         {
-                            TempData["Error"] = string.Join("<br/>", errors);
-                            return RedirectToAction(nameof(Index));
-                        }
-
-                        if (!importedRows.Any())
-                        {
+                            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                            {
+                                return Json(new { success = false, message = "Không có dữ liệu hợp lệ để import" });
+                            }
                             TempData["Error"] = "Không có dữ liệu hợp lệ để import";
                             return RedirectToAction(nameof(Index));
                         }
 
-                        // Import with upsert/skip logic similar to GiangVien
-                        int createdCount = 0, updatedCount = 0, skippedCount = 0;
-                        var updatedNotes = new List<string>();
-                        var seenIds = new HashSet<int>();
+                        // Import valid rows - create only; duplicate MaSv in DB => error
+                        int createdCount = 0;
                         foreach (var row in importedRows)
                         {
                             try
                             {
                                 var normalizedName = NormalizeName(row.HoTen?.Trim() ?? "");
 
-                                SinhVien? existing = null;
-                                if (row.MaSv.HasValue)
+                                var exists = await _db.SinhViens.AnyAsync(s => s.MaSv == row.MaSv!.Value);
+                                if (exists)
                                 {
-                                    if (seenIds.Contains(row.MaSv.Value))
+                                    var msgDup = $"Dòng {row.STT}: Mã sinh viên {row.MaSv} đã tồn tại, không thể thêm mới.";
+                                    errors.Add(msgDup);
+                                    if (!errorMap.ContainsKey(row.STT)) errorMap[row.STT] = new List<string>();
+                                    if (!errorMap[row.STT].Contains(msgDup)) errorMap[row.STT].Add(msgDup);
+                                    failedRows.Add(row);
+                                    continue;
+                                }
+
+                                var sinhVien = new SinhVien
+                                {
+                                    MaSv = row.MaSv!.Value,
+                                    HoTenSv = normalizedName,
+                                    NamSinh = row.NamSinh,
+                                    QueQuan = row.QueQuan,
+                                    MaKhoa = row.MaKhoa!
+                                };
+
+                                var strategy = _db.Database.CreateExecutionStrategy();
+                                await strategy.ExecuteAsync(async () =>
+                                {
+                                    using var tx = await _db.Database.BeginTransactionAsync();
+                                    try
                                     {
-                                        errors.Add($"Dòng {row.STT}: Trùng Mã sinh viên {row.MaSv.Value} trong file import");
-                                        continue;
+                                        await _db.Database.OpenConnectionAsync();
+                                        await _db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [SinhVien] ON");
+                                        _db.SinhViens.Add(sinhVien);
+                                        await _db.SaveChangesAsync();
+                                        await _db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [SinhVien] OFF");
+                                        await tx.CommitAsync();
                                     }
-                                    seenIds.Add(row.MaSv.Value);
-                                    existing = await _db.SinhViens.FirstOrDefaultAsync(s => s.MaSv == row.MaSv.Value);
-                                }
-
-                                if (existing != null)
-                                {
-                                    existing.HoTenSv = normalizedName;
-                                    existing.NamSinh = row.NamSinh;
-                                    existing.QueQuan = row.QueQuan;
-                                    existing.MaKhoa = row.MaKhoa!;
-                                    await _db.SaveChangesAsync();
-                                    updatedCount++;
-                                    updatedNotes.Add($"Dòng {row.STT}: Cập nhật sinh viên mã {existing.MaSv}");
-                                }
-                                else
-                                {
-                                    // Tạo mới với đúng mã SV từ file Excel (cột [masv] là IDENTITY trong DB)
-                                    var sinhVien = new SinhVien
+                                    catch
                                     {
-                                        MaSv = row.MaSv!.Value,
-                                        HoTenSv = normalizedName,
-                                        NamSinh = row.NamSinh,
-                                        QueQuan = row.QueQuan,
-                                        MaKhoa = row.MaKhoa!
-                                    };
-
-                                    var strategy = _db.Database.CreateExecutionStrategy();
-                                    await strategy.ExecuteAsync(async () =>
+                                        await tx.RollbackAsync();
+                                        throw;
+                                    }
+                                    finally
                                     {
-                                        using var tx = await _db.Database.BeginTransactionAsync();
-                                        try
-                                        {
-                                            await _db.Database.OpenConnectionAsync();
-                                            await _db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [SinhVien] ON");
-                                            _db.SinhViens.Add(sinhVien);
-                                            await _db.SaveChangesAsync();
-                                            await _db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [SinhVien] OFF");
-                                            await tx.CommitAsync();
-                                        }
-                                        catch
-                                        {
-                                            await tx.RollbackAsync();
-                                            throw;
-                                        }
-                                        finally
-                                        {
-                                            await _db.Database.CloseConnectionAsync();
-                                        }
-                                    });
+                                        await _db.Database.CloseConnectionAsync();
+                                    }
+                                });
 
-                                    await _userAccountService.CreateStudentAccountAsync(sinhVien.MaSv);
-                                    createdCount++;
-                                }
+                                await _userAccountService.CreateStudentAccountAsync(sinhVien.MaSv);
+                                createdCount++;
                             }
                             catch (Exception rex)
                             {
-                                errors.Add($"Dòng {row.STT}: Lỗi khi import - {rex.Message}");
+                                var msgEx = $"Dòng {row.STT}: Lỗi khi import - {rex.Message}";
+                                errors.Add(msgEx);
+                                if (!errorMap.ContainsKey(row.STT)) errorMap[row.STT] = new List<string>();
+                                if (!errorMap[row.STT].Contains(msgEx)) errorMap[row.STT].Add(msgEx);
+                                failedRows.Add(row);
                             }
                         }
 
-                        TempData["Success"] = $"Import xong: tạo mới {createdCount}, cập nhật {updatedCount}, bỏ qua {skippedCount}.";
-                        if (updatedNotes.Any())
+                        // Build error workbook if needed
+                        string? errorsFileUrl = null; // legacy fallback
+                        string? errorsFileBase64 = null;
+                        string? errorsFileName = null;
+                        if (failedRows.Any())
                         {
-                            TempData["Warning"] = string.Join("<br/>", updatedNotes);
-                        }
-                        if (errors.Any())
-                        {
-                            TempData["Error"] = string.Join("<br/>", errors);
+                            using var packageErr = new ExcelPackage();
+                            var worksheetErr = packageErr.Workbook.Worksheets.Add("DanhSachSinhVien");
+
+                            // Title
+                            worksheetErr.Cells[1, 1].Value = "DANH SÁCH NHẬP THÔNG TIN SINH VIÊN (HÀNG LỖI)";
+                            worksheetErr.Cells[1, 1].Style.Font.Bold = true;
+                            worksheetErr.Cells[1, 1].Style.Font.Size = 16;
+                            worksheetErr.Cells[1, 1, 1, 7].Merge = true;
+                            worksheetErr.Cells[1, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                            // Header row at 3 (same as template)
+                            var headerRowIndex = 3;
+                            string[] headers = { "STT", "Mã sinh viên", "Họ và tên", "Năm sinh", "Quê quán", "Mã khoa", "Lỗi" };
+                            for (int i = 0; i < headers.Length; i++)
+                            {
+                                worksheetErr.Cells[headerRowIndex, i + 1].Value = headers[i];
+                                worksheetErr.Cells[headerRowIndex, i + 1].Style.Font.Bold = true;
+                                worksheetErr.Cells[headerRowIndex, i + 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                worksheetErr.Cells[headerRowIndex, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                            }
+
+                            // Rows start at 4
+                            var writeRow = headerRowIndex + 1;
+                            foreach (var fr in failedRows)
+                            {
+                                worksheetErr.Cells[writeRow, 1].Value = (writeRow - headerRowIndex).ToString();
+                                worksheetErr.Cells[writeRow, 2].Value = fr.MaSv?.ToString() ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 3].Value = fr.HoTen ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 4].Value = fr.NamSinh?.ToString() ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 5].Value = fr.QueQuan ?? string.Empty;
+                                worksheetErr.Cells[writeRow, 6].Value = fr.MaKhoa ?? string.Empty;
+                                if (errorMap.TryGetValue(fr.STT, out var errsRow) && errsRow.Any())
+                                {
+                                    var clean = errsRow.Select(e => e.Replace($"Dòng {fr.STT}: ", string.Empty).Trim());
+                                    worksheetErr.Cells[writeRow, 7].Value = string.Join("; ", clean);
+                                }
+                                writeRow++;
+                            }
+
+                            // Column widths
+                            worksheetErr.Column(1).Width = 8;
+                            worksheetErr.Column(2).Width = 16;
+                            worksheetErr.Column(3).Width = 30;
+                            worksheetErr.Column(4).Width = 12;
+                            worksheetErr.Column(5).Width = 25;
+                            worksheetErr.Column(6).Width = 15;
+                            worksheetErr.Column(7).Width = 60;
+
+                            // Build file content for direct client download (no server-side storage)
+                            var fileBytes = packageErr.GetAsByteArray();
+                            errorsFileBase64 = Convert.ToBase64String(fileBytes);
+                            errorsFileName = $"Import_SV_Errors_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                         }
 
+                        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        {
+                            return Json(new
+                            {
+                                success = createdCount > 0,
+                                createdCount,
+                                errors,
+                                errorsFileUrl,
+                                errorsFileBase64,
+                                errorsFileName
+                            });
+                        }
+
+                        var summaryMsg = createdCount > 0
+                            ? $"Import thành công {createdCount} sinh viên."
+                            : "Không có dữ liệu nào được import.";
+                        if (errors.Any())
+                        {
+                            summaryMsg += "<br/>Có lỗi xảy ra ở một số dòng.";
+                        }
+                        TempData["Success"] = summaryMsg;
                         return RedirectToAction(nameof(Index));
                     }
                 }
             }
             catch (Exception ex)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = $"Lỗi khi import: {ex.Message}" });
+                }
                 TempData["Error"] = $"Lỗi khi import: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
@@ -811,67 +911,7 @@ namespace InternshipManagement.Controllers
                 {
                     var worksheet = package.Workbook.Worksheets.Add("DanhSachSinhVien");
 
-                    // Thiết lập tiêu đề và thông tin
-                    var currentRow = 1;
-                    
-                    // Tiêu đề chính
-                    worksheet.Cells[currentRow, 1].Value = "DANH SÁCH SINH VIÊN";
-                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                    worksheet.Cells[currentRow, 1].Style.Font.Size = 16;
-                    worksheet.Cells[currentRow, 1, currentRow, 6].Merge = true;
-                    worksheet.Cells[currentRow, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-                    currentRow += 2;
-
-                    // Thông tin xuất file
-                    worksheet.Cells[currentRow, 1].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
-                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                    currentRow++;
-
-                    worksheet.Cells[currentRow, 1].Value = $"Tổng số sinh viên: {sinhVienData.Count}";
-                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                    currentRow++;
-
-                    // Thông tin filter
-                    if (!string.IsNullOrWhiteSpace(model.Filter.Keyword) || 
-                        !string.IsNullOrWhiteSpace(model.Filter.MaKhoa) ||
-                        model.Filter.NamSinhMin.HasValue || 
-                        model.Filter.NamSinhMax.HasValue)
-                    {
-                        currentRow++;
-                        worksheet.Cells[currentRow, 1].Value = "Điều kiện lọc:";
-                        worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                        currentRow++;
-
-                        if (!string.IsNullOrWhiteSpace(model.Filter.Keyword))
-                        {
-                            worksheet.Cells[currentRow, 1].Value = $"- Từ khóa: {model.Filter.Keyword}";
-                            currentRow++;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(model.Filter.MaKhoa))
-                        {
-                            worksheet.Cells[currentRow, 1].Value = $"- Khoa: {khoaInfo} ({model.Filter.MaKhoa})";
-                            currentRow++;
-                        }
-
-                        if (model.Filter.NamSinhMin.HasValue || model.Filter.NamSinhMax.HasValue)
-                        {
-                            var namSinhFilter = "- Năm sinh: ";
-                            if (model.Filter.NamSinhMin.HasValue && model.Filter.NamSinhMax.HasValue)
-                                namSinhFilter += $"từ {model.Filter.NamSinhMin} đến {model.Filter.NamSinhMax}";
-                            else if (model.Filter.NamSinhMin.HasValue)
-                                namSinhFilter += $"từ {model.Filter.NamSinhMin} trở lên";
-                            else if (model.Filter.NamSinhMax.HasValue)
-                                namSinhFilter += $"đến {model.Filter.NamSinhMax} trở xuống";
-
-                            worksheet.Cells[currentRow, 1].Value = namSinhFilter;
-                            currentRow++;
-                        }
-                    }
-
-                    currentRow += 2; // Khoảng cách trước bảng dữ liệu
-
-                    // Define column configuration
+                    // Cấu hình cột + thứ tự cột
                     var columnConfigs = new Dictionary<string, (bool include, string header, string key)>
                     {
                         ["ExportMaSv"] = (model.ExportMaSv, "Mã SV", "MaSv"),
@@ -882,76 +922,151 @@ namespace InternshipManagement.Controllers
                         ["ExportMaKhoa"] = (model.ExportMaKhoa, "Mã khoa", "MaKhoa")
                     };
 
-                    // Parse column order if provided
-                    var orderedColumns = new List<string>();
-                    if (!string.IsNullOrEmpty(columnOrder))
-                    {
-                        orderedColumns = columnOrder.Split(',').ToList();
-                    }
-                    else
-                    {
-                        // Default order
-                        orderedColumns = columnConfigs.Keys.ToList();
-                    }
+                    var orderedColumns = string.IsNullOrEmpty(columnOrder)
+                        ? columnConfigs.Keys.ToList()
+                        : columnOrder.Split(',').ToList();
 
-                    // Tạo header cho bảng dữ liệu theo thứ tự được chỉ định
-                    var headers = new List<string>();
-                    var columnIndex = 1;
+                    var includedColumns = orderedColumns
+                        .Where(c => columnConfigs.TryGetValue(c, out var cfg) && cfg.include)
+                        .ToList();
 
-                    foreach (var columnName in orderedColumns)
+                    // Tổng số cột: 1 cột STT + số cột được chọn
+                    var totalColumns = 1 + includedColumns.Count;
+
+                    // Thiết lập tiêu đề và thông tin
+                    var currentRow = 1;
+
+                    // Tiêu đề chính (merge vừa đủ số cột)
+                    worksheet.Cells[currentRow, 1].Value = "DANH SÁCH SINH VIÊN";
+                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[currentRow, 1].Style.Font.Size = 16;
+                    worksheet.Cells[currentRow, 1, currentRow, totalColumns].Merge = true;
+                    worksheet.Cells[currentRow, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                    // Dòng: Ngày xuất (A..B: nhãn, C..D: giá trị)
+                    var infoDateRow = 3;
+                    worksheet.Cells[infoDateRow, 1, infoDateRow, 2].Merge = true;
+                    worksheet.Cells[infoDateRow, 1].Value = "Ngày xuất:";
+                    worksheet.Cells[infoDateRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[infoDateRow, 3, infoDateRow, 4].Merge = true;
+                    worksheet.Cells[infoDateRow, 3].Value = DateTime.Now;
+                    worksheet.Cells[infoDateRow, 3].Style.Numberformat.Format = "dd/MM/yyyy HH:mm:ss";
+
+                    // Dòng: Tổng số sinh viên (A..B: nhãn, C..D: giá trị)
+                    var infoCountRow = 4;
+                    worksheet.Cells[infoCountRow, 1, infoCountRow, 2].Merge = true;
+                    worksheet.Cells[infoCountRow, 1].Value = "Tổng số sinh viên:";
+                    worksheet.Cells[infoCountRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[infoCountRow, 3, infoCountRow, 4].Merge = true;
+                    worksheet.Cells[infoCountRow, 3].Value = sinhVienData.Count;
+
+                    // Thông tin filter (ghi nhãn ở cột A, nội dung ở cột B..)
+                    var nextRow = 6;
+                    if (!string.IsNullOrWhiteSpace(model.Filter.Keyword) || 
+                        !string.IsNullOrWhiteSpace(model.Filter.MaKhoa) ||
+                        model.Filter.NamSinhMin.HasValue || 
+                        model.Filter.NamSinhMax.HasValue)
                     {
-                        if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                        worksheet.Cells[nextRow, 1].Value = "Điều kiện lọc:";
+                        worksheet.Cells[nextRow, 1].Style.Font.Bold = true;
+                        nextRow++;
+
+                        if (!string.IsNullOrWhiteSpace(model.Filter.Keyword))
                         {
-                            headers.Add(config.header);
-                            worksheet.Cells[currentRow, columnIndex].Value = config.header;
-                            columnIndex++;
+                            worksheet.Cells[nextRow, 2, nextRow, totalColumns].Merge = true;
+                            worksheet.Cells[nextRow, 2].Value = $"- Từ khóa: {model.Filter.Keyword}";
+                            nextRow++;
+                        }
+                        if (!string.IsNullOrWhiteSpace(model.Filter.MaKhoa))
+                        {
+                            worksheet.Cells[nextRow, 2, nextRow, totalColumns].Merge = true;
+                            worksheet.Cells[nextRow, 2].Value = $"- Khoa: {khoaInfo} ({model.Filter.MaKhoa})";
+                            nextRow++;
+                        }
+                        if (model.Filter.NamSinhMin.HasValue || model.Filter.NamSinhMax.HasValue)
+                        {
+                            var namSinhFilter = "- Năm sinh: ";
+                            if (model.Filter.NamSinhMin.HasValue && model.Filter.NamSinhMax.HasValue)
+                                namSinhFilter += $"từ {model.Filter.NamSinhMin} đến {model.Filter.NamSinhMax}";
+                            else if (model.Filter.NamSinhMin.HasValue)
+                                namSinhFilter += $"từ {model.Filter.NamSinhMin} trở lên";
+                            else if (model.Filter.NamSinhMax.HasValue)
+                                namSinhFilter += $"đến {model.Filter.NamSinhMax} trở xuống";
+
+                            worksheet.Cells[nextRow, 2, nextRow, totalColumns].Merge = true;
+                            worksheet.Cells[nextRow, 2].Value = namSinhFilter;
+                            nextRow++;
                         }
                     }
 
-                    // Định dạng header
-                    var headerRange = worksheet.Cells[currentRow, 1, currentRow, columnIndex - 1];
+                    // Khoảng trống trước bảng
+                    currentRow = nextRow + 1;
+
+                    // Header: thêm cột STT trước
+                    var headerRow = currentRow;
+                    var columnIndex = 1;
+                    worksheet.Cells[headerRow, columnIndex].Value = "STT";
+                    columnIndex++;
+                    foreach (var columnName in includedColumns)
+                    {
+                        var cfg = columnConfigs[columnName];
+                        worksheet.Cells[headerRow, columnIndex].Value = cfg.header;
+                        columnIndex++;
+                    }
+
+                    // Định dạng header (đúng số cột hiện có)
+                    var headerRange = worksheet.Cells[headerRow, 1, headerRow, totalColumns];
                     headerRange.Style.Font.Bold = true;
                     headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                     headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
-                    headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+                    headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
 
-                    currentRow++;
-
-                    // Thêm dữ liệu theo thứ tự được chỉ định
+                    // Body
+                    var dataRow = headerRow + 1;
+                    var stt = 1;
                     foreach (var sv in sinhVienData)
                     {
-                        columnIndex = 1;
-
-                        foreach (var columnName in orderedColumns)
+                        var dataCol = 1;
+                        worksheet.Cells[dataRow, dataCol].Value = stt++;
+                        dataCol++;
+                        foreach (var columnName in includedColumns)
                         {
-                            if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                            var cfg = columnConfigs[columnName];
+                            switch (cfg.key)
                             {
-                                switch (config.key)
-                                {
-                                    case "MaSv":
-                                        worksheet.Cells[currentRow, columnIndex].Value = sv.Masv;
-                                        break;
-                                    case "HoTenSv":
-                                        worksheet.Cells[currentRow, columnIndex].Value = sv.Hotensv;
-                                        break;
-                                    case "MaKhoa":
-                                        worksheet.Cells[currentRow, columnIndex].Value = sv.MaKhoa;
-                                        break;
-                                    case "TenKhoa":
-                                        worksheet.Cells[currentRow, columnIndex].Value = sv.TenKhoa;
-                                        break;
-                                    case "NamSinh":
-                                        worksheet.Cells[currentRow, columnIndex].Value = sv.NamSinh;
-                                        break;
-                                    case "QueQuan":
-                                        worksheet.Cells[currentRow, columnIndex].Value = sv.QueQuan;
-                                        break;
-                                }
-                                columnIndex++;
+                                case "MaSv":
+                                    worksheet.Cells[dataRow, dataCol].Value = sv.Masv;
+                                    break;
+                                case "HoTenSv":
+                                    worksheet.Cells[dataRow, dataCol].Value = sv.Hotensv;
+                                    break;
+                                case "MaKhoa":
+                                    worksheet.Cells[dataRow, dataCol].Value = sv.MaKhoa;
+                                    break;
+                                case "TenKhoa":
+                                    worksheet.Cells[dataRow, dataCol].Value = sv.TenKhoa;
+                                    break;
+                                case "NamSinh":
+                                    worksheet.Cells[dataRow, dataCol].Value = sv.NamSinh;
+                                    break;
+                                case "QueQuan":
+                                    worksheet.Cells[dataRow, dataCol].Value = sv.QueQuan;
+                                    break;
                             }
+                            dataCol++;
                         }
+                        dataRow++;
+                    }
 
-                        currentRow++;
+                    // Đường viền cho toàn bộ bảng (header + body)
+                    if (dataRow - 1 >= headerRow)
+                    {
+                        var tableRange = worksheet.Cells[headerRow, 1, dataRow - 1, totalColumns];
+                        var border = tableRange.Style.Border;
+                        border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        border.Left.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        border.Right.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
                     }
 
                     // Tự động điều chỉnh độ rộng cột

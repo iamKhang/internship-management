@@ -815,66 +815,6 @@ namespace InternshipManagement.Controllers
                 {
                     var worksheet = package.Workbook.Worksheets.Add("DanhSachGiangVien");
 
-                    // Thiết lập tiêu đề và thông tin
-                    var currentRow = 1;
-                    
-                    // Tiêu đề chính
-                    worksheet.Cells[currentRow, 1].Value = "DANH SÁCH GIẢNG VIÊN";
-                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                    worksheet.Cells[currentRow, 1].Style.Font.Size = 16;
-                    worksheet.Cells[currentRow, 1, currentRow, 6].Merge = true;
-                    worksheet.Cells[currentRow, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-                    currentRow += 2;
-
-                    // Thông tin xuất file
-                    worksheet.Cells[currentRow, 1].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
-                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                    currentRow++;
-
-                    worksheet.Cells[currentRow, 1].Value = $"Tổng số giảng viên: {giangVienData.Count}";
-                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                    currentRow++;
-
-                    // Thông tin filter
-                    if (!string.IsNullOrWhiteSpace(model.Filter.Keyword) || 
-                        !string.IsNullOrWhiteSpace(model.Filter.MaKhoa) ||
-                        model.Filter.LuongMin.HasValue || 
-                        model.Filter.LuongMax.HasValue)
-                    {
-                        currentRow++;
-                        worksheet.Cells[currentRow, 1].Value = "Điều kiện lọc:";
-                        worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
-                        currentRow++;
-
-                        if (!string.IsNullOrWhiteSpace(model.Filter.Keyword))
-                        {
-                            worksheet.Cells[currentRow, 1].Value = $"- Từ khóa: {model.Filter.Keyword}";
-                            currentRow++;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(model.Filter.MaKhoa))
-                        {
-                            worksheet.Cells[currentRow, 1].Value = $"- Khoa: {khoaInfo} ({model.Filter.MaKhoa})";
-                            currentRow++;
-                        }
-
-                        if (model.Filter.LuongMin.HasValue || model.Filter.LuongMax.HasValue)
-                        {
-                            var luongFilter = "- Lương: ";
-                            if (model.Filter.LuongMin.HasValue && model.Filter.LuongMax.HasValue)
-                                luongFilter += $"từ {model.Filter.LuongMin:N0} đến {model.Filter.LuongMax:N0}";
-                            else if (model.Filter.LuongMin.HasValue)
-                                luongFilter += $"từ {model.Filter.LuongMin:N0} trở lên";
-                            else if (model.Filter.LuongMax.HasValue)
-                                luongFilter += $"đến {model.Filter.LuongMax:N0} trở xuống";
-
-                            worksheet.Cells[currentRow, 1].Value = luongFilter;
-                            currentRow++;
-                        }
-                    }
-
-                    currentRow += 2; // Khoảng cách trước bảng dữ liệu
-
                     // Cấu hình cột + thứ tự cột
                     var columnConfigs = new Dictionary<string, (bool include, string header, string key)>
                     {
@@ -889,58 +829,146 @@ namespace InternshipManagement.Controllers
                         ? columnConfigs.Keys.ToList()
                         : columnOrder.Split(',').ToList();
 
-                    // Tạo header theo thứ tự cột
-                    var columnIndex = 1;
-                    foreach (var columnName in orderedColumns)
+                    var includedColumns = orderedColumns
+                        .Where(c => columnConfigs.TryGetValue(c, out var cfg) && cfg.include)
+                        .ToList();
+
+                    // Tổng số cột: 1 cột STT + số cột được chọn
+                    var totalColumns = 1 + includedColumns.Count;
+
+                    // Thiết lập tiêu đề và thông tin
+                    var currentRow = 1;
+
+                    // Tiêu đề chính (merge vừa đủ số cột)
+                    worksheet.Cells[currentRow, 1].Value = "DANH SÁCH GIẢNG VIÊN";
+                    worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[currentRow, 1].Style.Font.Size = 16;
+                    worksheet.Cells[currentRow, 1, currentRow, totalColumns].Merge = true;
+                    worksheet.Cells[currentRow, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                    // Dòng: Ngày xuất (A..B: nhãn, C..D: giá trị)
+                    var infoDateRow = 3;
+                    worksheet.Cells[infoDateRow, 1, infoDateRow, 2].Merge = true;
+                    worksheet.Cells[infoDateRow, 1].Value = "Ngày xuất:";
+                    worksheet.Cells[infoDateRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[infoDateRow, 3, infoDateRow, 4].Merge = true;
+                    worksheet.Cells[infoDateRow, 3].Value = DateTime.Now;
+                    worksheet.Cells[infoDateRow, 3].Style.Numberformat.Format = "dd/MM/yyyy HH:mm:ss";
+
+                    // Dòng: Tổng số giảng viên (A..B: nhãn, C..D: giá trị)
+                    var infoCountRow = 4;
+                    worksheet.Cells[infoCountRow, 1, infoCountRow, 2].Merge = true;
+                    worksheet.Cells[infoCountRow, 1].Value = "Tổng số giảng viên:";
+                    worksheet.Cells[infoCountRow, 1].Style.Font.Bold = true;
+                    worksheet.Cells[infoCountRow, 3, infoCountRow, 4].Merge = true;
+                    worksheet.Cells[infoCountRow, 3].Value = giangVienData.Count;
+
+                    // Thông tin filter (ghi nhãn ở cột A, nội dung ở cột B..)
+                    var nextRow = 6;
+                    if (!string.IsNullOrWhiteSpace(model.Filter.Keyword) ||
+                        !string.IsNullOrWhiteSpace(model.Filter.MaKhoa) ||
+                        model.Filter.LuongMin.HasValue ||
+                        model.Filter.LuongMax.HasValue)
                     {
-                        if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                        worksheet.Cells[nextRow, 1].Value = "Điều kiện lọc:";
+                        worksheet.Cells[nextRow, 1].Style.Font.Bold = true;
+                        nextRow++;
+
+                        if (!string.IsNullOrWhiteSpace(model.Filter.Keyword))
                         {
-                            worksheet.Cells[currentRow, columnIndex].Value = config.header;
-                            columnIndex++;
+                            worksheet.Cells[nextRow, 2, nextRow, totalColumns].Merge = true;
+                            worksheet.Cells[nextRow, 2].Value = $"- Từ khóa: {model.Filter.Keyword}";
+                            nextRow++;
+                        }
+                        if (!string.IsNullOrWhiteSpace(model.Filter.MaKhoa))
+                        {
+                            worksheet.Cells[nextRow, 2, nextRow, totalColumns].Merge = true;
+                            worksheet.Cells[nextRow, 2].Value = $"- Khoa: {khoaInfo} ({model.Filter.MaKhoa})";
+                            nextRow++;
+                        }
+                        if (model.Filter.LuongMin.HasValue || model.Filter.LuongMax.HasValue)
+                        {
+                            var luongFilter = "- Lương: ";
+                            if (model.Filter.LuongMin.HasValue && model.Filter.LuongMax.HasValue)
+                                luongFilter += $"từ {model.Filter.LuongMin:N0} đến {model.Filter.LuongMax:N0}";
+                            else if (model.Filter.LuongMin.HasValue)
+                                luongFilter += $"từ {model.Filter.LuongMin:N0} trở lên";
+                            else if (model.Filter.LuongMax.HasValue)
+                                luongFilter += $"đến {model.Filter.LuongMax:N0} trở xuống";
+
+                            worksheet.Cells[nextRow, 2, nextRow, totalColumns].Merge = true;
+                            worksheet.Cells[nextRow, 2].Value = luongFilter;
+                            nextRow++;
                         }
                     }
 
-                    // Định dạng header
-                    var headerRange = worksheet.Cells[currentRow, 1, currentRow, columnIndex - 1];
+                    // Khoảng trống trước bảng
+                    currentRow = nextRow + 1;
+
+                    // Header: thêm cột STT trước
+                    var headerRow = currentRow;
+                    var columnIndex = 1;
+                    worksheet.Cells[headerRow, columnIndex].Value = "STT";
+                    columnIndex++;
+                    foreach (var columnName in includedColumns)
+                    {
+                        var cfg = columnConfigs[columnName];
+                        worksheet.Cells[headerRow, columnIndex].Value = cfg.header;
+                        columnIndex++;
+                    }
+
+                    // Định dạng header (đúng số cột hiện có)
+                    var headerRange = worksheet.Cells[headerRow, 1, headerRow, totalColumns];
                     headerRange.Style.Font.Bold = true;
                     headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                     headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
-                    headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+                    headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
 
-                    currentRow++;
-
-                    // Thêm dữ liệu theo thứ tự cột
+                    // Body
+                    var dataRow = headerRow + 1;
+                    var stt = 1;
                     foreach (var gv in giangVienData)
                     {
-                        columnIndex = 1;
-                        foreach (var columnName in orderedColumns)
+                        var dataCol = 1;
+                        worksheet.Cells[dataRow, dataCol].Value = stt++;
+                        dataCol++;
+                        foreach (var columnName in includedColumns)
                         {
-                            if (columnConfigs.TryGetValue(columnName, out var config) && config.include)
+                            var cfg = columnConfigs[columnName];
+                            switch (cfg.key)
                             {
-                                switch (config.key)
-                                {
-                                    case "MaGv":
-                                        worksheet.Cells[currentRow, columnIndex].Value = gv.MaGv;
-                                        break;
-                                    case "HoTenGv":
-                                        worksheet.Cells[currentRow, columnIndex].Value = gv.HoTenGv;
-                                        break;
-                                    case "MaKhoa":
-                                        worksheet.Cells[currentRow, columnIndex].Value = gv.MaKhoa;
-                                        break;
-                                    case "TenKhoa":
-                                        worksheet.Cells[currentRow, columnIndex].Value = gv.TenKhoa;
-                                        break;
-                                    case "Luong":
-                                        worksheet.Cells[currentRow, columnIndex].Value = gv.Luong;
-                                        if (gv.Luong.HasValue)
-                                            worksheet.Cells[currentRow, columnIndex].Style.Numberformat.Format = "#,##0";
-                                        break;
-                                }
-                                columnIndex++;
+                                case "MaGv":
+                                    worksheet.Cells[dataRow, dataCol].Value = gv.MaGv;
+                                    break;
+                                case "HoTenGv":
+                                    worksheet.Cells[dataRow, dataCol].Value = gv.HoTenGv;
+                                    break;
+                                case "MaKhoa":
+                                    worksheet.Cells[dataRow, dataCol].Value = gv.MaKhoa;
+                                    break;
+                                case "TenKhoa":
+                                    worksheet.Cells[dataRow, dataCol].Value = gv.TenKhoa;
+                                    break;
+                                case "Luong":
+                                    worksheet.Cells[dataRow, dataCol].Value = gv.Luong;
+                                    if (gv.Luong.HasValue)
+                                        worksheet.Cells[dataRow, dataCol].Style.Numberformat.Format = "#,##0";
+                                    break;
                             }
+                            dataCol++;
                         }
-                        currentRow++;
+                        dataRow++;
+                    }
+
+                    // Đường viền cho toàn bộ bảng (header + body)
+                    if (dataRow - 1 >= headerRow)
+                    {
+                        var tableRange = worksheet.Cells[headerRow, 1, dataRow - 1, totalColumns];
+                        var border = tableRange.Style.Border;
+                        border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        border.Left.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        border.Right.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
                     }
 
                     // Tự động điều chỉnh độ rộng cột
@@ -949,7 +977,7 @@ namespace InternshipManagement.Controllers
                     // Tạo file và trả về
                     var content = package.GetAsByteArray();
                     var fileName = $"DanhSach_GiangVien_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                    
+
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
             }
