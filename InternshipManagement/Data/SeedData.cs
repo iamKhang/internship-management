@@ -74,7 +74,7 @@ namespace InternshipManagement.Data
                     CreatedAt = new DateTime(2024, 9, 25), AcceptedAt = null,
                     KetQua = null, GhiChu = "Sinh viên xin rút đăng ký"
                 }
-                // Add more static records as needed for testing
+                
             };
 
             return huongDans;

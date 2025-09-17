@@ -42,19 +42,26 @@
 
 
                 <!-- Hàng 1 -->
-                <div class="col-md-4">
-                    <label class="form-label">Khoa</label>
-                    <div class="searchable-dropdown" id="khoaDropdown">
-                        <input type="hidden" asp-for="Filter.MaKhoa" />
-                        <input type="text" class="form-control" placeholder="Tìm kiếm khoa..." autocomplete="off">
-                        <i class="bi bi-chevron-down dropdown-arrow"></i>
-                        <div class="dropdown-menu">
-                            <div class="dropdown-options">
-                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                @if (!(User?.IsInRole("SinhVien") ?? false))
+                {
+                    <div class="col-md-4">
+                        <label class="form-label">Khoa</label>
+                        <div class="searchable-dropdown" id="khoaDropdown">
+                            <input type="hidden" asp-for="Filter.MaKhoa" />
+                            <input type="text" class="form-control" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                            <i class="bi bi-chevron-down dropdown-arrow"></i>
+                            <div class="dropdown-menu">
+                                <div class="dropdown-options">
+                                    <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="Filter.MaKhoa" value="@User?.FindFirst("MaKhoa")?.Value" />
+                }
                 <div class="col-md-4">
                     <label class="form-label">Giảng viên</label>
                     <div class="searchable-dropdown" id="giangVienDropdown">
@@ -491,23 +498,28 @@
                 window.location.href = '@Url.Action("Index", "DeTai")?' + queryParams.toString();
             });
 
-            // Initialize SearchableDropdown for khoa
-            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
-                placeholder: 'Tìm kiếm khoa...',
-                searchUrl: '@Url.Action("Search", "Khoa")',
-                searchParam: 'q',
-                debounceDelay: 300,
-                allowClear: true
-            });
+            // Initialize SearchableDropdown for khoa (skip for students)
+            const khoaEl = document.getElementById('khoaDropdown');
+            let khoaDropdown = null;
+            if (khoaEl) {
+                khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                    placeholder: 'Tìm kiếm khoa...',
+                    searchUrl: '@Url.Action("Search", "Khoa")',
+                    searchParam: 'q',
+                    debounceDelay: 300,
+                    allowClear: true
+                });
+            }
 
             // Initialize SearchableDropdown for giảng viên
+            const isStudent = !document.getElementById('khoaDropdown');
             const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
-                placeholder: 'Tìm kiếm giảng viên...',
+                placeholder: isStudent ? 'Tìm giảng viên trong khoa của bạn...' : 'Tìm kiếm giảng viên...',
                 searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
                 searchParam: 'q',
                 filterParam: 'maKhoa',
                 debounceDelay: 300,
-                allowClear: true,
+                allowClear: !isStudent,
                 labelFormatter: function(item) {
                     // Expect API returns {MaGv, HoTenGv}
                     if (item) {
@@ -523,10 +535,18 @@
             });
 
             // Handle khoa change to update lecturers
-            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
-                const selectedMaKhoa = e.detail.value;
-                giangVienDropdown.setFilterValue(selectedMaKhoa);
-            });
+            if (khoaEl) {
+                document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
+                    const selectedMaKhoa = e.detail.value;
+                    giangVienDropdown.setFilterValue(selectedMaKhoa);
+                });
+            } else {
+                // Student: force lecturer list to student's khoa
+                const hiddenMaKhoa = document.querySelector('input[name="Filter.MaKhoa"]')?.value || '';
+                if (hiddenMaKhoa) {
+                    giangVienDropdown.setFilterValue(hiddenMaKhoa);
+                }
+            }
 
             // Listen for selection changes
             document.getElementById('giangVienDropdown').addEventListener('selectionChanged', function(e) {
