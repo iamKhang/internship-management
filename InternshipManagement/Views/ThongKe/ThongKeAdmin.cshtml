@@ -1,7 +1,5 @@
 ﻿@model InternshipManagement.Models.ViewModels.ThongKeAdminVm
 @using System.Text.Json
-@using Syncfusion.EJ2.Charts
-<script src="https://cdn.syncfusion.com/ej2/21.2.3/dist/ej2.min.js"></script>
 
 @{
     ViewData["Title"] = "Thống kê Admin";
@@ -170,12 +168,12 @@
                 <div class="card-body">
                     @if (Model.StatusDist.Any())
                     {
-                        <ejs-circularchart3d id="statusPieChart3D" enableRotation="true" tilt="-45" height="350" title="Phân bổ trạng thái">
-                            <e-circularchart3d-tooltipsettings enable="true" header="" format="<b>${point.x}</b><br/>Số lượng: <b>${point.y}</b>"></e-circularchart3d-tooltipsettings>
-                            <e-circularchart3d-legendsettings visible="true" position="Bottom"></e-circularchart3d-legendsettings>
-                            <e-circularchart3d-series-collection>
-                                <e-circularchart3d-series dataSource="@Model.StatusDist.Select(s => new { 
-                                    X = s.TrangThai switch {
+                        <div id="statusPieChart" style="width: 100%; height: 350px;"></div>
+                        
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const statusData = @Html.Raw(Json.Serialize(Model.StatusDist.Select(s => new {
+                                    name = s.TrangThai switch {
                                 0 => "Đang chờ duyệt",
                                 1 => "Đã chấp nhận",
                                 2 => "Đang thực hiện",
@@ -184,14 +182,86 @@
                                 5 => "Đã rút đăng ký",
                                 _ => "Không xác định"
                                     },
-                                    Y = s.SoLuong
-                                })" xName="X" yName="Y" innerRadius="0%" explode="true">
-                                    <e-circularchart3d-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.CircularChart3DLabelPosition.Outside" name="X">
-                                        <e-font fontWeight="600"></e-font>
-                                    </e-circularchart3d-series-datalabel>
-                                </e-circularchart3d-series>
-                            </e-circularchart3d-series-collection>
-                        </ejs-circularchart3d>
+                                    value = s.SoLuong
+                                })));
+
+                                const chartDom = document.getElementById('statusPieChart');
+                                const myChart = echarts.init(chartDom);
+                                
+                                const colors = [
+                                    '#ffc107',  // Đang chờ duyệt - vàng
+                                    '#17a2b8',  // Đã chấp nhận - cyan
+                                    '#007bff',  // Đang thực hiện - xanh dương
+                                    '#28a745',  // Đã hoàn thành - xanh lá
+                                    '#dc3545',  // Đã từ chối - đỏ
+                                    '#6c757d'   // Đã rút đăng ký - xám
+                                ];
+
+                                const option = {
+                                    title: {
+                                        text: 'Phân bổ trạng thái',
+                                        textStyle: {
+                                            fontSize: 16,
+                                            fontWeight: 'bold'
+                                        },
+                                        top: 10,
+                                        left: 'center'
+                                    },
+                                    tooltip: {
+                                        trigger: 'item',
+                                        formatter: function(params) {
+                                            return `<strong>${params.name}</strong><br/>
+                                                    Số lượng: ${params.value}<br/>
+                                                    Tỷ lệ: ${params.percent}%`;
+                                        }
+                                    },
+                                    legend: {
+                                        show: false  // Ẩn legend vì thông tin đã hiển thị trên label
+                                    },
+                                    series: [{
+                                        name: 'Trạng thái',
+                                        type: 'pie',
+                                        radius: ['25%', '60%'],
+                                        center: ['50%', '50%'],
+                                        data: statusData,
+                                        emphasis: {
+                                            itemStyle: {
+                                                shadowBlur: 10,
+                                                shadowOffsetX: 0,
+                                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                            }
+                                        },
+                                        itemStyle: {
+                                            borderRadius: 8,
+                                            borderColor: '#fff',
+                                            borderWidth: 2
+                                        },
+                                        label: {
+                                            show: true,
+                                            formatter: function(params) {
+                                                return `${params.name}\n${params.percent}%`;
+                                            },
+                                            fontSize: 11,
+                                            fontWeight: 'bold',
+                                            lineHeight: 16
+                                        },
+                                        labelLine: {
+                                            show: true,
+                                            length: 15,
+                                            length2: 10
+                                        }
+                                    }],
+                                    color: colors
+                                };
+
+                                myChart.setOption(option);
+                                
+                                // Responsive
+                                window.addEventListener('resize', function () {
+                                    myChart.resize();
+                                });
+                            });
+                        </script>
                     }
                     else
                     {
@@ -211,16 +281,101 @@
                 <div class="card-body">
                     @if (Model.DiemTrungBinhDeTai.Any())
                     {
-                        <div class="text-center mb-3">
-                            <h4 class="text-primary">@String.Format("{0:F2}", Model.DiemTrungBinhDeTai.Where(dt => dt.DiemTrungBinh.HasValue).Average(dt => dt.DiemTrungBinh!.Value))</h4>
-                            <p class="text-muted">Điểm trung bình chung các đề tài</p>
-                            <small class="text-muted">(@Model.DiemTrungBinhDeTai.Count() đề tài có điểm)</small>
+                        var avgScore = Model.DiemTrungBinhDeTai.Where(dt => dt.DiemTrungBinh.HasValue).Average(dt => dt.DiemTrungBinh!.Value);
+                        var totalStudents = Model.DiemTrungBinhDeTai.Sum(dt => dt.SoSinhVienHoanThanh);
+                        var totalTopics = Model.DiemTrungBinhDeTai.Count();
+                        var scorePercentage = (double)(avgScore / 10) * 100;
+                        
+                        <!-- Score Display with Visual Gauge -->
+                        <div class="text-center mb-4">
+                            <div class="position-relative d-inline-block">
+                                <!-- Circular Progress Background -->
+                                <div class="score-circle" style="width: 120px; height: 120px; margin: 0 auto;">
+                                    <svg width="120" height="120" class="position-absolute">
+                                        <!-- Background Circle -->
+                                        <circle cx="60" cy="60" r="50" fill="none" 
+                                                stroke="#e9ecef" stroke-width="8" opacity="0.3"/>
+                                        <!-- Progress Circle -->
+                                        <circle cx="60" cy="60" r="50" fill="none" 
+                                                stroke="#28a745" stroke-width="8" 
+                                                stroke-dasharray="@(scorePercentage * 3.14) 314" 
+                                                stroke-dashoffset="78.5" 
+                                                transform="rotate(-90 60 60)"
+                                                style="transition: all 0.8s ease-in-out;"/>
+                                    </svg>
+                                    <!-- Score Text -->
+                                    <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                        <div class="h2 mb-0 fw-bold text-success">@String.Format("{0:F1}", avgScore)</div>
+                                        <small class="text-muted fw-semibold">/ 10</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Score Label -->
+                            <div class="mt-3">
+                                <h5 class="text-dark mb-1">Điểm trung bình chung</h5>
+                                <p class="text-muted small mb-0">Đánh giá tổng thể chất lượng đề tài</p>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Cards -->
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="bg-light rounded p-3 text-center h-100">
+                                    <div class="d-flex align-items-center justify-content-center mb-2">
+                                        <i class="fas fa-users text-primary me-2"></i>
+                                        <span class="h4 mb-0 text-primary">@totalStudents</span>
+                                    </div>
+                                    <small class="text-muted fw-semibold">Sinh viên có điểm</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="bg-light rounded p-3 text-center h-100">
+                                    <div class="d-flex align-items-center justify-content-center mb-2">
+                                        <i class="fas fa-tasks text-info me-2"></i>
+                                        <span class="h4 mb-0 text-info">@totalTopics</span>
+                                    </div>
+                                    <small class="text-muted fw-semibold">Đề tài có điểm</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Performance Indicator -->
+                        var performanceLevel = "";
+                        var performanceColor = "";
+                        var performanceIcon = "";
+                        
+                        if (avgScore >= 8.5m) { 
+                            performanceLevel = "Xuất sắc"; 
+                            performanceColor = "success"; 
+                            performanceIcon = "fas fa-trophy";
+                        }
+                        else if (avgScore >= 7.0m) { 
+                            performanceLevel = "Tốt"; 
+                            performanceColor = "primary"; 
+                            performanceIcon = "fas fa-thumbs-up";
+                        }
+                        else if (avgScore >= 5.5m) { 
+                            performanceLevel = "Khá"; 
+                            performanceColor = "warning"; 
+                            performanceIcon = "fas fa-star";
+                        }
+                        else { 
+                            performanceLevel = "Cần cải thiện"; 
+                            performanceColor = "danger"; 
+                            performanceIcon = "fas fa-exclamation-triangle";
+                        }
+                        
+                        <div class="mt-3 text-center">
+                            <span class="badge bg-@performanceColor bg-opacity-10 text-@performanceColor px-3 py-2">
+                                <i class="@performanceIcon me-2"></i>@performanceLevel
+                            </span>
                         </div>
                     }
                     else
                     {
-                        <div class="text-center mb-3">
-                            <p class="text-muted">Không có dữ liệu điểm số</p>
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="text-muted mt-3">Chưa có dữ liệu điểm số</p>
                         </div>
                     }
                     @if (ViewBag.LecturerAvgScore != null)
@@ -241,10 +396,6 @@
                             </div>
                         </div>
                     }
-                    @if (ViewBag.OverallTopicAvgScore == null && ViewBag.LecturerAvgScore == null)
-                    {
-                        <p class="text-muted text-center">Không có dữ liệu điểm số</p>
-                    }
                 </div>
             </div>
         </div>
@@ -261,41 +412,146 @@
                 </h6>
             </div>
             <div class="card-body">
-                <ejs-chart id="topicFillRatesChart" height="400">
-                    <e-chart-primaryxaxis valueType="Category" title="Đề tài" labelRotation="-45"></e-chart-primaryxaxis>
-                    <e-chart-primaryyaxis minimum="0" maximum="@(Model.DeTaiFill.Any() ? Model.DeTaiFill.Max(dt => dt.SlotToiDa) + 2 : 10)" interval="@(Model.DeTaiFill.Any() && Model.DeTaiFill.Max(dt => dt.SlotToiDa) <= 10 ? 1 : 5)" title="Số slot"></e-chart-primaryyaxis>
-                    <e-chart-tooltipsettings enable="true" format="Mã đề tài: ${point.x}<br/>${series.name}: ${point.y}<br/>Tỷ lệ lấp đầy: ${point.tooltip}%"></e-chart-tooltipsettings>
-                    <e-chart-legendsettings visible="true" position="Top"></e-chart-legendsettings>
-                    <e-series-collection>
-                        <e-series dataSource="@Model.DeTaiFill.Take(10).Select(dt => new { 
-                            Category = dt.MaDt,
-                            Used = dt.SlotDaDung,
-                            Remaining = dt.SlotConLai,
-                            Pending = dt.DangChoDuyet,
-                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
-                            FillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
-                        })" xName="Category" yName="Used" name="Đã sử dụng" type="StackingColumn" tooltipMappingName="FillRate">
-                        </e-series>
-                        <e-series dataSource="@Model.DeTaiFill.Take(10).Select(dt => new { 
-                            Category = dt.MaDt,
-                            Used = dt.SlotDaDung,
-                            Remaining = dt.SlotConLai,
-                            Pending = dt.DangChoDuyet,
-                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
-                            FillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
-                        })" xName="Category" yName="Pending" name="Chờ duyệt" type="StackingColumn" tooltipMappingName="FillRate">
-                        </e-series>
-                        <e-series dataSource="@Model.DeTaiFill.Take(10).Select(dt => new { 
-                            Category = dt.MaDt,
-                            Used = dt.SlotDaDung,
-                            Remaining = dt.SlotConLai,
-                            Pending = dt.DangChoDuyet,
-                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
-                            FillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
-                        })" xName="Category" yName="Remaining" name="Còn lại" type="StackingColumn" tooltipMappingName="FillRate">
-                        </e-series>
-                    </e-series-collection>
-                </ejs-chart>
+                <div id="topicFillRatesChart" style="width: 100%; height: 400px;"></div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const fillData = @Html.Raw(Json.Serialize(Model.DeTaiFill.Take(10).Select(dt => new {
+                            maDt = dt.MaDt,
+                            tenDt = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
+                            daSuDung = dt.SlotDaDung,
+                            choDuyet = dt.DangChoDuyet,
+                            conLai = dt.SlotConLai,
+                            slotToiDa = dt.SlotToiDa,
+                            fillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
+                        })));
+
+                        const chartDom = document.getElementById('topicFillRatesChart');
+                        const myChart = echarts.init(chartDom);
+                        
+                        const categories = fillData.map(x => x.maDt);
+                        const usedData = fillData.map(x => x.daSuDung);
+                        const pendingData = fillData.map(x => x.choDuyet);
+                        const remainingData = fillData.map(x => x.conLai);
+
+                        const option = {
+                            title: {
+                                text: 'Tỷ lệ lấp đầy đề tài (Top 10)',
+                                textStyle: {
+                                    fontSize: 16,
+                                    fontWeight: 'bold'
+                                },
+                                top: 10,
+                                left: 'center'
+                            },
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow'
+                                },
+                                formatter: function(params) {
+                                    const dataIndex = params[0].dataIndex;
+                                    const item = fillData[dataIndex];
+                                    let result = `<strong>Mã ĐT:</strong> ${item.maDt}<br/>`;
+                                    result += `<strong>Tên:</strong> ${item.tenDt}<br/>`;
+                                    params.forEach(param => {
+                                        result += `<span style="color: ${param.color}">●</span> ${param.seriesName}: ${param.value}<br/>`;
+                                    });
+                                    result += `<strong>Tỷ lệ lấp đầy:</strong> ${item.fillRate}%`;
+                                    return result;
+                                }
+                            },
+                            legend: {
+                                data: ['Đã sử dụng', 'Chờ duyệt', 'Còn lại'],
+                                top: 40,
+                                textStyle: {
+                                    fontSize: 12
+                                }
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '15%',
+                                top: '20%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                name: 'Đề tài',
+                                nameLocation: 'middle',
+                                nameGap: 30,
+                                axisLabel: {
+                                    interval: 0,
+                                    rotate: 45,
+                                    fontSize: 10
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: 'Số slot',
+                                nameLocation: 'middle',
+                                nameGap: 40
+                            },
+                            series: [
+                                {
+                                    name: 'Đã sử dụng',
+                                    type: 'bar',
+                                    stack: 'slot',
+                                    data: usedData,
+                                    itemStyle: {
+                                        color: '#28a745',
+                                        borderRadius: [0, 0, 4, 4]
+                                    },
+                                    emphasis: {
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowColor: 'rgba(40, 167, 69, 0.5)'
+                                        }
+                                    }
+                                },
+                                {
+                                    name: 'Chờ duyệt',
+                                    type: 'bar',
+                                    stack: 'slot',
+                                    data: pendingData,
+                                    itemStyle: {
+                                        color: '#ffc107'
+                                    },
+                                    emphasis: {
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowColor: 'rgba(255, 193, 7, 0.5)'
+                                        }
+                                    }
+                                },
+                                {
+                                    name: 'Còn lại',
+                                    type: 'bar',
+                                    stack: 'slot',
+                                    data: remainingData,
+                                    itemStyle: {
+                                        color: '#6c757d',
+                                        borderRadius: [4, 4, 0, 0]
+                                    },
+                                    emphasis: {
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowColor: 'rgba(108, 117, 125, 0.5)'
+                                        }
+                                    }
+                                }
+                            ]
+                        };
+
+                        myChart.setOption(option);
+                        
+                        // Responsive
+                        window.addEventListener('resize', function () {
+                            myChart.resize();
+                        });
+                    });
+                </script>
             </div>
         </div>
     }
@@ -343,28 +599,128 @@
                         </h6>
                     </div>
                     <div class="card-body">
-                        <ejs-chart id="departmentMiniChart" height="300">
-                            <e-chart-primaryxaxis valueType="Category" title="Khoa"></e-chart-primaryxaxis>
-                            <e-chart-primaryyaxis title="Số lượng"></e-chart-primaryyaxis>
-                            <e-chart-tooltipsettings enable="true" format="Khoa: ${point.x}<br/>${series.name}: ${point.y}"></e-chart-tooltipsettings>
-                            <e-chart-legendsettings visible="true" position="Bottom"></e-chart-legendsettings>
-                            <e-series-collection>
-                                <e-series dataSource="@Model.ByKhoa.Take(5).Select(k => new { 
-                                    Category = k.MaKhoa, 
-                                    Topics = k.SoDeTai,
-                                    Completed = k.DaHoanThanh,
-                                    Lecturers = k.SoGiangVien
-                                })" xName="Category" yName="Topics" name="Đề tài" type="Column">
-                                </e-series>
-                                <e-series dataSource="@Model.ByKhoa.Take(5).Select(k => new { 
-                                    Category = k.MaKhoa, 
-                                    Topics = k.SoDeTai,
-                                    Completed = k.DaHoanThanh,
-                                    Lecturers = k.SoGiangVien
-                                })" xName="Category" yName="Completed" name="Hoàn thành" type="Column">
-                                </e-series>
-                            </e-series-collection>
-                        </ejs-chart>
+                        <div id="departmentMiniChart" style="width: 100%; height: 300px;"></div>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const khoaData = @Html.Raw(Json.Serialize(Model.ByKhoa.Take(5).Select(k => new {
+                                    maKhoa = k.MaKhoa,
+                                    soDeTai = k.SoDeTai,
+                                    daHoanThanh = k.DaHoanThanh,
+                                    soGiangVien = k.SoGiangVien
+                                })));
+
+                                const chartDom = document.getElementById('departmentMiniChart');
+                                const myChart = echarts.init(chartDom);
+                                
+                                const categories = khoaData.map(x => x.maKhoa);
+                                const topicsData = khoaData.map(x => x.soDeTai);
+                                const completedData = khoaData.map(x => x.daHoanThanh);
+
+                                const option = {
+                                    title: {
+                                        text: 'Thống kê theo khoa',
+                                        textStyle: {
+                                            fontSize: 14,
+                                            fontWeight: 'bold'
+                                        },
+                                        top: 5,
+                                        left: 'center'
+                                    },
+                                    tooltip: {
+                                        trigger: 'axis',
+                                        axisPointer: {
+                                            type: 'shadow'
+                                        },
+                                        formatter: function(params) {
+                                            const dataIndex = params[0].dataIndex;
+                                            const item = khoaData[dataIndex];
+                                            let result = `<strong>Khoa:</strong> ${item.maKhoa}<br/>`;
+                                            result += `<strong>Số giảng viên:</strong> ${item.soGiangVien}<br/>`;
+                                            params.forEach(param => {
+                                                result += `<span style="color: ${param.color}">●</span> ${param.seriesName}: ${param.value}<br/>`;
+                                            });
+                                            return result;
+                                        }
+                                    },
+                                    legend: {
+                                        data: ['Đề tài', 'Hoàn thành'],
+                                        bottom: 5,
+                                        textStyle: {
+                                            fontSize: 11
+                                        }
+                                    },
+                                    grid: {
+                                        left: '8%',
+                                        right: '8%',
+                                        bottom: '20%',
+                                        top: '20%',
+                                        containLabel: true
+                                    },
+                                    xAxis: {
+                                        type: 'category',
+                                        data: categories,
+                                        name: 'Khoa',
+                                        nameLocation: 'middle',
+                                        nameGap: 25,
+                                        axisLabel: {
+                                            fontSize: 10
+                                        }
+                                    },
+                                    yAxis: {
+                                        type: 'value',
+                                        name: 'Số lượng',
+                                        nameLocation: 'middle',
+                                        nameGap: 30
+                                    },
+                                    series: [
+                                        {
+                                            name: 'Đề tài',
+                                            type: 'bar',
+                                            data: topicsData,
+                                            itemStyle: {
+                                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                                    { offset: 0, color: '#4dabf7' },
+                                                    { offset: 1, color: '#007bff' }
+                                                ]),
+                                                borderRadius: [4, 4, 0, 0]
+                                            },
+                                            emphasis: {
+                                                itemStyle: {
+                                                    shadowBlur: 10,
+                                                    shadowColor: 'rgba(0, 123, 255, 0.5)'
+                                                }
+                                            }
+                                        },
+                                        {
+                                            name: 'Hoàn thành',
+                                            type: 'bar',
+                                            data: completedData,
+                                            itemStyle: {
+                                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                                    { offset: 0, color: '#51cf66' },
+                                                    { offset: 1, color: '#28a745' }
+                                                ]),
+                                                borderRadius: [4, 4, 0, 0]
+                                            },
+                                            emphasis: {
+                                                itemStyle: {
+                                                    shadowBlur: 10,
+                                                    shadowColor: 'rgba(40, 167, 69, 0.5)'
+                                                }
+                                            }
+                                        }
+                                    ]
+                                };
+
+                                myChart.setOption(option);
+                                
+                                // Responsive
+                                window.addEventListener('resize', function () {
+                                    myChart.resize();
+                                });
+                            });
+                        </script>
                     </div>
                 </div>
             </div>
@@ -392,21 +748,93 @@
                 <div class="col-lg-6">
                     @if (Model.ByTerm.Any())
                     {
-                             <ejs-circularchart3d id="termStatsPieChart3D" enableRotation="true" tilt="-45" height="350" title="Thống kê trạng thái học kỳ">
-                                 <e-circularchart3d-tooltipsettings enable="true" header="" format="<b>${point.x}</b><br/>Số lượng: <b>${point.y}</b>"></e-circularchart3d-tooltipsettings>
-                                 <e-circularchart3d-legendsettings visible="true" position="Right"></e-circularchart3d-legendsettings>
-                                 <e-circularchart3d-series-collection>
-                                     <e-circularchart3d-series dataSource="@Model.ByTerm.Take(1).SelectMany(term => new[] {
-                                         new { X = "Hoàn thành", Y = term.HoanThanh },
-                                         new { X = "Đang thực hiện", Y = term.SlotDaDung - term.HoanThanh - term.ChoDuyet },
-                                         new { X = "Chờ duyệt", Y = term.ChoDuyet }
-                                     }.Where(x => x.Y > 0))" xName="X" yName="Y" innerRadius="0%" explode="true">
-                                         <e-circularchart3d-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.CircularChart3DLabelPosition.Outside" name="X">
-                                             <e-font fontWeight="600"></e-font>
-                                         </e-circularchart3d-series-datalabel>
-                                     </e-circularchart3d-series>
-                                 </e-circularchart3d-series-collection>
-                             </ejs-circularchart3d>
+                             <div id="termStatsPieChart" style="width: 100%; height: 350px;"></div>
+
+                             <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const termData = @Html.Raw(Json.Serialize(Model.ByTerm.Take(1).SelectMany(term => new[] {
+                                        new { name = "Hoàn thành", value = term.HoanThanh },
+                                        new { name = "Đang thực hiện", value = term.SlotDaDung - term.HoanThanh },
+                                        new { name = "Chờ duyệt", value = term.ChoDuyet }
+                                    }.Where(x => x.value > 0))));
+
+                                    const chartDom = document.getElementById('termStatsPieChart');
+                                    const myChart = echarts.init(chartDom);
+                                    
+                                    const colors = [
+                                        '#28a745',  // Hoàn thành - xanh lá
+                                        '#007bff',  // Đang thực hiện - xanh dương
+                                        '#ffc107'   // Chờ duyệt - vàng
+                                    ];
+
+                                    const option = {
+                                        title: {
+                                            text: 'Thống kê trạng thái học kỳ',
+                                            textStyle: {
+                                                fontSize: 14,
+                                                fontWeight: 'bold'
+                                            },
+                                            top: 10,
+                                            left: 'center'
+                                        },
+                                        tooltip: {
+                                            trigger: 'item',
+                                            formatter: function(params) {
+                                                return `<strong>${params.name}</strong><br/>
+                                                        Số lượng: ${params.value}<br/>
+                                                        Tỷ lệ: ${params.percent}%`;
+                                            }
+                                        },
+                                        legend: {
+                                            orient: 'vertical',
+                                            right: 10,
+                                            top: 'center',
+                                            textStyle: {
+                                                fontSize: 11
+                                            }
+                                        },
+                                        series: [{
+                                            name: 'Trạng thái học kỳ',
+                                            type: 'pie',
+                                            radius: ['40%', '75%'],
+                                            center: ['40%', '50%'],
+                                            data: termData,
+                                            emphasis: {
+                                                itemStyle: {
+                                                    shadowBlur: 15,
+                                                    shadowOffsetX: 0,
+                                                    shadowColor: 'rgba(0, 0, 0, 0.3)'
+                                                }
+                                            },
+                                            itemStyle: {
+                                                borderRadius: 10,
+                                                borderColor: '#fff',
+                                                borderWidth: 3
+                                            },
+                                            label: {
+                                                show: true,
+                                                formatter: function(params) {
+                                                    return `${params.percent}%`;
+                                                },
+                                                fontSize: 12,
+                                                fontWeight: 'bold',
+                                                color: '#fff'
+                                            },
+                                            labelLine: {
+                                                show: false
+                                            }
+                                        }],
+                                        color: colors
+                                    };
+
+                                    myChart.setOption(option);
+                                    
+                                    // Responsive
+                                    window.addEventListener('resize', function () {
+                                        myChart.resize();
+                                    });
+                                });
+                             </script>
                     }
                     else
                     {
@@ -422,8 +850,8 @@
                                 <div class="p-3 bg-primary bg-opacity-10 rounded">
                                     <div class="h3 text-primary mb-1">@currentTerm.SlotDaDung</div>
                                     <small class="text-muted">Slot đã sử dụng</small>
-                                </div>
-                            </div>
+                                        </div>
+                                        </div>
                             <div class="col-md-4 mb-3">
                                 <div class="p-3 bg-success bg-opacity-10 rounded">
                                     <div class="h3 text-success mb-1">@currentTerm.HoanThanh</div>
@@ -434,8 +862,8 @@
                                 <div class="p-3 bg-warning bg-opacity-10 rounded">
                                     <div class="h3 text-warning mb-1">@currentTerm.ChoDuyet</div>
                                             <small class="text-muted">Chờ duyệt</small>
-                                </div>
-                            </div>
+                                        </div>
+                                    </div>
                             <div class="col-md-6 mb-3">
                                 <div class="p-3 bg-info bg-opacity-10 rounded">
                                     <div class="h4 text-info mb-1">@((currentTerm.SlotDaDung > 0 ? (decimal)currentTerm.HoanThanh / currentTerm.SlotDaDung * 100 : 0).ToString("F1"))%</div>
@@ -444,7 +872,7 @@
                                     </div>
                             <div class="col-md-6 mb-3">
                                 <div class="p-3 bg-secondary bg-opacity-10 rounded">
-                                    <div class="h4 text-dark mb-1">@(currentTerm.SlotDaDung - currentTerm.HoanThanh - currentTerm.ChoDuyet)</div>
+                                    <div class="h4 text-dark mb-1">@(currentTerm.SlotDaDung - currentTerm.HoanThanh)</div>
                                     <small class="text-muted">Đang thực hiện</small>
                                 </div>
                             </div>
@@ -463,30 +891,153 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-light">
                 <h6 class="mb-0">
-                    <i class="fas fa-award me-2 text-primary"></i>
-                    Điểm trung bình theo đề tài (Top 10)
+                    <i class="fas fa-chart-bar me-2 text-primary"></i>
+                    Phân phối điểm số sinh viên
                 </h6>
             </div>
             <div class="card-body">
-                <ejs-chart id="topicScoresChart" height="400">
-                    <e-chart-primaryxaxis valueType="Category" title="Đề tài"></e-chart-primaryxaxis>
-                    <e-chart-primaryyaxis minimum="0" maximum="10" interval="1" title="Điểm trung bình"></e-chart-primaryyaxis>
-                    <e-chart-tooltipsettings enable="true" format="Mã đề tài: ${point.x}<br/>${point.tooltip}<br/>Điểm TB: ${point.y}"></e-chart-tooltipsettings>
-                    <e-chart-legendsettings visible="false"></e-chart-legendsettings>
-                    <e-series-collection>
-                        <e-series dataSource="@Model.DiemTrungBinhDeTai.Take(10).Select(dt => new { 
-                            Category = dt.MaDt, 
-                            Score = dt.DiemTrungBinh ?? 0,
-                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
-                            FullTitle = dt.TenDt,
-                            Lecturer = dt.HoTenGv,
-                            Students = dt.SoSinhVienHoanThanh,
-                            TooltipText = $"Tên: {dt.TenDt}<br/>Giảng viên: {dt.HoTenGv}<br/>SV hoàn thành: {dt.SoSinhVienHoanThanh}"
-                        })" xName="Category" yName="Score" name="Điểm TB" type="Column" tooltipMappingName="TooltipText">
-                        </e-series>
-                    </e-series-collection>
-                </ejs-chart>
-            </div>
+                <div id="topicScoresChart" style="width: 100%; height: 400px;"></div>
+                
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const data = @Html.Raw(Json.Serialize(Model.DiemTrungBinhDeTai.Select(dt => new { 
+                            maDt = dt.MaDt,
+                            tenDt = dt.TenDt,
+                            diemTB = dt.DiemTrungBinh ?? 0,
+                            hoTenGv = dt.HoTenGv,
+                            maGv = dt.MaGv,
+                            soSV = dt.SoSinhVienHoanThanh
+                        })));
+
+                        // Tạo histogram: đếm số lượng sinh viên theo khoảng điểm 0.5
+                        const scoreRanges = [
+                            { key: '1.0-1.4', label: '1.0-1.4', min: 1.0, max: 1.49 },
+                            { key: '1.5-1.9', label: '1.5-1.9', min: 1.5, max: 1.99 },
+                            { key: '2.0-2.4', label: '2.0-2.4', min: 2.0, max: 2.49 },
+                            { key: '2.5-2.9', label: '2.5-2.9', min: 2.5, max: 2.99 },
+                            { key: '3.0-3.4', label: '3.0-3.4', min: 3.0, max: 3.49 },
+                            { key: '3.5-3.9', label: '3.5-3.9', min: 3.5, max: 3.99 },
+                            { key: '4.0-4.4', label: '4.0-4.4', min: 4.0, max: 4.49 },
+                            { key: '4.5-4.9', label: '4.5-4.9', min: 4.5, max: 4.99 },
+                            { key: '5.0-5.4', label: '5.0-5.4', min: 5.0, max: 5.49 },
+                            { key: '5.5-5.9', label: '5.5-5.9', min: 5.5, max: 5.99 },
+                            { key: '6.0-6.4', label: '6.0-6.4', min: 6.0, max: 6.49 },
+                            { key: '6.5-6.9', label: '6.5-6.9', min: 6.5, max: 6.99 },
+                            { key: '7.0-7.4', label: '7.0-7.4', min: 7.0, max: 7.49 },
+                            { key: '7.5-7.9', label: '7.5-7.9', min: 7.5, max: 7.99 },
+                            { key: '8.0-8.4', label: '8.0-8.4', min: 8.0, max: 8.49 },
+                            { key: '8.5-8.9', label: '8.5-8.9', min: 8.5, max: 8.99 },
+                            { key: '9.0-9.4', label: '9.0-9.4', min: 9.0, max: 9.49 },
+                            { key: '9.5-10.0', label: '9.5-10.0', min: 9.5, max: 10.0 }
+                        ];
+                        
+                        const scoreDistribution = {};
+                        scoreRanges.forEach(range => {
+                            scoreDistribution[range.key] = 0;
+                        });
+
+                        // Phân loại sinh viên theo khoảng điểm
+                        data.forEach(item => {
+                            const score = item.diemTB;
+                            const range = scoreRanges.find(r => score >= r.min && score <= r.max);
+                            if (range) {
+                                scoreDistribution[range.key] += item.soSV;
+                            }
+                        });
+
+                        const chartDom = document.getElementById('topicScoresChart');
+                        const myChart = echarts.init(chartDom);
+                        
+                        const categories = scoreRanges.map(r => r.label);
+                        const counts = scoreRanges.map(r => scoreDistribution[r.key]);
+
+                        const option = {
+                            title: {
+                                text: 'Phân phối điểm số sinh viên',
+                                textStyle: {
+                                    fontSize: 16,
+                                    fontWeight: 'bold'
+                                },
+                                top: 10,
+                                left: 'center'
+                            },
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow'
+                                },
+                                formatter: function(params) {
+                                    const param = params[0];
+                                    return `<strong>Khoảng điểm: ${param.name}</strong><br/>Số sinh viên: ${param.value}`;
+                                }
+                            },
+                            grid: {
+                                left: '8%',
+                                right: '8%',
+                                bottom: '15%',
+                                top: '15%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                name: 'Khoảng điểm',
+                                nameLocation: 'middle',
+                                nameGap: 30,
+                                axisLabel: {
+                                    fontSize: 10,
+                                    interval: 0,
+                                    rotate: 45
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: 'Số lượng sinh viên',
+                                nameLocation: 'middle',
+                                nameGap: 40,
+                                min: 0,
+                                axisLabel: {
+                                    formatter: '{value}'
+                                }
+                            },
+                            series: [{
+                                name: 'Số sinh viên',
+                                type: 'bar',
+                                data: counts,
+                                itemStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: '#4CAF50' },
+                                        { offset: 1, color: '#2E7D32' }
+                                    ]),
+                                    borderRadius: [4, 4, 0, 0]
+                                },
+                                emphasis: {
+                                    itemStyle: {
+                                        shadowBlur: 10,
+                                        shadowColor: 'rgba(76, 175, 80, 0.5)'
+                                    }
+                                },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: function(params) {
+                                        return params.value > 0 ? params.value : '';
+                                    },
+                                    fontSize: 11,
+                                    fontWeight: 'bold'
+                                }
+                            }]
+                        };
+
+                        myChart.setOption(option);
+                        
+                        // Responsive
+                        window.addEventListener('resize', function () {
+                            myChart.resize();
+                        });
+                    });
+                </script>
+</div>
         </div>
     }
 
@@ -501,23 +1052,118 @@
                 </h6>
             </div>
             <div class="card-body">
-                <ejs-chart id="lecturerScoresChart" height="400">
-                    <e-chart-primaryxaxis valueType="Category" title="Giảng viên" labelRotation="-45"></e-chart-primaryxaxis>
-                    <e-chart-primaryyaxis minimum="0" maximum="10" interval="1" title="Điểm trung bình"></e-chart-primaryyaxis>
-                    <e-chart-tooltipsettings enable="true" format="GV: ${point.x}<br/>Điểm TB: ${point.y}"></e-chart-tooltipsettings>
-                    <e-chart-legendsettings visible="false"></e-chart-legendsettings>
-                    <e-series-collection>
-                        <e-series dataSource="@Model.DiemTrungBinhGiangVien.Take(10).Select(gv => new { 
-                            Category = gv.HoTenGv, 
-                            Score = gv.DiemTrungBinh ?? 0,
-                            MaGv = gv.MaGv,
-                            Khoa = gv.MaKhoa,
-                            Students = gv.TongSinhVienHoanThanh,
-                            Topics = gv.TongDeTai
-                        })" xName="Category" yName="Score" name="Điểm TB" type="Column">
-                        </e-series>
-                    </e-series-collection>
-                </ejs-chart>
+                <div id="lecturerScoresChart" style="width: 100%; height: 400px;"></div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const gvData = @Html.Raw(Json.Serialize(Model.DiemTrungBinhGiangVien.Take(10).Select(gv => new {
+                            hoTen = gv.HoTenGv,
+                            diemTB = gv.DiemTrungBinh ?? 0,
+                            maGv = gv.MaGv,
+                            maKhoa = gv.MaKhoa,
+                            tongSV = gv.TongSinhVienHoanThanh,
+                            tongDeTai = gv.TongDeTai
+                        })));
+
+                        const chartDom = document.getElementById('lecturerScoresChart');
+                        const myChart = echarts.init(chartDom);
+                        
+                        const categories = gvData.map(x => x.hoTen);
+                        const scoresData = gvData.map(x => x.diemTB);
+
+                        const option = {
+                            title: {
+                                text: 'Điểm trung bình theo giảng viên (Top 10)',
+                                textStyle: {
+                                    fontSize: 16,
+                                    fontWeight: 'bold'
+                                },
+                                top: 10,
+                                left: 'center'
+                            },
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow'
+                                },
+                                formatter: function(params) {
+                                    const dataIndex = params[0].dataIndex;
+                                    const item = gvData[dataIndex];
+                                    return `
+                                        <strong>${item.hoTen}</strong><br/>
+                                        <strong>Mã GV:</strong> ${item.maGv}<br/>
+                                        <strong>Khoa:</strong> ${item.maKhoa}<br/>
+                                        <strong>Điểm TB:</strong> ${item.diemTB.toFixed(2)}<br/>
+                                        <strong>Tổng SV hoàn thành:</strong> ${item.tongSV}<br/>
+                                        <strong>Tổng đề tài:</strong> ${item.tongDeTai}
+                                    `;
+                                }
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '20%',
+                                top: '15%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                name: 'Giảng viên',
+                                nameLocation: 'middle',
+                                nameGap: 30,
+                                axisLabel: {
+                                    interval: 0,
+                                    rotate: 45,
+                                    fontSize: 10
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: 'Điểm trung bình',
+                                nameLocation: 'middle',
+                                nameGap: 40,
+                                min: 0,
+                                max: 10,
+                                interval: 1
+                            },
+                            series: [{
+                                name: 'Điểm TB',
+                                type: 'bar',
+                                data: scoresData,
+                                itemStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: '#74c0fc' },
+                                        { offset: 1, color: '#17a2b8' }
+                                    ]),
+                                    borderRadius: [6, 6, 0, 0]
+                                },
+                                emphasis: {
+                                    itemStyle: {
+                                        shadowBlur: 15,
+                                        shadowColor: 'rgba(23, 162, 184, 0.5)'
+                                    }
+                                },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: function(params) {
+                                        return params.value.toFixed(2);
+                                    },
+                                    fontSize: 11,
+                                    fontWeight: 'bold'
+                                }
+                            }]
+                        };
+
+                        myChart.setOption(option);
+                        
+                        // Responsive
+                        window.addEventListener('resize', function () {
+                            myChart.resize();
+                        });
+                    });
+                </script>
             </div>
         </div>
     }
@@ -534,53 +1180,157 @@
                 <small class="text-muted">Mỗi giảng viên có tối đa 15 đề tài per học kỳ</small>
             </div>
             <div class="card-body">
-                <ejs-chart style="height: 100%; width: 100%" id="slotUsageGroupedChart" width="100%" height="400">
-                    <e-chart-primaryxaxis valueType="@Syncfusion.EJ2.Charts.ValueType.Category" interval="1" labelRotation="-45">
-                        <e-labelstyle size="11px"></e-labelstyle>
-                        <e-majorgridlines width="0"></e-majorgridlines>
-                    </e-chart-primaryxaxis>
-                    <e-chart-primaryyaxis labelFormat="{value}" minimum="0" maximum="15" interval="3" title="Số đề tài">
-                        <e-majorticklines width="0"></e-majorticklines>
-                        <e-linestyle width="0"></e-linestyle>
-                        <e-labelstyle size="11px"></e-labelstyle>
-                    </e-chart-primaryyaxis>
-                    <e-chart-chartarea>
-                        <e-chartarea-border width="0"></e-chartarea-border>
-                    </e-chart-chartarea>
-                    <e-chart-tooltipsettings enable="true" format="GV: ${point.x}<br/>${series.name}: ${point.y} đề tài"></e-chart-tooltipsettings>
-                    <e-series-collection>
-                        <e-series dataSource="@Model.SlotThongKe.Select(s => new { 
-                            GiangVien = s.HoTenGv.Length > 15 ? s.HoTenGv.Substring(0, 15) + "..." : s.HoTenGv,
-                            DaSuDung = s.SlotDaSuDung,
-                            ConLai = s.SlotConLai,
-                            MaKhoa = s.MaKhoa,
-                            Percentage = s.TiLeSuDung
-                        })" xName="GiangVien" yName="DaSuDung" name="Đã sử dụng" width="2" fill="#2485FA" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Column">
-                            <e-series-marker>
-                                <e-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.LabelPosition.Top">
-                                    <e-font color="black" size="10px"></e-font>
-                                </e-series-datalabel>
-                            </e-series-marker>
-                            <e-series-cornerradius topLeft="4" topRight="4"></e-series-cornerradius>
-                        </e-series>
-                        <e-series dataSource="@Model.SlotThongKe.Select(s => new { 
-                            GiangVien = s.HoTenGv.Length > 15 ? s.HoTenGv.Substring(0, 15) + "..." : s.HoTenGv,
-                            DaSuDung = s.SlotDaSuDung,
-                            ConLai = s.SlotConLai,
-                            MaKhoa = s.MaKhoa,
-                            Percentage = s.TiLeSuDung
-                        })" xName="GiangVien" yName="ConLai" name="Còn lại" fill="#FEC200" width="2" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Column">
-                            <e-series-marker>
-                                <e-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.LabelPosition.Top">
-                                    <e-font color="black" size="10px"></e-font>
-                                </e-series-datalabel>
-                            </e-series-marker>
-                            <e-series-cornerradius topLeft="4" topRight="4"></e-series-cornerradius>
-                        </e-series>
-                    </e-series-collection>
-                    <e-chart-legendsettings padding="5" shapeHeight="8" shapeWidth="8" enableHighlight="true" position="Top">
-                    </e-chart-legendsettings>
-                </ejs-chart>
+                <div id="slotUsageGroupedChart" style="width: 100%; height: 400px;"></div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const slotData = @Html.Raw(Json.Serialize(Model.SlotThongKe.Select(s => new {
+                            giangVien = s.HoTenGv.Length > 15 ? s.HoTenGv.Substring(0, 15) + "..." : s.HoTenGv,
+                            daSuDung = s.SlotDaSuDung,
+                            conLai = s.SlotConLai,
+                            maKhoa = s.MaKhoa,
+                            tiLeSuDung = s.TiLeSuDung
+                        })));
+
+                        const chartDom = document.getElementById('slotUsageGroupedChart');
+                        const myChart = echarts.init(chartDom);
+                        
+                        const categories = slotData.map(x => x.giangVien);
+                        const usedData = slotData.map(x => x.daSuDung);
+                        const remainingData = slotData.map(x => x.conLai);
+
+                        const option = {
+                            title: {
+                                text: 'Thống kê số lượng hướng dẫn theo giảng viên (Top 15)',
+                                textStyle: {
+                                    fontSize: 16,
+                                    fontWeight: 'bold'
+                                },
+                                top: 10,
+                                left: 'center'
+                            },
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow'
+                                },
+                                formatter: function(params) {
+                                    const dataIndex = params[0].dataIndex;
+                                    const item = slotData[dataIndex];
+                                    let result = `<strong>GV:</strong> ${item.giangVien}<br/>`;
+                                    result += `<strong>Khoa:</strong> ${item.maKhoa}<br/>`;
+                                    params.forEach(param => {
+                                        result += `<span style="color: ${param.color}">●</span> ${param.seriesName}: ${param.value} đề tài<br/>`;
+                                    });
+                                    result += `<strong>Tỷ lệ sử dụng:</strong> ${item.tiLeSuDung}%`;
+                                    return result;
+                                }
+                            },
+                            legend: {
+                                data: ['Đã sử dụng', 'Còn lại'],
+                                top: 40,
+                                textStyle: {
+                                    fontSize: 12
+                                }
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '20%',
+                                top: '20%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                name: 'Giảng viên',
+                                nameLocation: 'middle',
+                                nameGap: 30,
+                                axisLabel: {
+                                    interval: 0,
+                                    rotate: 45,
+                                    fontSize: 9
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: 'Số đề tài',
+                                nameLocation: 'middle',
+                                nameGap: 40,
+                                min: 0,
+                                max: 15,
+                                interval: 3
+                            },
+                            series: [
+                                {
+                                    name: 'Đã sử dụng',
+                                    type: 'bar',
+                                    stack: 'slot',
+                                    data: usedData,
+                                    itemStyle: {
+                                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                            { offset: 0, color: '#74c0fc' },
+                                            { offset: 1, color: '#2485FA' }
+                                        ]),
+                                        borderRadius: [0, 0, 4, 4]
+                                    },
+                                    emphasis: {
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowColor: 'rgba(36, 133, 250, 0.5)'
+                                        }
+                                    },
+                                    label: {
+                                        show: true,
+                                        position: 'inside',
+                                        formatter: function(params) {
+                                            return params.value > 0 ? params.value : '';
+                                        },
+                                        fontSize: 10,
+                                        fontWeight: 'bold',
+                                        color: '#fff'
+                                    }
+                                },
+                                {
+                                    name: 'Còn lại',
+                                    type: 'bar',
+                                    stack: 'slot',
+                                    data: remainingData,
+                                    itemStyle: {
+                                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                            { offset: 0, color: '#fff3cd' },
+                                            { offset: 1, color: '#FEC200' }
+                                        ]),
+                                        borderRadius: [4, 4, 0, 0]
+                                    },
+                                    emphasis: {
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowColor: 'rgba(254, 194, 0, 0.5)'
+                                        }
+                                    },
+                                    label: {
+                                        show: true,
+                                        position: 'inside',
+                                        formatter: function(params) {
+                                            return params.value > 0 ? params.value : '';
+                                        },
+                                        fontSize: 10,
+                                        fontWeight: 'bold',
+                                        color: '#333'
+                                    }
+                                }
+                            ]
+                        };
+
+                        myChart.setOption(option);
+                        
+                        // Responsive
+                        window.addEventListener('resize', function () {
+                            myChart.resize();
+                        });
+                    });
+                </script>
             </div>
         </div>
     }
@@ -593,18 +1343,6 @@
         <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
         <script src="~/js/searchable-dropdown.js"></script>
         <script>
-            // Global function for slot chart loading
-            window.loadSlotChart = function (args) {
-                // Apply responsive sizing
-                const isDevice = ej.base.Browser.isDevice;
-                args.chart.width = isDevice ? "100%" : "100%";
-                args.chart.height = isDevice ? "350px" : "450px";
-                
-                // Custom styling if needed
-                if (args && args.chart) {
-                    // Apply theme or custom settings
-                }
-            };
 
             // Quick term selection + SearchableDropdown init
             document.addEventListener('DOMContentLoaded', function () {
@@ -687,19 +1425,30 @@
                     }
                 });
 
-                // Initialize dropdowns with current values if any
-                document.addEventListener('DOMContentLoaded', function() {
-                    const currentHocKy = '@Context.Request.Query["hocKy"]';
-                    const currentStart = '@Context.Request.Query["namHocStart"]';
-                    const currentEnd = '@Context.Request.Query["namHocEnd"]';
-                    
-                    if (currentHocKy && currentStart && currentEnd) {
-                        const termInput = document.querySelector('#termDropdown input[type="text"]');
-                        if (termInput) {
-                            termInput.value = `HK${currentHocKy} (${currentStart}-${currentEnd})`;
-                        }
-                    }
-                });
+                // Initialize dropdown with current values if any
+                const currentHocKy = '@Context.Request.Query["hocKy"]';
+                const currentStart = '@Context.Request.Query["namHocStart"]';
+                const currentEnd = '@Context.Request.Query["namHocEnd"]';
+                
+                if (currentHocKy && currentStart && currentEnd) {
+                    // Chờ dropdown được khởi tạo xong
+                    setTimeout(function() {
+                        // Sử dụng setValue method của SearchableDropdown
+                        const termValue = `${currentHocKy}|${currentStart}|${currentEnd}`;
+                        const termText = `HK${currentHocKy} (${currentStart}-${currentEnd})`;
+                        
+                        termDropdown.setValue(termValue, termText);
+                        
+                        // Đặt giá trị cho hidden inputs
+                        const hiddenHocKy = document.querySelector('#termDropdown input[name="hocKy"]');
+                        const hiddenStart = document.querySelector('#termDropdown input[name="namHocStart"]');
+                        const hiddenEnd = document.querySelector('#termDropdown input[name="namHocEnd"]');
+                        
+                        if (hiddenHocKy) hiddenHocKy.value = currentHocKy;
+                        if (hiddenStart) hiddenStart.value = currentStart;
+                        if (hiddenEnd) hiddenEnd.value = currentEnd;
+                    }, 100);
+                }
 
             });
 

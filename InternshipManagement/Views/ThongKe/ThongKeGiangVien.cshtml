@@ -3,59 +3,15 @@
 
 @{
     ViewData["Title"] = "Thống kê Giảng viên";
-
-    // Serialize an toàn bằng System.Text.Json
-    var trendJson = JsonSerializer.Serialize(Model.Trend);
-    var statusJson = JsonSerializer.Serialize(Model.StatusDist);
-    var fillJson = JsonSerializer.Serialize(Model.DeTaiFill);
-
-    // Tính học kỳ và năm học mặc định
-    var now = DateTime.Now;
-    var currentYear = now.Year;
-    var nextYear = currentYear + 1;
-    var currentMonth = now.Month;
-
-    // Xác định học kỳ dựa vào tháng hiện tại
-    var currentTerm = currentMonth switch
-    {
-        >= 9 and <= 12 => 1,  // HK1: 9-12
-        >= 1 and <= 4 => 2,   // HK2: 1-4
-        _ => 3                 // HK3: 5-8
-    };
-
-    // Xác định năm học
-    var academicYear = currentTerm == 1
-        ? $"{currentYear}-{nextYear}"      // HK1 bắt đầu năm học mới
-        : $"{currentYear-1}-{currentYear}"; // HK2,3 thuộc năm học cũ
-
-    // Tính toán ngày mặc định cho kỳ hiện tại
-    var termStart = currentTerm switch
-    {
-        1 => new DateTime(currentYear, 9, 1),    // Sep 1
-        2 => new DateTime(currentYear, 1, 1),    // Jan 1
-        3 => new DateTime(currentYear, 5, 1),    // May 1
-        _ => new DateTime(currentYear, 9, 1)
-    };
-
-    var termEnd = currentTerm switch
-    {
-        1 => new DateTime(currentYear, 12, 31),    // Dec 31
-        2 => new DateTime(currentYear, 4, 30),     // Apr 30
-        3 => new DateTime(currentYear, 8, 31),     // Aug 31
-        _ => new DateTime(currentYear, 12, 31)
-    };
 }
-
-<!-- FontAwesome CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <div class="container py-3">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <h4 class="mb-0 text-primary">
-            <i class="fas fa-user-tie me-2"></i>Thống kê của Giảng viên
+            <i class="fas fa-chart-line me-2"></i>Thống kê cá nhân - @ViewBag.LecturerName
         </h4>
         <div class="text-muted small">
-            Kỳ hiện tại: HK @currentTerm (@academicYear)
+            Khoa: @ViewBag.LecturerDepartment | Kỳ hiện tại: HK @ViewBag.CurrentTerm (@ViewBag.AcademicYear)
         </div>
     </div>
 
@@ -69,21 +25,13 @@
         </div>
         <div class="card-body">
             <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Từ ngày</label>
-                    <input type="date" name="from" class="form-control form-control-sm"
-                           value="@(Context.Request.Query["from"].FirstOrDefault() ?? termStart.ToString("yyyy-MM-dd"))" />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Đến ngày</label>
-                    <input type="date" name="to" class="form-control form-control-sm"
-                           value="@(Context.Request.Query["to"].FirstOrDefault() ?? termEnd.ToString("yyyy-MM-dd"))" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Khoa</label>
-                    <div class="searchable-dropdown" id="khoaDropdown">
-                        <input type="hidden" name="maKhoa" value="@Context.Request.Query["maKhoa"]" />
-                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Học kỳ/Năm học</label>
+                    <div class="searchable-dropdown" id="termDropdown">
+                        <input type="hidden" name="hocKy" value="@Context.Request.Query["hocKy"]" />
+                        <input type="hidden" name="namHocStart" value="@Context.Request.Query["namHocStart"]" />
+                        <input type="hidden" name="namHocEnd" value="@Context.Request.Query["namHocEnd"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="HK1 (2025-2026)" autocomplete="off">
                         <i class="bi bi-chevron-down dropdown-arrow"></i>
                         <div class="dropdown-menu">
                             <div class="dropdown-options">
@@ -92,11 +40,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Giảng viên</label>
-                    <div class="searchable-dropdown" id="giangVienDropdown">
-                        <input type="hidden" name="maGv" value="@Context.Request.Query["maGv"]" />
-                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Đề tài</label>
+                    <div class="searchable-dropdown" id="topicDropdown">
+                        <input type="hidden" name="maDt" value="@Context.Request.Query["maDt"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm đề tài..." autocomplete="off">
                         <i class="bi bi-chevron-down dropdown-arrow"></i>
                         <div class="dropdown-menu">
                             <div class="dropdown-options">
@@ -105,30 +53,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Năm học</label>
-                    <select name="namHoc" class="form-select form-select-sm">
-                        <option value="">-- Tất cả năm học --</option>
-                        @{
-                            for (int y = currentYear - 3; y <= currentYear + 2; y++)
-                            {
-                                var yearStr = $"{y}-{y+1}";
-                                <option value="@yearStr" selected="@(Context.Request.Query["namHoc"].FirstOrDefault() == yearStr)">@yearStr</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Học kỳ</label>
-                    <select name="hocKy" class="form-select form-select-sm">
-                        <option value="">-- Tất cả học kỳ --</option>
-                        <option value="1" selected="@(Context.Request.Query["hocKy"].FirstOrDefault() == "1")">Học kỳ 1</option>
-                        <option value="2" selected="@(Context.Request.Query["hocKy"].FirstOrDefault() == "2")">Học kỳ 2</option>
-                        <option value="3" selected="@(Context.Request.Query["hocKy"].FirstOrDefault() == "3")">Học kỳ 3</option>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <div class="d-flex gap-2 justify-content-end">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-end gap-2"> 
                         <button class="btn btn-primary btn-sm px-3 py-2" type="submit">
                             <i class="bi bi-funnel me-1"></i>Lọc
                         </button>
@@ -141,86 +67,420 @@
         </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-2">
-            <div class="card border-primary text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-file-alt fa-2x text-primary mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.TongDeTai</h5>
-                    <p class="card-text text-muted small">Tổng đề tài</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-info text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-user-graduate fa-2x text-info mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.TongSinhVien</h5>
-                    <p class="card-text text-muted small">SV đã ĐK</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-warning text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.Pending</h5>
-                    <p class="card-text text-muted small">Chờ duyệt</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-primary text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.Accepted</h5>
-                    <p class="card-text text-muted small">Đã duyệt</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-success text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-trophy fa-2x text-success mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.Completed</h5>
-                    <p class="card-text text-muted small">Hoàn thành</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-secondary text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-calendar-days fa-2x text-secondary mb-2"></i>
-                    <h5 class="card-title">@(Model.Kpi.AvgDaysToAccept?.ToString("0.##") ?? "-")</h5>
-                    <p class="card-text text-muted small">Avg days accept</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <hr class="my-4" />
-
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <h6 class="mb-2">Xu hướng đăng ký theo tháng</h6>
-            <div id="gv_trend" style="height:360px;" class="border rounded"></div>
-        </div>
-        <div class="col-lg-6">
-            <h6 class="mb-2">Phân bố trạng thái</h6>
-            <div id="gv_status" style="height:360px;" class="border rounded"></div>
-        </div>
-
-        <div class="col-12">
-            <h6 class="mb-2">Lấp đầy theo đề tài</h6>
-            <div id="gv_fill" style="height:420px;" class="border rounded"></div>
-        </div>
-    </div>
-
-    @if (!Model.DeTaiFill.Any() && !Model.Trend.Any() && !Model.StatusDist.Any())
+    <!-- Error Message -->
+    @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
     {
-        <div class="alert alert-info mt-4">
-            Chưa có dữ liệu thống kê cho bộ lọc hiện tại.
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>@ViewBag.ErrorMessage
+        </div>
+    }
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Tổng đề tài</h6>
+                            <h3 class="text-primary mb-0">@Model.TermSummary.TotalTopics</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-tasks text-primary fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Sinh viên đăng ký</h6>
+                            <h3 class="text-info mb-0">@Model.TermSummary.TotalStudents</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-users text-info fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Đã hoàn thành</h6>
+                            <h3 class="text-success mb-0">@Model.TermSummary.CompletedStudents</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-check-circle text-success fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Điểm TB</h6>
+                            <h3 class="text-warning mb-0">
+                                @if (Model.TermSummary.AverageScore.HasValue)
+                                {
+                                    @String.Format("{0:F1}", Model.TermSummary.AverageScore.Value)
+                                }
+                                else
+                                {
+                                    <span class="text-muted">--</span>
+                                }
+                            </h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-star text-warning fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Status Chart & Slot Usage -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>
+                        Thống kê tình hình đăng ký hướng dẫn
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.RegistrationStats.Pending + Model.RegistrationStats.Accepted + Model.RegistrationStats.InProgress + Model.RegistrationStats.Completed + Model.RegistrationStats.Rejected + Model.RegistrationStats.Withdrawn > 0)
+                    {
+                        <div id="registrationStatusChart" style="width: 100%; height: 350px;"></div>
+                        
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const registrationData = @Html.Raw(Json.Serialize(new[] {
+                                    new { name = "Đang chờ duyệt", value = Model.RegistrationStats.Pending },
+                                    new { name = "Đã chấp nhận", value = Model.RegistrationStats.Accepted },
+                                    new { name = "Đang thực hiện", value = Model.RegistrationStats.InProgress },
+                                    new { name = "Đã hoàn thành", value = Model.RegistrationStats.Completed },
+                                    new { name = "Đã từ chối", value = Model.RegistrationStats.Rejected },
+                                    new { name = "Đã rút đăng ký", value = Model.RegistrationStats.Withdrawn }
+                                }.Where(x => x.value > 0)));
+
+                                const chartDom = document.getElementById('registrationStatusChart');
+                                const myChart = echarts.init(chartDom);
+                                
+                                const colors = [
+                                    '#ffc107',  // Đang chờ duyệt - vàng
+                                    '#17a2b8',  // Đã chấp nhận - cyan
+                                    '#007bff',  // Đang thực hiện - xanh dương
+                                    '#28a745',  // Đã hoàn thành - xanh lá
+                                    '#dc3545',  // Đã từ chối - đỏ
+                                    '#6c757d'   // Đã rút đăng ký - xám
+                                ];
+
+                                const option = {
+                                    title: {
+                                        text: 'Tình hình đăng ký',
+                                        textStyle: {
+                                            fontSize: 16,
+                                            fontWeight: 'bold'
+                                        },
+                                        top: 10,
+                                        left: 'center'
+                                    },
+                                    tooltip: {
+                                        trigger: 'item',
+                                        formatter: function(params) {
+                                            return `<strong>${params.name}</strong><br/>
+                                                    Số lượng: ${params.value}<br/>
+                                                    Tỷ lệ: ${params.percent}%`;
+                                        }
+                                    },
+                                    legend: {
+                                        show: false
+                                    },
+                                    series: [{
+                                        name: 'Trạng thái',
+                                        type: 'pie',
+                                        radius: ['25%', '60%'],
+                                        center: ['50%', '50%'],
+                                        data: registrationData,
+                                        emphasis: {
+                                            itemStyle: {
+                                                shadowBlur: 10,
+                                                shadowOffsetX: 0,
+                                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                            }
+                                        },
+                                        itemStyle: {
+                                            borderRadius: 8,
+                                            borderColor: '#fff',
+                                            borderWidth: 2
+                                        },
+                                        label: {
+                                            show: true,
+                                            formatter: function(params) {
+                                                return `${params.name}\n${params.percent}%`;
+                                            },
+                                            fontSize: 11,
+                                            fontWeight: 'bold',
+                                            lineHeight: 16
+                                        },
+                                        labelLine: {
+                                            show: true,
+                                            length: 15,
+                                            length2: 10
+                                        }
+                                    }],
+                                    color: colors
+                                };
+
+                                myChart.setOption(option);
+                                
+                                // Responsive
+                                window.addEventListener('resize', function () {
+                                    myChart.resize();
+                                });
+                            });
+                        </script>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-pie text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="text-muted mt-3">Chưa có dữ liệu đăng ký</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-line me-2 text-primary"></i>
+                        Số lượt đề tài đã sử dụng
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="slotUsageChart" style="width: 100%; height: 300px;"></div>
+                    
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const slotData = @Html.Raw(Json.Serialize(new[] {
+                                new { name = "Đã sử dụng", value = Model.SlotUsage.UsedSlots },
+                                new { name = "Còn lại", value = Model.SlotUsage.RemainingSlots }
+                            }));
+
+                            const chartDom = document.getElementById('slotUsageChart');
+                            const myChart = echarts.init(chartDom);
+                            
+                            const option = {
+                                title: {
+                                    text: `${@Model.SlotUsage.UsagePercentage}%`,
+                                    subtext: 'Đã sử dụng',
+                                    left: 'center',
+                                    top: 'center',
+                                    textStyle: {
+                                        fontSize: 24,
+                                        fontWeight: 'bold',
+                                        color: '#007bff'
+                                    },
+                                    subtextStyle: {
+                                        fontSize: 12,
+                                        color: '#666'
+                                    }
+                                },
+                                tooltip: {
+                                    trigger: 'item',
+                                    formatter: function(params) {
+                                        return `<strong>${params.name}</strong><br/>Số slot: ${params.value}`;
+                                    }
+                                },
+                                legend: {
+                                    orient: 'horizontal',
+                                    bottom: 10,
+                                    textStyle: {
+                                        fontSize: 11
+                                    }
+                                },
+                                series: [{
+                                    name: 'Slot usage',
+                                    type: 'pie',
+                                    radius: ['50%', '80%'],
+                                    center: ['50%', '50%'],
+                                    data: slotData,
+                                    itemStyle: {
+                                        borderRadius: 10,
+                                        borderColor: '#fff',
+                                        borderWidth: 3
+                                    },
+                                    label: {
+                                        show: false
+                                    },
+                                    emphasis: {
+                                        scale: false,
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowOffsetX: 0,
+                                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                        }
+                                    }
+                                }],
+                                color: ['#007bff', '#e9ecef']
+                            };
+
+                            myChart.setOption(option);
+                            
+                            // Responsive
+                            window.addEventListener('resize', function () {
+                                myChart.resize();
+                            });
+                        });
+                    </script>
+                    
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            @Model.SlotUsage.UsedSlots / @Model.SlotUsage.TotalSlots slots
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topic Scores Chart -->
+    @if (Model.TopicScores.Any())
+    {
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-star me-2 text-primary"></i>
+                    Thống kê điểm số các đề tài
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="topicScoresChart" style="width: 100%; height: 400px;"></div>
+                
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const topicData = @Html.Raw(Json.Serialize(Model.TopicScores.Select(t => new {
+                            maDt = t.MaDt,
+                            tenDt = t.TenDt.Length > 30 ? t.TenDt.Substring(0, 30) + "..." : t.TenDt,
+                            diemTB = t.DiemTrungBinh ?? 0,
+                            soSV = t.SoSinhVienHoanThanh,
+                            slotMax = t.SlotToiDa,
+                            slotConLai = t.SlotConLai
+                        })));
+
+                        const chartDom = document.getElementById('topicScoresChart');
+                        const myChart = echarts.init(chartDom);
+                        
+                        const categories = topicData.map(x => x.maDt);
+                        const scores = topicData.map(x => x.diemTB);
+
+                        const option = {
+                            title: {
+                                text: 'Điểm trung bình các đề tài',
+                                textStyle: {
+                                    fontSize: 16,
+                                    fontWeight: 'bold'
+                                },
+                                top: 10,
+                                left: 'center'
+                            },
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow'
+                                },
+                                formatter: function(params) {
+                                    const dataIndex = params[0].dataIndex;
+                                    const item = topicData[dataIndex];
+                                    return `
+                                        <strong>Mã ĐT:</strong> ${item.maDt}<br/>
+                                        <strong>Tên:</strong> ${item.tenDt}<br/>
+                                        <strong>Điểm TB:</strong> ${item.diemTB.toFixed(2)}<br/>
+                                        <strong>SV hoàn thành:</strong> ${item.soSV}<br/>
+                                        <strong>Slot còn lại:</strong> ${item.slotConLai}/${item.slotMax}
+                                    `;
+                                }
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '20%',
+                                top: '15%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                name: 'Đề tài',
+                                nameLocation: 'middle',
+                                nameGap: 30,
+                                axisLabel: {
+                                    interval: 0,
+                                    rotate: 45,
+                                    fontSize: 10
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: 'Điểm trung bình',
+                                nameLocation: 'middle',
+                                nameGap: 40,
+                                min: 0,
+                                max: 10,
+                                interval: 2
+                            },
+                            series: [{
+                                name: 'Điểm TB',
+                                type: 'bar',
+                                data: scores,
+                                itemStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: '#4CAF50' },
+                                        { offset: 1, color: '#2E7D32' }
+                                    ]),
+                                    borderRadius: [4, 4, 0, 0]
+                                },
+                                emphasis: {
+                                    itemStyle: {
+                                        shadowBlur: 10,
+                                        shadowColor: 'rgba(76, 175, 80, 0.5)'
+                                    }
+                                },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: function(params) {
+                                        return params.value > 0 ? params.value.toFixed(1) : '';
+                                    },
+                                    fontSize: 11,
+                                    fontWeight: 'bold'
+                                }
+                            }]
+                        };
+
+                        myChart.setOption(option);
+                        
+                        // Responsive
+                        window.addEventListener('resize', function () {
+                            myChart.resize();
+                        });
+                    });
+                </script>
+            </div>
         </div>
     }
 </div>
@@ -228,190 +488,92 @@
 @section Scripts {
     <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
     <script src="~/js/searchable-dropdown.js"></script>
-    <script src="~/lib/echarts/dist/echarts.min.js"></script>
     <script>
-        const trendData  = @Html.Raw(trendJson);
-        const statusData = @Html.Raw(statusJson);
-        const fillData   = @Html.Raw(fillJson);
-
-        // Trend
-        (function () {
-            const el = document.getElementById('gv_trend');
-            const chart = echarts.init(el);
-            const xs = trendData.map(p => `${p.Nam}-${String(p.Thang).padStart(2, '0')}`);
-            const ys = trendData.map(p => p.SoDangKy);
-            chart.setOption({
-                tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: xs },
-                yAxis: { type: 'value' },
-                series: [{ type: 'line', data: ys, smooth: true }]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-
-        // Status
-        (function () {
-            const el = document.getElementById('gv_status');
-            const chart = echarts.init(el);
-            const labelMap = { 0: 'Pending', 1: 'Accepted', 2: 'InProgress', 3: 'Completed', 4: 'Rejected', 5: 'Withdrawn' };
-            chart.setOption({
-                tooltip: { trigger: 'item' },
-                legend: { top: 'bottom' },
-                series: [{
-                    type: 'pie',
-                    radius: ['35%', '70%'],
-                    data: statusData.map(s => ({ name: labelMap[s.TrangThai] ?? s.TrangThai, value: s.SoLuong }))
-                }]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-
-        // Fill per topic
-        (function () {
-            const el = document.getElementById('gv_fill');
-            const chart = echarts.init(el);
-            const names = fillData.map(d => d.TenDt);
-            const used = fillData.map(d => d.SlotDaDung);
-            const left = fillData.map(d => d.SlotConLai);
-            const wait = fillData.map(d => d.DangChoDuyet);
-            chart.setOption({
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                grid: { left: 80, right: 20, bottom: 20, containLabel: true },
-                xAxis: { type: 'value' },
-                yAxis: { type: 'category', data: names },
-                series: [
-                    { name: 'Đã dùng', type: 'bar', stack: 't', data: used },
-                    { name: 'Còn lại', type: 'bar', stack: 't', data: left },
-                    { name: 'Chờ duyệt', type: 'bar', stack: 't', data: wait }
-                ]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-
-        // Initialize SearchableDropdowns
-        (function() {
-            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
-                placeholder: 'Tìm kiếm khoa...',
-                searchUrl: '@Url.Action("Search", "Khoa")',
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize Term dropdown
+            const termDropdown = new SearchableDropdown('termDropdown', {
+                placeholder: 'Học kỳ',
+                searchUrl: '@Url.Action("SuggestTerms", "ThongKe")',
                 searchParam: 'q',
                 debounceDelay: 300,
                 allowClear: true,
-                labelFormatter: function(item) {
-                    const mk = item.MaKhoa ?? item.maKhoa;
-                    const tk = item.TenKhoa ?? item.tenKhoa;
-                    if (mk !== undefined && tk !== undefined) {
-                        return { value: mk, text: `${tk}` };
-                    }
+                labelFormatter: function (item) {
+                    const t = item.term ?? item.Term ?? item.termNumber;
+                    const ys = item.yearStart ?? item.YearStart ?? item.namHocStart;
+                    const ye = item.yearEnd ?? item.YearEnd ?? item.namHocEnd;
+                    const disp = item.display ?? item.Display ?? `HK${t} (${ys}-${ye})`;
+                    if (t && ys && ye) return { value: `${t}|${ys}|${ye}`, text: disp };
                     return null;
                 }
             });
 
-            const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
-                placeholder: 'Tìm kiếm giảng viên...',
-                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+            // Initialize Topic dropdown
+            const topicDropdown = new SearchableDropdown('topicDropdown', {
+                placeholder: 'Tìm kiếm đề tài...',
+                searchUrl: '@Url.Action("GetLecturerTopics", "ThongKe")',
                 searchParam: 'q',
-                filterParam: 'maKhoa',
+                filterParam: 'termFilter',
                 debounceDelay: 300,
                 allowClear: true,
-                labelFormatter: function(item) {
-                    const mgv = item.MaGv ?? item.maGv;
-                    const hten = item.HoTenGv ?? item.hoTenGv;
-                    if (mgv !== undefined && hten !== undefined) {
-                        return { value: String(mgv), text: `${mgv} - ${hten}` };
-                    }
+                labelFormatter: function (item) {
+                    const maDt = item.MaDt ?? item.maDt;
+                    const display = item.Display ?? item.display ?? `${maDt} - ${item.TenDt ?? item.tenDt}`;
+                    if (maDt) return { value: maDt, text: display };
                     return null;
                 }
             });
 
-            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
-                giangVienDropdown.setFilterValue(e.detail.value || '');
+            // Map term selection to hidden inputs
+            document.getElementById('termDropdown').addEventListener('selectionChanged', function (e) {
+                const hiddenHocKy = document.querySelector('#termDropdown input[name="hocKy"]');
+                const hiddenStart = document.querySelector('#termDropdown input[name="namHocStart"]');
+                const hiddenEnd = document.querySelector('#termDropdown input[name="namHocEnd"]');
+                const raw = e.detail?.value || '';
+
+                if (!raw) {
+                    hiddenHocKy.value = '';
+                    hiddenStart.value = '';
+                    hiddenEnd.value = '';
+                    topicDropdown.setFilterValue('');
+                    return;
+                }
+
+                const parts = raw.split('|');
+                if (parts.length === 3) {
+                    hiddenHocKy.value = parts[0];
+                    hiddenStart.value = parts[1];
+                    hiddenEnd.value = parts[2];
+                    
+                    // Update topic dropdown filter
+                    topicDropdown.setFilterValue(`${parts[0]}|${parts[1]}|${parts[2]}`);
+                }
             });
-        })();
 
-        // Update date inputs when học kỳ or năm học changes
-        const namHocSelect = document.querySelector('select[name="namHoc"]');
-        const hocKySelect = document.querySelector('select[name="hocKy"]');
-        const fromDateInput = document.querySelector('input[name="from"]');
-        const toDateInput = document.querySelector('input[name="to"]');
-
-        function updateDateInputs() {
-            const namHoc = namHocSelect.value;
-            const hocKy = hocKySelect.value;
-
-            if (namHoc && hocKy) {
-                // Parse năm học (format: "2023-2024")
-                const [startYear, endYear] = namHoc.split('-').map(y => parseInt(y));
-
-                let termStart, termEnd;
-
-                switch(hocKy) {
-                    case '1': // HK1: Sep - Dec of start year
-                        termStart = new Date(startYear, 8, 1);    // Sep 1
-                        termEnd = new Date(startYear, 11, 31);    // Dec 31
-                        break;
-                    case '2': // HK2: Jan - Apr of end year
-                        termStart = new Date(endYear, 0, 1);      // Jan 1
-                        termEnd = new Date(endYear, 3, 30);       // Apr 30
-                        break;
-                    case '3': // HK3: May - Aug of end year
-                        termStart = new Date(endYear, 4, 1);      // May 1
-                        termEnd = new Date(endYear, 7, 31);       // Aug 31
-                        break;
-                    default:
-                        return; // Don't update if invalid
-                }
-
-                // Update input values
-                fromDateInput.value = termStart.toISOString().split('T')[0];
-                toDateInput.value = termEnd.toISOString().split('T')[0];
-            } else if (namHoc && !hocKy) {
-                // Chỉ chọn năm học, không chọn học kỳ cụ thể
-                // Gom dữ liệu từ 1/8 của năm đầu tiên đến 31/7 của năm sau
-                const [startYear, endYear] = namHoc.split('-').map(y => parseInt(y));
-
-                const termStart = new Date(startYear, 7, 1);      // Aug 1 of start year
-                const termEnd = new Date(endYear, 6, 31);         // Jul 31 of end year
-
-                fromDateInput.value = termStart.toISOString().split('T')[0];
-                toDateInput.value = termEnd.toISOString().split('T')[0];
-            } else if (!namHoc) {
-                // Chọn tất cả năm học - reset về kỳ hiện tại mặc định
-                const now = new Date();
-                const currentYear = now.getFullYear();
-                const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
-
-                let termStart, termEnd;
-                if (currentMonth >= 9 && currentMonth <= 12) {
-                    // HK1: Sep - Dec
-                    termStart = new Date(currentYear, 8, 1);    // Sep 1
-                    termEnd = new Date(currentYear, 11, 31);    // Dec 31
-                } else if (currentMonth >= 1 && currentMonth <= 4) {
-                    // HK2: Jan - Apr
-                    termStart = new Date(currentYear, 0, 1);    // Jan 1
-                    termEnd = new Date(currentYear, 3, 30);     // Apr 30
-                } else {
-                    // HK3: May - Aug
-                    termStart = new Date(currentYear, 4, 1);    // May 1
-                    termEnd = new Date(currentYear, 7, 31);     // Aug 31
-                }
-
-                fromDateInput.value = termStart.toISOString().split('T')[0];
-                toDateInput.value = termEnd.toISOString().split('T')[0];
+            // Initialize dropdown with current values
+            const currentHocKy = '@Context.Request.Query["hocKy"]';
+            const currentStart = '@Context.Request.Query["namHocStart"]';
+            const currentEnd = '@Context.Request.Query["namHocEnd"]';
+            
+            if (currentHocKy && currentStart && currentEnd) {
+                setTimeout(function() {
+                    const termValue = `${currentHocKy}|${currentStart}|${currentEnd}`;
+                    const termText = `HK${currentHocKy} (${currentStart}-${currentEnd})`;
+                    
+                    termDropdown.setValue(termValue, termText);
+                    
+                    // Set hidden inputs
+                    const hiddenHocKy = document.querySelector('#termDropdown input[name="hocKy"]');
+                    const hiddenStart = document.querySelector('#termDropdown input[name="namHocStart"]');
+                    const hiddenEnd = document.querySelector('#termDropdown input[name="namHocEnd"]');
+                    
+                    if (hiddenHocKy) hiddenHocKy.value = currentHocKy;
+                    if (hiddenStart) hiddenStart.value = currentStart;
+                    if (hiddenEnd) hiddenEnd.value = currentEnd;
+                    
+                    // Set topic filter
+                    topicDropdown.setFilterValue(termValue);
+                }, 100);
             }
-        }
-
-        // Function to reset học kỳ and năm học when user manually changes dates
-        function resetTermSelectors() {
-            namHocSelect.value = '';
-            hocKySelect.value = '';
-        }
-
-        // Listen for changes
-        namHocSelect.addEventListener('change', updateDateInputs);
-        hocKySelect.addEventListener('change', updateDateInputs);
-
-        // Reset term selectors when user manually changes dates
-        fromDateInput.addEventListener('change', resetTermSelectors);
-        toDateInput.addEventListener('change', resetTermSelectors);
+        });
     </script>
 }

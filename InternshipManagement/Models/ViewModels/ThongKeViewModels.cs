@@ -97,14 +97,7 @@
         public int ChoDuyet { get; set; }
     }
 
-    public class ThongKeGiangVienVm
-    {
-        public KpiVm Kpi { get; set; } = new();
-        public List<TrendPointVm> Trend { get; set; } = new();
-        public List<StatusCountVm> StatusDist { get; set; } = new();
-        public List<DeTaiFillVm> DeTaiFill { get; set; } = new();
-        public List<dynamic> TopSinhVien { get; set; } = new(); // { masv, Pending, Accepted, ... }
-    }
+    
 
     public class ThongKeAdminVm
     {
@@ -129,5 +122,67 @@
         public byte? FilterHocKy { get; set; }
         public int? FilterNamHocStart { get; set; }
         public int? FilterNamHocEnd { get; set; }
+    }
+
+    // Lecturer Statistics ViewModels
+    public class ThongKeGiangVienVm
+    {
+        public int MaGv { get; set; }
+        public byte? FilterHocKy { get; set; }
+        public int? FilterNamHocStart { get; set; }
+        public int? FilterNamHocEnd { get; set; }
+        
+        public LecturerRegistrationStatsVm RegistrationStats { get; set; } = new();
+        public List<LecturerTopicScoreVm> TopicScores { get; set; } = new();
+        public LecturerSlotUsageVm SlotUsage { get; set; } = new();
+        public LecturerTermSummaryVm TermSummary { get; set; } = new();
+    }
+
+    public class LecturerRegistrationStatsVm
+    {
+        public int Pending { get; set; }
+        public int Accepted { get; set; }
+        public int InProgress { get; set; }
+        public int Completed { get; set; }
+        public int Rejected { get; set; }
+        public int Withdrawn { get; set; }
+        public decimal AcceptanceRatePct { get; set; }
+        public decimal CompletionRatePct { get; set; }
+    }
+
+    public class LecturerTopicScoreVm
+    {
+        public string MaDt { get; set; } = "";
+        public string TenDt { get; set; } = "";
+        public decimal? DiemTrungBinh { get; set; }
+        public int SoSinhVienHoanThanh { get; set; }
+        public int SoSinhVienDangKy { get; set; }
+        public int SlotToiDa { get; set; }
+        public int SlotConLai { get; set; }
+    }
+
+    public class LecturerSlotUsageVm
+    {
+        public int TotalSlots { get; set; } = 15;
+        public int UsedSlots { get; set; }
+        public int RemainingSlots { get; set; }
+        public decimal UsagePercentage { get; set; }
+    }
+
+    public class LecturerTermSummaryVm
+    {
+        public string NamHoc { get; set; } = "";
+        public byte HocKy { get; set; }
+        public int TotalTopics { get; set; }
+        public int TotalStudents { get; set; }
+        public int CompletedStudents { get; set; }
+        public decimal? AverageScore { get; set; }
+    }
+
+    public class LecturerTopicOptionVm
+    {
+        public string MaDt { get; set; } = "";
+        public string TenDt { get; set; } = "";
+        public string Display { get; set; } = "";
     }
 }

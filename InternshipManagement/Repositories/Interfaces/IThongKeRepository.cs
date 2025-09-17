@@ -24,5 +24,12 @@ namespace InternshipManagement.Repositories.Interfaces
         
         // Trend methods
         Task<List<TrendPointVm>> GetRegistrationTrendAsync(string? maKhoa = null, int? maGv = null, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null);
+        
+        // Lecturer specific methods
+        Task<LecturerRegistrationStatsVm> GetLecturerRegistrationStatsAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null);
+        Task<List<LecturerTopicScoreVm>> GetLecturerTopicScoresAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null);
+        Task<LecturerSlotUsageVm> GetLecturerSlotUsageAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null);
+        Task<LecturerTermSummaryVm> GetLecturerTermSummaryAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null);
+        Task<List<LecturerTopicOptionVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null, string? searchTerm = null);
     }
 }

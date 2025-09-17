@@ -327,7 +327,7 @@ namespace InternshipManagement.Repositories.Implementations
                     DiemTrungBinh = dt.HuongDans
                         .Where(h => h.TrangThai == HuongDanStatus.Completed && h.KetQua.HasValue)
                         .Average(h => h.KetQua!.Value),
-                    SoSinhVienHoanThanh = dt.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed),
+                    SoSinhVienHoanThanh = dt.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed && h.KetQua.HasValue),
                     HoTenGv = dt.GiangVien!.HoTenGv ?? "",
                     MaGv = dt.MaGv
                 })
@@ -478,6 +478,169 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .OrderBy(t => t.Nam)
                 .ThenBy(t => t.Thang)
+                .ToListAsync();
+
+            return result;
+        }
+
+        // Lecturer specific methods
+        public async Task<LecturerRegistrationStatsVm> GetLecturerRegistrationStatsAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null)
+        {
+            var query = _db.HuongDans
+                .Include(h => h.DeTai)
+                .Where(h => h.MaGv == maGv);
+
+            if (hocKy.HasValue && namHocStart.HasValue && namHocEnd.HasValue)
+            {
+                var namHoc = $"{namHocStart}-{namHocEnd}";
+                query = query.Where(h => h.DeTai!.HocKy == hocKy.Value && h.DeTai.NamHoc == namHoc);
+            }
+
+            var stats = new LecturerRegistrationStatsVm
+            {
+                Pending = await query.CountAsync(h => h.TrangThai == HuongDanStatus.Pending),
+                Accepted = await query.CountAsync(h => h.TrangThai == HuongDanStatus.Accepted),
+                InProgress = await query.CountAsync(h => h.TrangThai == HuongDanStatus.InProgress),
+                Completed = await query.CountAsync(h => h.TrangThai == HuongDanStatus.Completed),
+                Rejected = await query.CountAsync(h => h.TrangThai == HuongDanStatus.Rejected),
+                Withdrawn = await query.CountAsync(h => h.TrangThai == HuongDanStatus.Withdrawn)
+            };
+
+            var total = stats.Pending + stats.Accepted + stats.InProgress + stats.Completed + stats.Rejected + stats.Withdrawn;
+            if (total > 0)
+            {
+                stats.AcceptanceRatePct = Math.Round((decimal)(stats.Accepted + stats.InProgress + stats.Completed) / total * 100, 2);
+                stats.CompletionRatePct = Math.Round((decimal)stats.Completed / total * 100, 2);
+            }
+
+            return stats;
+        }
+
+        public async Task<List<LecturerTopicScoreVm>> GetLecturerTopicScoresAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null)
+        {
+            var query = _db.DeTais
+                .Include(dt => dt.HuongDans)
+                .Where(dt => dt.MaGv == maGv);
+
+            if (hocKy.HasValue && namHocStart.HasValue && namHocEnd.HasValue)
+            {
+                var namHoc = $"{namHocStart}-{namHocEnd}";
+                query = query.Where(dt => dt.HocKy == hocKy.Value && dt.NamHoc == namHoc);
+            }
+
+            var result = await query.Select(dt => new LecturerTopicScoreVm
+            {
+                MaDt = dt.MaDt,
+                TenDt = dt.TenDt ?? "",
+                DiemTrungBinh = dt.HuongDans
+                    .Where(h => h.TrangThai == HuongDanStatus.Completed && h.KetQua.HasValue)
+                    .Any() ?
+                    dt.HuongDans
+                        .Where(h => h.TrangThai == HuongDanStatus.Completed && h.KetQua.HasValue)
+                        .Average(h => h.KetQua!.Value) : null,
+                SoSinhVienHoanThanh = dt.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Completed && h.KetQua.HasValue),
+                SoSinhVienDangKy = dt.HuongDans.Count(),
+                SlotToiDa = dt.SoLuongToiDa,
+                SlotConLai = dt.SoLuongToiDa - dt.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || 
+                                                                      h.TrangThai == HuongDanStatus.InProgress || 
+                                                                      h.TrangThai == HuongDanStatus.Completed)
+            }).ToListAsync();
+
+            // Round scores
+            foreach (var item in result)
+            {
+                if (item.DiemTrungBinh.HasValue)
+                    item.DiemTrungBinh = Math.Round(item.DiemTrungBinh.Value, 2);
+            }
+
+            return result;
+        }
+
+        public async Task<LecturerSlotUsageVm> GetLecturerSlotUsageAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null)
+        {
+            var query = _db.DeTais.Where(dt => dt.MaGv == maGv);
+
+            if (hocKy.HasValue && namHocStart.HasValue && namHocEnd.HasValue)
+            {
+                var namHoc = $"{namHocStart}-{namHocEnd}";
+                query = query.Where(dt => dt.HocKy == hocKy.Value && dt.NamHoc == namHoc);
+            }
+
+            var usedSlots = await query.CountAsync();
+            var totalSlots = 15;
+            var remainingSlots = Math.Max(0, totalSlots - usedSlots);
+            var usagePercentage = totalSlots > 0 ? Math.Round((decimal)usedSlots / totalSlots * 100, 2) : 0;
+
+            return new LecturerSlotUsageVm
+            {
+                TotalSlots = totalSlots,
+                UsedSlots = usedSlots,
+                RemainingSlots = remainingSlots,
+                UsagePercentage = usagePercentage
+            };
+        }
+
+        public async Task<LecturerTermSummaryVm> GetLecturerTermSummaryAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null)
+        {
+            // Get current term if not specified
+            if (!hocKy.HasValue || !namHocStart.HasValue || !namHocEnd.HasValue)
+            {
+                var now = DateTime.Now;
+                var currentYearStart = now.Month >= 9 ? now.Year : now.Year - 1;
+                var currentTerm = (now.Month >= 9 && now.Month <= 12) ? 1 : (now.Month >= 1 && now.Month <= 4) ? 2 : 3;
+                
+                hocKy = (byte)currentTerm;
+                namHocStart = currentYearStart;
+                namHocEnd = currentYearStart + 1;
+            }
+
+            var namHoc = $"{namHocStart}-{namHocEnd}";
+            
+            var topicsQuery = _db.DeTais
+                .Include(dt => dt.HuongDans)
+                .Where(dt => dt.MaGv == maGv && dt.HocKy == hocKy && dt.NamHoc == namHoc);
+
+            var topics = await topicsQuery.ToListAsync();
+            
+            var completedWithScores = topics
+                .SelectMany(dt => dt.HuongDans)
+                .Where(h => h.TrangThai == HuongDanStatus.Completed && h.KetQua.HasValue)
+                .ToList();
+
+            return new LecturerTermSummaryVm
+            {
+                NamHoc = namHoc,
+                HocKy = hocKy.Value,
+                TotalTopics = topics.Count,
+                TotalStudents = topics.SelectMany(dt => dt.HuongDans).Count(),
+                CompletedStudents = topics.SelectMany(dt => dt.HuongDans).Count(h => h.TrangThai == HuongDanStatus.Completed),
+                AverageScore = completedWithScores.Any() ? Math.Round(completedWithScores.Average(h => h.KetQua!.Value), 2) : null
+            };
+        }
+
+        public async Task<List<LecturerTopicOptionVm>> GetLecturerTopicsAsync(int maGv, byte? hocKy = null, int? namHocStart = null, int? namHocEnd = null, string? searchTerm = null)
+        {
+            var query = _db.DeTais.Where(dt => dt.MaGv == maGv);
+
+            if (hocKy.HasValue && namHocStart.HasValue && namHocEnd.HasValue)
+            {
+                var namHoc = $"{namHocStart}-{namHocEnd}";
+                query = query.Where(dt => dt.HocKy == hocKy.Value && dt.NamHoc == namHoc);
+            }
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(dt => dt.MaDt.Contains(searchTerm) || dt.TenDt!.Contains(searchTerm));
+            }
+
+            var result = await query
+                .Take(50)
+                .Select(dt => new LecturerTopicOptionVm
+                {
+                    MaDt = dt.MaDt,
+                    TenDt = dt.TenDt ?? "",
+                    Display = $"{dt.MaDt} - {dt.TenDt}"
+                })
                 .ToListAsync();
 
             return result;
