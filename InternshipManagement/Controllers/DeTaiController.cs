@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 namespace InternshipManagement.Controllers
 {
@@ -15,16 +16,44 @@ namespace InternshipManagement.Controllers
         private readonly IDeTaiRepository _repo;
         private readonly IKhoaRepository _khoaRepo;
         private readonly IGiangVienRepository _gvRepo;
+        private readonly AppDbContext _db;
 
-        public DeTaiController(IDeTaiRepository repo, IKhoaRepository khoaRepo, IGiangVienRepository gvRepo)
+        public DeTaiController(IDeTaiRepository repo, IKhoaRepository khoaRepo, IGiangVienRepository gvRepo, AppDbContext db)
         {
             _repo = repo;
             _khoaRepo = khoaRepo;
             _gvRepo = gvRepo;
+            _db = db;
         }
 
         public async Task<IActionResult> Index([FromQuery] DeTaiFilterVm filter)
         {
+            // Nếu là sinh viên: luôn giới hạn theo khoa của sinh viên, không cho xem khoa khác
+            if (User?.Identity?.IsAuthenticated == true && (User.IsInRole("SinhVien") || User.IsInRole("Student")))
+            {
+                // Ưu tiên lấy từ claim nếu có
+                var claimMaKhoa = User.FindFirst("MaKhoa")?.Value;
+                if (string.IsNullOrWhiteSpace(claimMaKhoa))
+                {
+                    // Fallback: tra cứu từ bảng SinhViens bằng MaSv trong claim
+                    var raw = User.FindFirst("MaSv")?.Value
+                               ?? User.FindFirst("code")?.Value
+                               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (int.TryParse(raw, out var maSv))
+                    {
+                        var sv = await _db.SinhViens.AsNoTracking().FirstOrDefaultAsync(s => s.MaSv == maSv);
+                        if (sv != null)
+                        {
+                            claimMaKhoa = sv.MaKhoa;
+                        }
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(claimMaKhoa))
+                {
+                    filter.MaKhoa = claimMaKhoa;
+                }
+            }
+
             var khoaOptions = (await _khoaRepo.GetOptionsAsync())
                 .Select(k => new SelectListItem { Value = k.MaKhoa, Text = k.TenKhoa, Selected = (filter.MaKhoa == k.MaKhoa) })
                 .ToList();

@@ -1,19 +1,11 @@
 ﻿@model InternshipManagement.Models.ViewModels.ThongKeAdminVm
 @using System.Text.Json
+@using Syncfusion.EJ2.Charts
+<script src="https://cdn.syncfusion.com/ej2/21.2.3/dist/ej2.min.js"></script>
 
 @{
     ViewData["Title"] = "Thống kê Admin";
-
-    var trendJson = JsonSerializer.Serialize(Model.Trend);
-    var statusJson = JsonSerializer.Serialize(Model.StatusDist);
-    var fillJson = JsonSerializer.Serialize(Model.DeTaiFill);
-    var byKhoaJson = JsonSerializer.Serialize(Model.ByKhoa);
-    var topGvJson = JsonSerializer.Serialize(Model.TopGv);
-    var termJson = JsonSerializer.Serialize(Model.ByTerm);
 }
-
-<!-- FontAwesome CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <div class="container py-3">
     <div class="d-flex align-items-center justify-content-between mb-4">
@@ -39,7 +31,8 @@
                     <label class="form-label small fw-semibold">Khoa</label>
                     <div class="searchable-dropdown" id="khoaDropdown">
                         <input type="hidden" name="maKhoa" value="@Context.Request.Query["maKhoa"]" />
-                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm khoa..." autocomplete="off">
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm khoa..."
+                            autocomplete="off">
                         <i class="bi bi-chevron-down dropdown-arrow"></i>
                         <div class="dropdown-menu">
                             <div class="dropdown-options">
@@ -48,11 +41,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-5">
                     <label class="form-label small fw-semibold">Giảng viên</label>
                     <div class="searchable-dropdown" id="giangVienDropdown">
                         <input type="hidden" name="maGv" value="@Context.Request.Query["maGv"]" />
-                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm giảng viên..."
+                            autocomplete="off">
                         <i class="bi bi-chevron-down dropdown-arrow"></i>
                         <div class="dropdown-menu">
                             <div class="dropdown-options">
@@ -61,18 +55,23 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Từ ngày</label>
-                    <input type="date" name="from" class="form-control form-control-sm"
-                           value="@(ViewBag.AutoFrom?.ToString("yyyy-MM-dd") ?? Context.Request.Query["from"].ToString())" />
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Học kỳ/Năm học</label>
+                    <div class="searchable-dropdown" id="termDropdown">
+                        <input type="hidden" name="hocKy" value="@Context.Request.Query["hocKy"]" />
+                        <input type="hidden" name="namHocStart" value="@Context.Request.Query["namHocStart"]" />
+                        <input type="hidden" name="namHocEnd" value="@Context.Request.Query["namHocEnd"]" />
+                        <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm học kỳ" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Đến ngày</label>
-                    <input type="date" name="to" class="form-control form-control-sm"
-                           value="@(ViewBag.AutoTo?.ToString("yyyy-MM-dd") ?? Context.Request.Query["to"].ToString())" />
-                </div>
-                <div class="col-md-12 d-flex justify-content-end gap-2">
-                    <div class="d-flex gap-2">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-end gap-2"> 
                         <button class="btn btn-primary btn-sm px-3 py-2" type="submit">
                             <i class="bi bi-funnel me-1"></i>Lọc
                         </button>
@@ -82,460 +81,627 @@
                     </div>
                 </div>
             </form>
-
-            <!-- Quick Term Selection -->
-            <div class="row mt-3">
-                <div class="col-12">
-                    <label class="form-label small fw-semibold">Chọn nhanh theo kỳ:</label>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-outline-primary btn-sm quick-term-btn"
-                                data-term="1" data-year="@(ViewBag.AcademicYear)">
-                            <i class="fas fa-calendar-alt me-1"></i>HK1 (@ViewBag.AcademicYear)
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm quick-term-btn"
-                                data-term="2" data-year="@(ViewBag.AcademicYear)">
-                            <i class="fas fa-calendar-alt me-1"></i>HK2 (@ViewBag.AcademicYear)
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm quick-term-btn"
-                                data-term="3" data-year="@(ViewBag.AcademicYear)">
-                            <i class="fas fa-calendar-alt me-1"></i>HK3 (@ViewBag.AcademicYear)
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-2">
-            <div class="card border-primary text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-file-alt fa-2x text-primary mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.TongDeTai</h5>
-                    <p class="card-text text-muted small">Đề tài</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-success text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-user-tie fa-2x text-success mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.TongGiangVien</h5>
-                    <p class="card-text text-muted small">Giảng viên</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-info text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-user-graduate fa-2x text-info mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.TongSinhVien</h5>
-                    <p class="card-text text-muted small">Sinh viên</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-warning text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.Pending</h5>
-                    <p class="card-text text-muted small">Chờ duyệt</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-primary text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.Accepted</h5>
-                    <p class="card-text text-muted small">Đã duyệt</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-success text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-trophy fa-2x text-success mb-2"></i>
-                    <h5 class="card-title">@Model.Kpi.Completed</h5>
-                    <p class="card-text text-muted small">Hoàn thành</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <hr class="my-4" />
-
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <h6 class="mb-2">Xu hướng đăng ký theo tháng</h6>
-            <div id="adm_trend" style="height:360px;" class="border rounded"></div>
-        </div>
-        <div class="col-lg-6">
-            <h6 class="mb-2">Phân bố trạng thái</h6>
-            <div id="adm_status" style="height:360px;" class="border rounded"></div>
-        </div>
-
-        <div class="col-12">
-            <h6 class="mb-2">Lấp đầy theo đề tài</h6>
-            <div id="adm_fill" style="height:420px;" class="border rounded"></div>
-        </div>
-
-        <div class="col-lg-6">
-            <h6 class="mb-2">Phân bố theo Khoa</h6>
-            <div id="adm_khoa" style="height:360px;" class="border rounded"></div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 bg-transparent">
-                <div class="card-body p-0">
-                    <h6 class="mb-3">Top Giảng viên</h6>
-                    
-                    <!-- Legend tùy biến -->
-                    <div class="d-flex flex-wrap gap-3 mb-3 align-items-center" id="legend-top-giangvien">
-                        <span class="d-inline-flex align-items-center gap-2">
-                            <span class="legend-dot" style="background:#22c55e"></span> Hoàn thành
-                        </span>
-                        <span class="d-inline-flex align-items-center gap-2">
-                            <span class="legend-dot" style="background:#3b82f6"></span> Đang thực hiện
-                        </span>
-                        <span class="d-inline-flex align-items-center gap-2">
-                            <span class="legend-dot" style="background:#f59e0b"></span> Chờ duyệt
-                        </span>
-                    </div>
-
-                    <!-- Canvas tự co chiều cao -->
-                    <div class="position-relative">
-                        <canvas id="topGiangVienChart"></canvas>
-                    </div>
-
-                    <!-- JSON data -->
-                    <script id="top-giangvien-data" type="application/json">
-                        @Html.Raw(JsonSerializer.Serialize(Model.TopGv.Select(g => new
-                        {
-                            name = g.HoTenGv,
-                            hoanThanh = g.Completed,
-                            dangThucHien = g.DangThucHien,
-                            choDuyet = g.Pending
-                        })))
-                    </script>
-                </div>
-            </div>
-        </div>
-
-        <style>
-            .legend-dot {
-                width: 14px;
-                height: 14px;
-                display: inline-block;
-                border-radius: 999px;
-                box-shadow: 0 0 0 1px rgba(0,0,0,.08) inset;
-            }
-            #topGiangVienChart {
-                max-width: 100%;
-            }
-        </style>
-
-        <div class="col-12">
-            <h6 class="mb-2">Theo Học kỳ / Năm học</h6>
-            <div id="adm_term" style="height:360px;" class="border rounded"></div>
-        </div>
-    </div>
-
-    @if (!Model.Trend.Any() && !Model.StatusDist.Any() && !Model.DeTaiFill.Any() && !Model.ByKhoa.Any() && !Model.TopGv.Any() && !Model.ByTerm.Any())
+    <!-- Statistics Content -->
+    @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
     {
-        <div class="alert alert-info mt-4">Chưa có dữ liệu thống kê cho bộ lọc hiện tại.</div>
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>@ViewBag.ErrorMessage
+        </div>
     }
+
+    <!-- KPI Cards Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Tổng đề tài</h6>
+                            <h3 class="text-primary mb-0">@Model.Kpi.TongDeTai</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-project-diagram text-primary fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Tổng sinh viên</h6>
+                            <h3 class="text-success mb-0">@Model.Kpi.TongSinhVien</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-users text-success fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Tổng giảng viên</h6>
+                            <h3 class="text-info mb-0">@Model.Kpi.TongGiangVien</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-chalkboard-teacher text-info fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Hoàn thành</h6>
+                            <h3 class="text-warning mb-0">@Model.Kpi.Completed</h3>
+                            <small class="text-muted">(@Model.Kpi.CompletionRatePct%)</small>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-check-circle text-warning fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row - Status Distribution and Average Scores -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>
+                        Phân bổ trạng thái
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.StatusDist.Any())
+                    {
+                        <ejs-circularchart3d id="statusPieChart3D" enableRotation="true" tilt="-45" height="350" title="Phân bổ trạng thái">
+                            <e-circularchart3d-tooltipsettings enable="true" header="" format="<b>${point.x}</b><br/>Số lượng: <b>${point.y}</b>"></e-circularchart3d-tooltipsettings>
+                            <e-circularchart3d-legendsettings visible="true" position="Bottom"></e-circularchart3d-legendsettings>
+                            <e-circularchart3d-series-collection>
+                                <e-circularchart3d-series dataSource="@Model.StatusDist.Select(s => new { 
+                                    X = s.TrangThai switch {
+                                0 => "Đang chờ duyệt",
+                                1 => "Đã chấp nhận",
+                                2 => "Đang thực hiện",
+                                3 => "Đã hoàn thành",
+                                4 => "Đã từ chối",
+                                5 => "Đã rút đăng ký",
+                                _ => "Không xác định"
+                                    },
+                                    Y = s.SoLuong
+                                })" xName="X" yName="Y" innerRadius="0%" explode="true">
+                                    <e-circularchart3d-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.CircularChart3DLabelPosition.Outside" name="X">
+                                        <e-font fontWeight="600"></e-font>
+                                    </e-circularchart3d-series-datalabel>
+                                </e-circularchart3d-series>
+                            </e-circularchart3d-series-collection>
+                        </ejs-circularchart3d>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Không có dữ liệu</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-star me-2 text-primary"></i>
+                        Điểm số trung bình
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.DiemTrungBinhDeTai.Any())
+                    {
+                        <div class="text-center mb-3">
+                            <h4 class="text-primary">@String.Format("{0:F2}", Model.DiemTrungBinhDeTai.Where(dt => dt.DiemTrungBinh.HasValue).Average(dt => dt.DiemTrungBinh!.Value))</h4>
+                            <p class="text-muted">Điểm trung bình chung các đề tài</p>
+                            <small class="text-muted">(@Model.DiemTrungBinhDeTai.Count() đề tài có điểm)</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center mb-3">
+                            <p class="text-muted">Không có dữ liệu điểm số</p>
+                        </div>
+                    }
+                    @if (ViewBag.LecturerAvgScore != null)
+                    {
+                        <div class="border-top pt-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Điểm TB giảng viên được chọn:</span>
+                                <strong class="text-success">@String.Format("{0:F2}", ViewBag.LecturerAvgScore)</strong>
+                            </div>
+                        </div>
+                    }
+                    @if (ViewBag.LecturerRemainingSlots != null)
+                    {
+                        <div class="border-top pt-3 mt-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Slot còn lại của GV:</span>
+                                <strong class="text-info">@ViewBag.LecturerRemainingSlots / 15</strong>
+                            </div>
+                        </div>
+                    }
+                    @if (ViewBag.OverallTopicAvgScore == null && ViewBag.LecturerAvgScore == null)
+                    {
+                        <p class="text-muted text-center">Không có dữ liệu điểm số</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Third Row - Topic Fill Rates Chart -->
+    @if (Model.DeTaiFill.Any())
+    {
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2 text-primary"></i>
+                    Tỷ lệ lấp đầy đề tài (Top 10)
+                </h6>
+            </div>
+            <div class="card-body">
+                <ejs-chart id="topicFillRatesChart" height="400">
+                    <e-chart-primaryxaxis valueType="Category" title="Đề tài" labelRotation="-45"></e-chart-primaryxaxis>
+                    <e-chart-primaryyaxis minimum="0" maximum="@(Model.DeTaiFill.Any() ? Model.DeTaiFill.Max(dt => dt.SlotToiDa) + 2 : 10)" interval="@(Model.DeTaiFill.Any() && Model.DeTaiFill.Max(dt => dt.SlotToiDa) <= 10 ? 1 : 5)" title="Số slot"></e-chart-primaryyaxis>
+                    <e-chart-tooltipsettings enable="true" format="Mã đề tài: ${point.x}<br/>${series.name}: ${point.y}<br/>Tỷ lệ lấp đầy: ${point.tooltip}%"></e-chart-tooltipsettings>
+                    <e-chart-legendsettings visible="true" position="Top"></e-chart-legendsettings>
+                    <e-series-collection>
+                        <e-series dataSource="@Model.DeTaiFill.Take(10).Select(dt => new { 
+                            Category = dt.MaDt,
+                            Used = dt.SlotDaDung,
+                            Remaining = dt.SlotConLai,
+                            Pending = dt.DangChoDuyet,
+                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
+                            FillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
+                        })" xName="Category" yName="Used" name="Đã sử dụng" type="StackingColumn" tooltipMappingName="FillRate">
+                        </e-series>
+                        <e-series dataSource="@Model.DeTaiFill.Take(10).Select(dt => new { 
+                            Category = dt.MaDt,
+                            Used = dt.SlotDaDung,
+                            Remaining = dt.SlotConLai,
+                            Pending = dt.DangChoDuyet,
+                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
+                            FillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
+                        })" xName="Category" yName="Pending" name="Chờ duyệt" type="StackingColumn" tooltipMappingName="FillRate">
+                        </e-series>
+                        <e-series dataSource="@Model.DeTaiFill.Take(10).Select(dt => new { 
+                            Category = dt.MaDt,
+                            Used = dt.SlotDaDung,
+                            Remaining = dt.SlotConLai,
+                            Pending = dt.DangChoDuyet,
+                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
+                            FillRate = dt.SlotToiDa > 0 ? Math.Round((decimal)dt.SlotDaDung / dt.SlotToiDa * 100, 1) : 0
+                        })" xName="Category" yName="Remaining" name="Còn lại" type="StackingColumn" tooltipMappingName="FillRate">
+                        </e-series>
+                    </e-series-collection>
+                </ejs-chart>
+            </div>
+        </div>
+    }
+
+    <!-- Fourth Row - Top Lecturers and Department Stats -->
+    <div class="row g-4 mb-4">
+        @if (Model.TopGv.Any())
+        {
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-trophy me-2 text-primary"></i>
+                            Top giảng viên
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var gv in Model.TopGv.Take(5))
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
+                                <div>
+                                    <strong>@gv.HoTenGv</strong>
+                                    <small class="text-muted d-block">Mã GV: @gv.MaGv</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="small">
+                                        <span class="badge bg-success me-1">Hoàn thành: @gv.Completed</span>
+                                        <span class="badge bg-primary">Đang HĐ: @gv.DangThucHien</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (Model.ByKhoa.Any())
+        {
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-building me-2 text-primary"></i>
+                            Thống kê theo khoa
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ejs-chart id="departmentMiniChart" height="300">
+                            <e-chart-primaryxaxis valueType="Category" title="Khoa"></e-chart-primaryxaxis>
+                            <e-chart-primaryyaxis title="Số lượng"></e-chart-primaryyaxis>
+                            <e-chart-tooltipsettings enable="true" format="Khoa: ${point.x}<br/>${series.name}: ${point.y}"></e-chart-tooltipsettings>
+                            <e-chart-legendsettings visible="true" position="Bottom"></e-chart-legendsettings>
+                            <e-series-collection>
+                                <e-series dataSource="@Model.ByKhoa.Take(5).Select(k => new { 
+                                    Category = k.MaKhoa, 
+                                    Topics = k.SoDeTai,
+                                    Completed = k.DaHoanThanh,
+                                    Lecturers = k.SoGiangVien
+                                })" xName="Category" yName="Topics" name="Đề tài" type="Column">
+                                </e-series>
+                                <e-series dataSource="@Model.ByKhoa.Take(5).Select(k => new { 
+                                    Category = k.MaKhoa, 
+                                    Topics = k.SoDeTai,
+                                    Completed = k.DaHoanThanh,
+                                    Lecturers = k.SoGiangVien
+                                })" xName="Category" yName="Completed" name="Hoàn thành" type="Column">
+                                </e-series>
+                            </e-series-collection>
+                        </ejs-chart>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Fifth Row - Current Term Statistics -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                Thống kê học kỳ 
+                @if (!string.IsNullOrEmpty(Context.Request.Query["hocKy"]) && !string.IsNullOrEmpty(Context.Request.Query["namHocStart"]))
+                {
+                    <span class="text-muted">- HK@(Context.Request.Query["hocKy"]) (@(Context.Request.Query["namHocStart"])-@(Context.Request.Query["namHocEnd"]))</span>
+                }
+                else
+                {
+                    <span class="text-muted">- HK @ViewBag.CurrentTerm (@ViewBag.AcademicYear)</span>
+                }
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                <div class="col-lg-6">
+                    @if (Model.ByTerm.Any())
+                    {
+                             <ejs-circularchart3d id="termStatsPieChart3D" enableRotation="true" tilt="-45" height="350" title="Thống kê trạng thái học kỳ">
+                                 <e-circularchart3d-tooltipsettings enable="true" header="" format="<b>${point.x}</b><br/>Số lượng: <b>${point.y}</b>"></e-circularchart3d-tooltipsettings>
+                                 <e-circularchart3d-legendsettings visible="true" position="Right"></e-circularchart3d-legendsettings>
+                                 <e-circularchart3d-series-collection>
+                                     <e-circularchart3d-series dataSource="@Model.ByTerm.Take(1).SelectMany(term => new[] {
+                                         new { X = "Hoàn thành", Y = term.HoanThanh },
+                                         new { X = "Đang thực hiện", Y = term.SlotDaDung - term.HoanThanh - term.ChoDuyet },
+                                         new { X = "Chờ duyệt", Y = term.ChoDuyet }
+                                     }.Where(x => x.Y > 0))" xName="X" yName="Y" innerRadius="0%" explode="true">
+                                         <e-circularchart3d-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.CircularChart3DLabelPosition.Outside" name="X">
+                                             <e-font fontWeight="600"></e-font>
+                                         </e-circularchart3d-series-datalabel>
+                                     </e-circularchart3d-series>
+                                 </e-circularchart3d-series-collection>
+                             </ejs-circularchart3d>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Không có dữ liệu cho kỳ học đã chọn</p>
+                    }
+                </div>
+                <div class="col-lg-6">
+                    @if (Model.ByTerm.Any())
+                    {
+                        var currentTerm = Model.ByTerm.First();
+                                    <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <div class="p-3 bg-primary bg-opacity-10 rounded">
+                                    <div class="h3 text-primary mb-1">@currentTerm.SlotDaDung</div>
+                                    <small class="text-muted">Slot đã sử dụng</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="p-3 bg-success bg-opacity-10 rounded">
+                                    <div class="h3 text-success mb-1">@currentTerm.HoanThanh</div>
+                                    <small class="text-muted">Đã hoàn thành</small>
+                                        </div>
+                                        </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="p-3 bg-warning bg-opacity-10 rounded">
+                                    <div class="h3 text-warning mb-1">@currentTerm.ChoDuyet</div>
+                                            <small class="text-muted">Chờ duyệt</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="p-3 bg-info bg-opacity-10 rounded">
+                                    <div class="h4 text-info mb-1">@((currentTerm.SlotDaDung > 0 ? (decimal)currentTerm.HoanThanh / currentTerm.SlotDaDung * 100 : 0).ToString("F1"))%</div>
+                                    <small class="text-muted">Tỷ lệ hoàn thành</small>
+                                        </div>
+                                    </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="p-3 bg-secondary bg-opacity-10 rounded">
+                                    <div class="h4 text-dark mb-1">@(currentTerm.SlotDaDung - currentTerm.HoanThanh - currentTerm.ChoDuyet)</div>
+                                    <small class="text-muted">Đang thực hiện</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Statistics Sections -->
+    
+    <!-- Average Scores by Topics Chart -->
+    @if (Model.DiemTrungBinhDeTai.Any())
+    {
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-award me-2 text-primary"></i>
+                    Điểm trung bình theo đề tài (Top 10)
+                </h6>
+            </div>
+            <div class="card-body">
+                <ejs-chart id="topicScoresChart" height="400">
+                    <e-chart-primaryxaxis valueType="Category" title="Đề tài"></e-chart-primaryxaxis>
+                    <e-chart-primaryyaxis minimum="0" maximum="10" interval="1" title="Điểm trung bình"></e-chart-primaryyaxis>
+                    <e-chart-tooltipsettings enable="true" format="Mã đề tài: ${point.x}<br/>${point.tooltip}<br/>Điểm TB: ${point.y}"></e-chart-tooltipsettings>
+                    <e-chart-legendsettings visible="false"></e-chart-legendsettings>
+                    <e-series-collection>
+                        <e-series dataSource="@Model.DiemTrungBinhDeTai.Take(10).Select(dt => new { 
+                            Category = dt.MaDt, 
+                            Score = dt.DiemTrungBinh ?? 0,
+                            Title = dt.TenDt.Length > 30 ? dt.TenDt.Substring(0, 30) + "..." : dt.TenDt,
+                            FullTitle = dt.TenDt,
+                            Lecturer = dt.HoTenGv,
+                            Students = dt.SoSinhVienHoanThanh,
+                            TooltipText = $"Tên: {dt.TenDt}<br/>Giảng viên: {dt.HoTenGv}<br/>SV hoàn thành: {dt.SoSinhVienHoanThanh}"
+                        })" xName="Category" yName="Score" name="Điểm TB" type="Column" tooltipMappingName="TooltipText">
+                        </e-series>
+                    </e-series-collection>
+                </ejs-chart>
+            </div>
+        </div>
+    }
+
+    <!-- Average Scores by Lecturers Chart -->
+    @if (Model.DiemTrungBinhGiangVien.Any())
+    {
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-chalkboard-teacher me-2 text-primary"></i>
+                    Điểm trung bình theo giảng viên (Top 10)
+                </h6>
+            </div>
+            <div class="card-body">
+                <ejs-chart id="lecturerScoresChart" height="400">
+                    <e-chart-primaryxaxis valueType="Category" title="Giảng viên" labelRotation="-45"></e-chart-primaryxaxis>
+                    <e-chart-primaryyaxis minimum="0" maximum="10" interval="1" title="Điểm trung bình"></e-chart-primaryyaxis>
+                    <e-chart-tooltipsettings enable="true" format="GV: ${point.x}<br/>Điểm TB: ${point.y}"></e-chart-tooltipsettings>
+                    <e-chart-legendsettings visible="false"></e-chart-legendsettings>
+                    <e-series-collection>
+                        <e-series dataSource="@Model.DiemTrungBinhGiangVien.Take(10).Select(gv => new { 
+                            Category = gv.HoTenGv, 
+                            Score = gv.DiemTrungBinh ?? 0,
+                            MaGv = gv.MaGv,
+                            Khoa = gv.MaKhoa,
+                            Students = gv.TongSinhVienHoanThanh,
+                            Topics = gv.TongDeTai
+                        })" xName="Category" yName="Score" name="Điểm TB" type="Column">
+                        </e-series>
+                    </e-series-collection>
+                </ejs-chart>
+            </div>
+        </div>
+    }
+
+    <!-- Slot Statistics - Grouped Column Chart -->
+    @if (Model.SlotThongKe.Any())
+    {
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-column me-2 text-primary"></i>
+                    Thống kê số lượng hướng dẫn theo giảng viên (Top 15)
+                </h6>
+                <small class="text-muted">Mỗi giảng viên có tối đa 15 đề tài per học kỳ</small>
+            </div>
+            <div class="card-body">
+                <ejs-chart style="height: 100%; width: 100%" id="slotUsageGroupedChart" width="100%" height="400">
+                    <e-chart-primaryxaxis valueType="@Syncfusion.EJ2.Charts.ValueType.Category" interval="1" labelRotation="-45">
+                        <e-labelstyle size="11px"></e-labelstyle>
+                        <e-majorgridlines width="0"></e-majorgridlines>
+                    </e-chart-primaryxaxis>
+                    <e-chart-primaryyaxis labelFormat="{value}" minimum="0" maximum="15" interval="3" title="Số đề tài">
+                        <e-majorticklines width="0"></e-majorticklines>
+                        <e-linestyle width="0"></e-linestyle>
+                        <e-labelstyle size="11px"></e-labelstyle>
+                    </e-chart-primaryyaxis>
+                    <e-chart-chartarea>
+                        <e-chartarea-border width="0"></e-chartarea-border>
+                    </e-chart-chartarea>
+                    <e-chart-tooltipsettings enable="true" format="GV: ${point.x}<br/>${series.name}: ${point.y} đề tài"></e-chart-tooltipsettings>
+                    <e-series-collection>
+                        <e-series dataSource="@Model.SlotThongKe.Select(s => new { 
+                            GiangVien = s.HoTenGv.Length > 15 ? s.HoTenGv.Substring(0, 15) + "..." : s.HoTenGv,
+                            DaSuDung = s.SlotDaSuDung,
+                            ConLai = s.SlotConLai,
+                            MaKhoa = s.MaKhoa,
+                            Percentage = s.TiLeSuDung
+                        })" xName="GiangVien" yName="DaSuDung" name="Đã sử dụng" width="2" fill="#2485FA" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Column">
+                            <e-series-marker>
+                                <e-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.LabelPosition.Top">
+                                    <e-font color="black" size="10px"></e-font>
+                                </e-series-datalabel>
+                            </e-series-marker>
+                            <e-series-cornerradius topLeft="4" topRight="4"></e-series-cornerradius>
+                        </e-series>
+                        <e-series dataSource="@Model.SlotThongKe.Select(s => new { 
+                            GiangVien = s.HoTenGv.Length > 15 ? s.HoTenGv.Substring(0, 15) + "..." : s.HoTenGv,
+                            DaSuDung = s.SlotDaSuDung,
+                            ConLai = s.SlotConLai,
+                            MaKhoa = s.MaKhoa,
+                            Percentage = s.TiLeSuDung
+                        })" xName="GiangVien" yName="ConLai" name="Còn lại" fill="#FEC200" width="2" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Column">
+                            <e-series-marker>
+                                <e-series-datalabel visible="true" position="@Syncfusion.EJ2.Charts.LabelPosition.Top">
+                                    <e-font color="black" size="10px"></e-font>
+                                </e-series-datalabel>
+                            </e-series-marker>
+                            <e-series-cornerradius topLeft="4" topRight="4"></e-series-cornerradius>
+                        </e-series>
+                    </e-series-collection>
+                    <e-chart-legendsettings padding="5" shapeHeight="8" shapeWidth="8" enableHighlight="true" position="Top">
+                    </e-chart-legendsettings>
+                </ejs-chart>
+            </div>
+        </div>
+    }
+
+
 </div>
 
+
 @section Scripts {
-    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
-    <script src="~/js/searchable-dropdown.js"></script>
-    <script src="~/lib/echarts/dist/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script>
-        // Quick term selection + SearchableDropdown init
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Khoa dropdown
-            const khoaDropdown = new SearchableDropdown('khoaDropdown', {
-                placeholder: 'Tìm kiếm khoa...',
-                searchUrl: '@Url.Action("Search", "Khoa")',
-                searchParam: 'q',
-                debounceDelay: 300,
-                allowClear: true,
-                labelFormatter: function(item) {
-                    const mk = item.MaKhoa ?? item.maKhoa;
-                    const tk = item.TenKhoa ?? item.tenKhoa;
-                    if (mk !== undefined && tk !== undefined) {
-                        return { value: mk, text: `${tk}` };
-                    }
-                    return null;
+        <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+        <script src="~/js/searchable-dropdown.js"></script>
+        <script>
+            // Global function for slot chart loading
+            window.loadSlotChart = function (args) {
+                // Apply responsive sizing
+                const isDevice = ej.base.Browser.isDevice;
+                args.chart.width = isDevice ? "100%" : "100%";
+                args.chart.height = isDevice ? "350px" : "450px";
+                
+                // Custom styling if needed
+                if (args && args.chart) {
+                    // Apply theme or custom settings
                 }
-            });
+            };
 
-            // Initialize GiangVien dropdown
-            const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
-                placeholder: 'Tìm kiếm giảng viên...',
-                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
-                searchParam: 'q',
-                filterParam: 'maKhoa',
-                debounceDelay: 300,
-                allowClear: true,
-                labelFormatter: function(item) {
-                    const mgv = item.MaGv ?? item.maGv;
-                    const hten = item.HoTenGv ?? item.hoTenGv;
-                    if (mgv !== undefined && hten !== undefined) {
-                        return { value: String(mgv), text: `${mgv} - ${hten}` };
-                    }
-                    return null;
-                }
-            });
-
-            // Update GV list when Khoa changes
-            document.getElementById('khoaDropdown').addEventListener('selectionChanged', function(e) {
-                giangVienDropdown.setFilterValue(e.detail.value || '');
-            });
-
-            // Quick term buttons
-            const quickTermBtns = document.querySelectorAll('.quick-term-btn');
-            quickTermBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const term = this.getAttribute('data-term');
-                    const year = this.getAttribute('data-year');
-                    const [startYear, endYear] = year.split('-').map(y => parseInt(y));
-
-                    let fromDate, toDate;
-                    switch(term) {
-                        case '1': fromDate = new Date(startYear, 8, 1); toDate = new Date(startYear, 11, 31); break;
-                        case '2': fromDate = new Date(endYear, 0, 1);   toDate = new Date(endYear, 3, 30);  break;
-                        case '3': fromDate = new Date(endYear, 4, 1);   toDate = new Date(endYear, 7, 31);  break;
-                    }
-
-                    const fromInput = document.querySelector('input[name="from"]');
-                    const toInput = document.querySelector('input[name="to"]');
-                    if (fromInput && toInput) {
-                        fromInput.value = fromDate.toISOString().split('T')[0];
-                        toInput.value = toDate.toISOString().split('T')[0];
-
-                        // Clear combobox filters
-                        if (typeof khoaDropdown.clear === 'function') khoaDropdown.clear();
-                        if (typeof giangVienDropdown.clear === 'function') giangVienDropdown.clear();
+            // Quick term selection + SearchableDropdown init
+            document.addEventListener('DOMContentLoaded', function () {
+                // Initialize Khoa dropdown
+                const khoaDropdown = new SearchableDropdown('khoaDropdown', {
+                    placeholder: 'Tìm kiếm khoa...',
+                    searchUrl: '@Url.Action("Search", "Khoa")',
+                    searchParam: 'q',
+                    debounceDelay: 300,
+                    allowClear: true,
+                    labelFormatter: function (item) {
+                        const mk = item.MaKhoa ?? item.maKhoa;
+                        const tk = item.TenKhoa ?? item.tenKhoa;
+                        if (mk !== undefined && tk !== undefined) {
+                            return { value: mk, text: `${tk}` };
+                        }
+                        return null;
                     }
                 });
-            });
-        });
-    </script>
-    <script>
-        const trendData  = @Html.Raw(trendJson);
-        const statusData = @Html.Raw(statusJson);
-        const fillData   = @Html.Raw(fillJson);
-        const byKhoaData = @Html.Raw(byKhoaJson);
-        const topGvData  = @Html.Raw(topGvJson);
-        const termData   = @Html.Raw(termJson);
 
-        // Trend
-        (function () {
-            const el = document.getElementById('adm_trend');
-            const chart = echarts.init(el);
-            const xs = trendData.map(p => `${p.Nam}-${String(p.Thang).padStart(2, '0')}`);
-            const ys = trendData.map(p => p.SoDangKy);
-            chart.setOption({
-                tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: xs },
-                yAxis: { type: 'value' },
-                series: [{ type: 'line', data: ys, smooth: true }]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-        // Status
-        (function () {
-            const el = document.getElementById('adm_status');
-            const chart = echarts.init(el);
-            const labelMap = { 0: 'Pending', 1: 'Accepted', 2: 'InProgress', 3: 'Completed', 4: 'Rejected', 5: 'Withdrawn' };
-            chart.setOption({
-                tooltip: { trigger: 'item' },
-                legend: { top: 'bottom' },
-                series: [{
-                    type: 'pie',
-                    radius: ['35%', '70%'],
-                    data: statusData.map(s => ({ name: labelMap[s.TrangThai] ?? s.TrangThai, value: s.SoLuong }))
-                }]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-
-        // Fill per topic
-        (function () {
-            const el = document.getElementById('adm_fill');
-            const chart = echarts.init(el);
-            const names = fillData.map(d => d.TenDt);
-            const used  = fillData.map(d => d.SlotDaDung);
-            const left  = fillData.map(d => d.SlotConLai);
-            const wait  = fillData.map(d => d.DangChoDuyet);
-            chart.setOption({
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                grid: { left: 80, right: 20, bottom: 20, containLabel: true },
-                xAxis: { type: 'value' },
-                yAxis: { type: 'category', data: names },
-                series: [
-                    { name: 'Đã dùng',   type: 'bar', stack: 'total', data: used },
-                    { name: 'Còn lại',   type: 'bar', stack: 'total', data: left },
-                    { name: 'Chờ duyệt', type: 'bar', stack: 'total', data: wait }
-                ]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-
-        // By Khoa
-        (function () {
-            const el = document.getElementById('adm_khoa');
-            const chart = echarts.init(el);
-            const xs = byKhoaData.map(k => k.MaKhoa);
-            const used = byKhoaData.map(k => k.TongSlotDaDung);
-            const done = byKhoaData.map(k => k.DaHoanThanh);
-            chart.setOption({
-                tooltip: { trigger: 'axis' },
-                legend: {},
-                xAxis: { type: 'category', data: xs },
-                yAxis: { type: 'value' },
-                series: [
-                    { name: 'Slot đã dùng', type: 'bar', data: used },
-                    { name: 'Hoàn thành',  type: 'bar', data: done }
-                ]
-            });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-
-        // Top GV with Chart.js
-        (function() {
-            // 1) Lấy dữ liệu
-            let raw = (() => {
-                try {
-                    const el = document.getElementById('top-giangvien-data');
-                    return el ? JSON.parse(el.textContent || '[]') : [];
-                } catch { return []; }
-            })();
-
-            if (!Array.isArray(raw) || raw.length === 0) {
-                raw = [
-                    { name: "Nguyễn Văn A (Khoa CNTT)", hoanThanh: 5, dangThucHien: 3, choDuyet: 2 },
-                    { name: "Trần Thị B (Khoa Cơ khí)", hoanThanh: 4, dangThucHien: 2, choDuyet: 1 },
-                    { name: "Lê Văn C (Khoa Kế toán)", hoanThanh: 6, dangThucHien: 1, choDuyet: 0 },
-                ];
-            }
-
-            // 2) Chuẩn hóa key
-            const norm = (item) => ({
-                name: item.name || item.ten || item.tenGiangVien || item.tenGV || item.label || "",
-                hoanThanh: Number(item.hoanThanh ?? item.HoanThanh ?? item.done ?? 0),
-                dangThucHien: Number(item.dangThucHien ?? item.DangThucHien ?? item.inprogress ?? 0),
-                choDuyet: Number(item.choDuyet ?? item.ChoDuyet ?? item.pending ?? 0),
-            });
-            const data = raw.map(norm);
-
-            // 3) Tách label & datasets
-            const labels = data.map(x => x.name);
-            const dsHoanThanh   = data.map(x => x.hoanThanh);
-            const dsDangThucHien= data.map(x => x.dangThucHien);
-            const dsChoDuyet    = data.map(x => x.choDuyet);
-
-            // 4) Tự động đặt chiều cao: mỗi hàng ~ 34px
-            const perRow = 34;
-            const canvas = document.getElementById('topGiangVienChart');
-            const desired = Math.max(280, labels.length * perRow + 60);
-            canvas.height = desired;
-
-            // 5) Hàm truncate nhãn dài
-            function truncateLabel(str, max=28) {
-                if (typeof str !== "string") return "";
-                return str.length > max ? (str.slice(0, max) + "…") : str;
-            }
-
-            // 6) Tạo chart
-            new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: labels.map(l => truncateLabel(l)),
-                    datasets: [
-                        { label: 'Hoàn thành',     data: dsHoanThanh,    backgroundColor: '#22c55e', borderWidth: 0 },
-                        { label: 'Đang thực hiện', data: dsDangThucHien, backgroundColor: '#3b82f6', borderWidth: 0 },
-                        { label: 'Chờ duyệt',      data: dsChoDuyet,     backgroundColor: '#f59e0b', borderWidth: 0 },
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',                 // Biểu đồ ngang
-                    interaction: { mode: 'nearest', axis: 'y', intersect: false },
-                    layout: { padding: { left: 4, right: 8, top: 4, bottom: 4 } },
-                    plugins: {
-                        legend: {
-                            display: false // Legend đã custom bên trên cho gọn
-                        },
-                        tooltip: {
-                            callbacks: {
-                                // Hiện tên đầy đủ trong tooltip
-                                title: (items) => {
-                                    if (!items?.length) return '';
-                                    const idx = items[0].dataIndex;
-                                    return labels[idx] || '';
-                                },
-                                label: (item) => {
-                                    const dsLabel = item.dataset?.label ?? '';
-                                    const v = item.parsed?.x ?? 0;
-                                    return ` ${dsLabel}: ${v}`;
-                                },
-                                footer: (items) => {
-                                    if (!items?.length) return '';
-                                    const idx = items[0].dataIndex;
-                                    const sum = (dsHoanThanh[idx] || 0) + (dsDangThucHien[idx] || 0) + (dsChoDuyet[idx] || 0);
-                                    return `Tổng: ${sum}`;
-                                }
-                            }
+                // Initialize GiangVien dropdown
+                const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
+                    placeholder: 'Tìm kiếm giảng viên...',
+                    searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+                    searchParam: 'q',
+                    filterParam: 'maKhoa',
+                    debounceDelay: 300,
+                    allowClear: true,
+                    labelFormatter: function (item) {
+                        const mgv = item.MaGv ?? item.maGv;
+                        const hten = item.HoTenGv ?? item.hoTenGv;
+                        if (mgv !== undefined && hten !== undefined) {
+                            return { value: String(mgv), text: `${mgv} - ${hten}` };
                         }
-                    },
-                    scales: {
-                        y: {
-                            stacked: true,
-                            ticks: {
-                                autoSkip: false,
-                                maxRotation: 0,
-                                minRotation: 0,
-                                font: { size: 12 }
-                            },
-                            grid: { display: false }
-                        },
-                        x: {
-                            stacked: true,
-                            ticks: {
-                                precision: 0,
-                                stepSize: 1
-                            },
-                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        return null;
+                    }
+                });
+
+                // Update GV list when Khoa changes
+                document.getElementById('khoaDropdown').addEventListener('selectionChanged', function (e) {
+                    giangVienDropdown.setFilterValue(e.detail.value || '');
+                });
+
+                // Initialize Term dropdown (search from server, map selection to hidden inputs)
+                const termDropdown = new SearchableDropdown('termDropdown', {
+                    placeholder: 'VD: HK1 (2025-2026) hoặc gõ 2024...',
+                    searchUrl: '@Url.Action("SuggestTerms", "ThongKe")',
+                    searchParam: 'q',
+                    debounceDelay: 300,
+                    allowClear: true,
+                    labelFormatter: function (item) {
+                        const t = item.term ?? item.Term ?? item.termNumber;
+                        const ys = item.yearStart ?? item.YearStart ?? item.namHocStart;
+                        const ye = item.yearEnd ?? item.YearEnd ?? item.namHocEnd;
+                        const disp = item.display ?? item.Display ?? `HK${t} (${ys}-${ye})`;
+                        if (t && ys && ye) return { value: `${t}|${ys}|${ye}`, text: disp };
+                        return null;
+                    }
+                });
+
+                // Map selection to hidden inputs
+                document.getElementById('termDropdown').addEventListener('selectionChanged', function (e) {
+                    const hiddenHocKy = document.querySelector('#termDropdown input[name="hocKy"]');
+                    const hiddenStart = document.querySelector('#termDropdown input[name="namHocStart"]');
+                    const hiddenEnd = document.querySelector('#termDropdown input[name="namHocEnd"]');
+                    const raw = e.detail?.value || '';
+                    console.log('Term selection changed:', raw); // Debug log
+                    if (!raw) {
+                        hiddenHocKy.value = '';
+                        hiddenStart.value = '';
+                        hiddenEnd.value = '';
+                        return;
+                    }
+                    const parts = raw.split('|');
+                    if (parts.length === 3) {
+                        hiddenHocKy.value = parts[0];
+                        hiddenStart.value = parts[1];
+                        hiddenEnd.value = parts[2];
+                        console.log('Set values:', parts); // Debug log
+                    }
+                });
+
+                // Initialize dropdowns with current values if any
+                document.addEventListener('DOMContentLoaded', function() {
+                    const currentHocKy = '@Context.Request.Query["hocKy"]';
+                    const currentStart = '@Context.Request.Query["namHocStart"]';
+                    const currentEnd = '@Context.Request.Query["namHocEnd"]';
+                    
+                    if (currentHocKy && currentStart && currentEnd) {
+                        const termInput = document.querySelector('#termDropdown input[type="text"]');
+                        if (termInput) {
+                            termInput.value = `HK${currentHocKy} (${currentStart}-${currentEnd})`;
                         }
                     }
-                }
-            });
-        })();
+                });
 
-        // By Term
-        (function () {
-            const el = document.getElementById('adm_term');
-            const chart = echarts.init(el);
-            const xs = termData.map(t => `${t.NamHoc}-HK${t.HocKy}`);
-            const used = termData.map(t => t.SlotDaDung);
-            const done = termData.map(t => t.HoanThanh);
-            const wait = termData.map(t => t.ChoDuyet);
-            chart.setOption({
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: xs },
-                yAxis: { type: 'value' },
-                series: [
-                    { name: 'Đã dùng',   type: 'bar', stack: 't', data: used },
-                    { name: 'Hoàn thành',type: 'bar', stack: 't', data: done },
-                    { name: 'Chờ duyệt', type: 'bar', stack: 't', data: wait }
-                ]
             });
-            window.addEventListener('resize', () => chart.resize());
-        })();
-    </script>
+
+        </script>
 }

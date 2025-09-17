@@ -18,170 +18,103 @@ namespace InternshipManagement.Controllers
             _db = db;
         }
 
-        [Authorize(Roles = "GiangVien, Admin")]
-        public async Task<IActionResult> Index(DateTime? from = null, DateTime? to = null, byte? hocKy = null, string? namHoc = null, string? maKhoa = null, int? maGv = null)
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Index(string? maKhoa, int? maGv, byte? hocKy, int? namHocStart, int? namHocEnd, DateTime? from, DateTime? to)
         {
-            var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value;
-            var code = User.FindFirst("code")?.Value;
+            // Prepare current term info for header
+            var now = DateTime.Now;
+            var currentYearStart = now.Month >= 9 ? now.Year : now.Year - 1;
+            var currentTerm = (now.Month >= 9 && now.Month <= 12) ? 1 : (now.Month >= 1 && now.Month <= 4) ? 2 : (byte)3;
+            ViewBag.CurrentTerm = currentTerm;
+            ViewBag.AcademicYear = $"{currentYearStart}-{currentYearStart + 1}";
 
-            if (string.Equals(role, "GiangVien", StringComparison.OrdinalIgnoreCase))
+            // Fetch all statistical data using repository methods in parallel for better performance
+            try
             {
-                if (!int.TryParse(code, out var maGvClaim)) return Unauthorized();
-
-                // Auto-set date range if not provided for GiangVien too
-                if (!from.HasValue || !to.HasValue)
+                var vm = new ThongKeAdminVm
                 {
-                    var now = DateTime.Now;
-                    var currentYear = now.Year;
-                    var currentMonth = now.Month;
-
-                    var currentTerm = currentMonth switch
-                    {
-                        >= 9 and <= 12 => 1,  // HK1: Sep-Dec
-                        >= 1 and <= 4 => 2,   // HK2: Jan-Apr
-                        _ => 3                 // HK3: May-Aug
-                    };
-
-                    int yearStart, yearEnd;
-                    if (currentTerm == 1)
-                    {
-                        yearStart = currentYear;
-                        yearEnd = currentYear;
-                    }
-                    else if (currentTerm == 2)
-                    {
-                        yearStart = currentYear;
-                        yearEnd = currentYear;
-                    }
-                    else // HK3
-                    {
-                        yearStart = currentYear;
-                        yearEnd = currentYear;
-                    }
-
-                    var termStart = currentTerm switch
-                    {
-                        1 => new DateTime(yearStart, 9, 1),    // Sep 1
-                        2 => new DateTime(yearStart, 1, 1),    // Jan 1
-                        3 => new DateTime(yearStart, 5, 1),    // May 1
-                        _ => new DateTime(yearStart, 9, 1)
-                    };
-
-                    var termEnd = currentTerm switch
-                    {
-                        1 => new DateTime(yearEnd, 12, 31),    // Dec 31
-                        2 => new DateTime(yearEnd, 4, 30),     // Apr 30
-                        3 => new DateTime(yearEnd, 8, 31),     // Aug 31
-                        _ => new DateTime(yearEnd, 12, 31)
-                    };
-
-                    if (!from.HasValue) from = termStart;
-                    if (!to.HasValue) to = termEnd;
-                }
-
-                var vm = await _repo.GetThongKeGiangVienAsync(maGvClaim, from, to, hocKy, namHoc);
-                return View("ThongKeGiangVien", vm);
-            }
-
-            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                // Auto-set date range if not provided OR if explicitly empty
-                if (!from.HasValue || !to.HasValue)
-                {
-                    var now = DateTime.Now;
-                    var currentYear = now.Year;
-                    var currentMonth = now.Month;
-
-                    var currentTerm = currentMonth switch
-                    {
-                        >= 9 and <= 12 => 1,  // HK1: Sep-Dec
-                        >= 1 and <= 4 => 2,   // HK2: Jan-Apr
-                        _ => 3                 // HK3: May-Aug
-                    };
-
-                    int yearStart, yearEnd;
-                    if (currentTerm == 1)
-                    {
-                        yearStart = currentYear;
-                        yearEnd = currentYear;
-                    }
-                    else if (currentTerm == 2)
-                    {
-                        yearStart = currentYear;
-                        yearEnd = currentYear;
-                    }
-                    else // HK3
-                    {
-                        yearStart = currentYear;
-                        yearEnd = currentYear;
-                    }
-
-                    var termStart = currentTerm switch
-                    {
-                        1 => new DateTime(yearStart, 9, 1),    // Sep 1
-                        2 => new DateTime(yearStart, 1, 1),    // Jan 1
-                        3 => new DateTime(yearStart, 5, 1),    // May 1
-                        _ => new DateTime(yearStart, 9, 1)
-                    };
-
-                    var termEnd = currentTerm switch
-                    {
-                        1 => new DateTime(yearEnd, 12, 31),    // Dec 31
-                        2 => new DateTime(yearEnd, 4, 30),     // Apr 30
-                        3 => new DateTime(yearEnd, 8, 31),     // Aug 31
-                        _ => new DateTime(yearEnd, 12, 31)
-                    };
-
-                    if (!from.HasValue) from = termStart;
-                    if (!to.HasValue) to = termEnd;
-                }
-
-                var vm = await _repo.GetThongKeAdminAsync(maKhoa, maGv, from, to, hocKy, namHoc);
-
-                // Get filter options
-                var khoaOptions = await _db.Khoas
-                    .Select(k => new KhoaOptionVm { MaKhoa = k.MaKhoa, TenKhoa = k.TenKhoa })
-                    .OrderBy(k => k.TenKhoa)
-                    .ToListAsync();
-
-                var giangVienOptions = await _db.GiangViens
-                    .Include(g => g.Khoa)
-                    .Select(g => new GiangVienOptionVm
-                    {
-                        MaGv = g.MaGv,
-                        TenGv = g.HoTenGv,
-                        MaKhoa = g.MaKhoa
-                    })
-                    .OrderBy(g => g.TenGv)
-                    .ToListAsync();
-
-                // Calculate current term info for ViewBag
-                var now2 = DateTime.Now;
-                var currentYear2 = now2.Year;
-                var currentMonth2 = now2.Month;
-
-                var currentTerm2 = currentMonth2 switch
-                {
-                    >= 9 and <= 12 => 1,  // HK1: Sep-Dec
-                    >= 1 and <= 4 => 2,   // HK2: Jan-Apr
-                    _ => 3                 // HK3: May-Aug
+                    FilterKhoa = maKhoa,
+                    FilterGiangVien = maGv,
+                    FilterHocKy = hocKy,
+                    FilterNamHocStart = namHocStart,
+                    FilterNamHocEnd = namHocEnd
                 };
 
-                var academicYear2 = currentTerm2 == 1
-                    ? $"{currentYear2}-{currentYear2 + 1}"      // HK1 starts new academic year
-                    : $"{currentYear2 - 1}-{currentYear2}";     // HK2,3 belong to previous academic year
+                // Execute repository calls sequentially to avoid DbContext concurrency issues
+                vm.Kpi = await _repo.GetKpiAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                vm.StatusDist = await _repo.GetStatusDistributionAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                vm.DeTaiFill = await _repo.GetDeTaiFillRatesAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                vm.TopGv = await _repo.GetTopGiangViensAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                vm.ByKhoa = await _repo.GetStatsByKhoaAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                vm.ByTerm = await _repo.GetTermSummariesAsync(maKhoa, maGv);
+                vm.Trend = await _repo.GetRegistrationTrendAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                
+                // New comprehensive statistics
+                vm.DiemTrungBinhDeTai = await _repo.GetAverageScoresByTopicsAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
+                vm.DiemTrungBinhGiangVien = await _repo.GetAverageScoresByLecturersAsync(maKhoa, hocKy, namHocStart, namHocEnd);
+                vm.SlotThongKe = await _repo.GetSlotStatisticsAsync(maKhoa, maGv, hocKy, namHocStart, namHocEnd);
 
-                ViewBag.KhoaOptions = khoaOptions;
-                ViewBag.GiangVienOptions = giangVienOptions;
-                ViewBag.CurrentTerm = currentTerm2;
-                ViewBag.AcademicYear = academicYear2;
-                ViewBag.AutoFrom = from;
-                ViewBag.AutoTo = to;
+                // Additional specific lecturer statistics if filtered
+                if (maGv.HasValue)
+                {
+                    ViewBag.LecturerAvgScore = await _repo.GetAverageScoreByLecturerAsync(maGv.Value, hocKy, namHocStart, namHocEnd);
+                    ViewBag.LecturerRemainingSlots = await _repo.GetRemainingLecturerSlotsAsync(maGv.Value, hocKy, namHocStart, namHocEnd);
+                }
 
                 return View("ThongKeAdmin", vm);
             }
+            catch (Exception)
+            {
+                // Log error and return empty view model
+                ViewBag.ErrorMessage = "Có lỗi xảy ra khi tải dữ liệu thống kê.";
+                return View("ThongKeAdmin", new ThongKeAdminVm());
+            }
+        }
 
-            return Forbid();
+        [HttpGet]
+        public IActionResult SuggestTerms(string? q)
+        {
+            try
+            {
+                var now = DateTime.Now.Year;
+                // Generate a wide window to allow searching past years by typing
+                var startYear = now - 50;
+                var endYear = now + 2;
+
+                bool HasYearMatch(int y)
+                {
+                    if (string.IsNullOrWhiteSpace(q)) return true;
+                    var s = q.Trim();
+                    return y.ToString().Contains(s) || (y + 1).ToString().Contains(s);
+                }
+
+                var results = new List<object>();
+                for (var y = endYear; y >= startYear; y--)
+                {
+                    if (!HasYearMatch(y)) continue;
+                    var labelYear = $"{y}-{y + 1}";
+                    for (var term = 1; term <= 3; term++)
+                    {
+                        results.Add(new
+                        {
+                            term = term,
+                            yearStart = y,
+                            yearEnd = y + 1,
+                            display = $"HK{term} ({labelYear})"
+                        });
+                    }
+                }
+
+                // Limit suggestions
+                results = results.Take(60).ToList();
+
+                return Json(new { success = true, data = results });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }
