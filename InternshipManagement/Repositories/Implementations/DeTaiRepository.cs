@@ -10,6 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 public class GvRegistrationVm
 {
+    // STT
+    public int Stt { get; set; }
+    
     // Sinh viên
     public int Masv { get; set; }
     public string? HotenSv { get; set; }
@@ -26,6 +29,8 @@ public class GvRegistrationVm
 
     // Hướng dẫn
     public byte TrangThai { get; set; }
+    public string TrangThaiText { get; set; } = "";
+    public string HocKyNamHoc { get; set; } = "";
     public DateTime? NgayDangKy { get; set; }
     public DateTime? NgayChapNhan { get; set; }
     public decimal? KetQua { get; set; }
@@ -611,8 +616,10 @@ namespace InternshipManagement.Repositories.Implementations
                 .Select(d => new { d.MaDt, d.TenDt })
                 .ToListAsync();
 
-            var items = new List<SelectListItem> { new("Tất cả đề tài", "") };
-            items.AddRange(topics.Select(t => new SelectListItem($"{t.MaDt} - {t.TenDt ?? ""}", t.MaDt)));
+            var items = new List<SelectListItem> { new("-- Tất cả --", "") };
+            items.AddRange(topics.Select(t => new SelectListItem(
+                string.IsNullOrWhiteSpace(t.TenDt) ? t.MaDt?.Trim() : $"{t.MaDt?.Trim()} - {t.TenDt.Trim()}", 
+                t.MaDt)));
 
             return items;
         }
@@ -650,9 +657,9 @@ namespace InternshipManagement.Repositories.Implementations
                 query = query.Where(h => h.MaDt == code);
             }
 
-            // Project to ViewModel
-            return await query
-                .OrderBy(h => h.MaSv)
+            // Get data and calculate STT
+            var results = await query
+                .OrderBy(h => h.CreatedAt) // Order by registration date for consistent STT
                 .Select(h => new GvRegistrationVm
                 {
                     Masv = h.MaSv,
@@ -666,14 +673,29 @@ namespace InternshipManagement.Repositories.Implementations
                     TenDt = h.DeTai.TenDt,
                     HocKy = h.DeTai.HocKy,
                     NamHoc = h.DeTai.NamHoc ?? "",
+                    HocKyNamHoc = $"HK{h.DeTai.HocKy} ({h.DeTai.NamHoc ?? ""})",
 
                     TrangThai = (byte)h.TrangThai,
+                    TrangThaiText = h.TrangThai == HuongDanStatus.Pending ? "Đang chờ duyệt" :
+                                   h.TrangThai == HuongDanStatus.Accepted ? "Chấp nhận" :
+                                   h.TrangThai == HuongDanStatus.InProgress ? "Đang thực hiện" :
+                                   h.TrangThai == HuongDanStatus.Completed ? "Hoàn thành" :
+                                   h.TrangThai == HuongDanStatus.Rejected ? "Đã từ chối" :
+                                   h.TrangThai == HuongDanStatus.Withdrawn ? "Đã rút" : "Khác",
                     NgayDangKy = h.CreatedAt,
                     NgayChapNhan = h.AcceptedAt,
                     KetQua = h.KetQua,
                     GhiChu = h.GhiChu
                 })
                 .ToListAsync();
+
+            // Assign STT (sequential numbering)
+            for (int i = 0; i < results.Count; i++)
+            {
+                results[i].Stt = i + 1;
+            }
+
+            return results;
         }
 
         public async Task<bool> UpdateHuongDanStatusAsync(int maGv, int maSv, string maDt, byte newStatus, string? ghiChu = null)

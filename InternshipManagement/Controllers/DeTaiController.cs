@@ -1211,6 +1211,29 @@ namespace InternshipManagement.Controllers
             return Json(new { success = true, data = list });
         }
 
+        [HttpGet]
+        [Authorize(Roles = "GiangVien")]
+        public async Task<IActionResult> GetTopicsByTerm(byte? hocKy, string? namHoc)
+        {
+            try
+            {
+                // Lấy mã GV từ claims
+                string? rawMaGv = User.FindFirst("MaGv")?.Value
+                               ?? User.FindFirst("code")?.Value
+                               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrWhiteSpace(rawMaGv) || !int.TryParse(rawMaGv, out var maGv))
+                    return Json(new { success = false, message = "Không tìm thấy thông tin giảng viên" });
+
+                var options = await _repo.GetLecturerTopicOptionsAsync(maGv, hocKy, namHoc);
+                return Json(new { success = true, data = options.Select(o => new { value = o.Value, text = o.Text }) });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "GiangVien")]

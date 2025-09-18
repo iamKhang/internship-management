@@ -1,42 +1,6 @@
 ﻿@model GvRegistrationsPageVm
 @{
     ViewData["Title"] = "Sinh viên đăng ký đề tài";
-    byte? selectedHk = Model.Filter.HocKy;
-    string? selectedYear = Model.Filter.NamHoc;
-
-    // Function kiểm tra quá hạn
-    bool IsOverdue(byte hk, string namHoc)
-    {
-        var now = DateTime.Now;
-        var parts = namHoc?.Split('-');
-        if (parts == null || parts.Length != 2) return false;
-
-        if (!int.TryParse(parts[0], out var startYear)) return false;
-        if (!int.TryParse(parts[1], out var endYear)) return false;
-
-        DateTime hkStart, hkEnd;
-
-        switch (hk)
-        {
-            case 1: // HK1: 9/startYear đến 12/startYear
-                hkStart = new DateTime(startYear, 9, 1);
-                hkEnd = new DateTime(startYear, 12, 31);
-                break;
-            case 2: // HK2: 1/endYear đến 4/endYear
-                hkStart = new DateTime(endYear, 1, 1);
-                hkEnd = new DateTime(endYear, 4, 30);
-                break;
-            case 3: // HK3: 5/endYear đến 8/endYear
-                hkStart = new DateTime(endYear, 5, 1);
-                hkEnd = new DateTime(endYear, 8, 31);
-                break;
-            default:
-                return false;
-        }
-
-        // Quá hạn nếu đã qua ngày kết thúc học kỳ
-        return now > hkEnd;
-    }
 }
 
 <style>
@@ -60,261 +24,194 @@
     <div class="card-body">
 
         <form method="get" class="row g-3 align-items-end mb-3" id="filterForm">
-            <div class="col-md-3">
-                <label class="form-label">Học kỳ - Năm học</label>
-                <select class="form-select py-2" id="hkNamSelect">
-                    <option value="">-- Tất cả --</option>
-                    @{
-                        var nowY = DateTime.Now.Year;
-                        var pairs = Enumerable.Range(nowY - 5, 8)
-                                    .SelectMany(y => new[] { (hk: (byte)1, yearStr: $"{y}-{y+1}"), (hk: (byte)2, yearStr: $"{y}-{y+1}"), (hk: (byte)3, yearStr: $"{y}-{y+1}") });
-                        var selectedValue = selectedHk.HasValue && !string.IsNullOrEmpty(selectedYear)
-                                            ? $"{selectedHk}-{selectedYear}"
-                                            : "";
-                        foreach (var p in pairs)
-                        {
-                            var val = $"{p.hk}-{p.yearStr}";
-                            var text = $"HK{p.hk} - {p.yearStr}";
-                            <option value="@val" selected="@(val == selectedValue ? "selected" : null)">@text</option>
-                        }
-                    }
-                </select>
-                <input type="hidden" name="hocKy" id="hocKyHidden" value="@(selectedHk?.ToString() ?? "")" />
-                <input type="hidden" name="namHoc" id="namHocHidden" value="@(selectedYear ?? "")" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Đề tài</label>
-                <select class="form-select py-2" name="maDt">
-                    <option value="">-- Tất cả đề tài --</option>
-                    @foreach (var opt in Model.DeTaiOptions)
-                    {
-                        <option value="@opt.Value" selected="@(opt.Value == Model.Filter.MaDt ? "selected" : null)">
-                            @opt.Text
-                        </option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Trạng thái</label>
-                <select class="form-select py-2" name="trangThai">
-                    <option value="" selected="@(Model.Filter.TrangThai == null ? "selected" : null)">-- Tất cả --</option>
-                    <option value="0" selected="@(Model.Filter.TrangThai == 0 ? "selected" : null)">Đang chờ duyệt</option>
-                    <option value="1" selected="@(Model.Filter.TrangThai == 1 ? "selected" : null)">Chấp nhận</option>
-                    <option value="2" selected="@(Model.Filter.TrangThai == 2 ? "selected" : null)">Đang thực hiện</option>
-                    <option value="3" selected="@(Model.Filter.TrangThai == 3 ? "selected" : null)">Hoàn thành</option>
-                    <option value="4" selected="@(Model.Filter.TrangThai == 4 ? "selected" : null)">Đã từ chối</option>
-                </select>
+            <div class="col-md-4">
+                <label class="form-label">Học kỳ/Năm học</label>
+                <div class="searchable-dropdown" id="termDropdownReg">
+                    <input type="hidden"
+                        value="@(Model.Filter.HocKy.HasValue && !string.IsNullOrEmpty(Model.Filter.NamHoc) ? ($"{Model.Filter.HocKy}|{Model.Filter.NamHoc}") : "")" />
+                    <input type="text" class="form-control" autocomplete="off">
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-options">
+                            <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy?.ToString() ?? "")" />
+                <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc ?? "")" />
             </div>
             <div class="col-md-4">
-                <div class="d-flex gap-2">
+                <label class="form-label">Đề tài</label>
+                <div class="searchable-dropdown" id="deTaiDropdownReg">
+                    <input type="hidden" name="maDt" value="@Model.Filter.MaDt" />
+                    <input type="text" class="form-control" placeholder="Tìm kiếm đề tài..." autocomplete="off">
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-options">
+                            <!-- Options will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Trạng thái</label>
+                <div class="searchable-dropdown" id="statusDropdownReg">
+                    <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai?.ToString() ?? "")" />
+                    <input type="text" class="form-control" autocomplete="off">
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-options">
+                            <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            <a class="dropdown-item" href="#" data-value="0">Đang chờ duyệt</a>
+                            <a class="dropdown-item" href="#" data-value="1">Chấp nhận</a>
+                            <a class="dropdown-item" href="#" data-value="2">Đang thực hiện</a>
+                            <a class="dropdown-item" href="#" data-value="3">Hoàn thành</a>
+                            <a class="dropdown-item" href="#" data-value="4">Đã từ chối</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 d-flex gap-2 justify-content-end">
+                <a class="btn btn-outline-secondary py-2" asp-action="Registrations">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Hủy
+                </a>
+                <a class="btn btn-success py-2" asp-action="ExportRegistrationsExcel"
+                    asp-route-hocKy="@(Model.Filter.HocKy)" asp-route-namHoc="@(Model.Filter.NamHoc)"
+                    asp-route-trangThai="@(Model.Filter.TrangThai)" asp-route-maDt="@(Model.Filter.MaDt)">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                </a>
                     <button class="btn btn-primary py-2" type="submit" id="btnFilter">
                         <i class="bi bi-funnel me-1"></i>Lọc
                     </button>
-                    <a class="btn btn-outline-secondary py-2" asp-action="Registrations">
-                        <i class="bi bi-trash me-1"></i>Xóa lọc
-                    </a>
-                    <a class="btn btn-success py-2"
-                       asp-action="ExportRegistrationsExcel"
-                       asp-route-hocKy="@(Model.Filter.HocKy)"
-                       asp-route-namHoc="@(Model.Filter.NamHoc)"
-                       asp-route-trangThai="@(Model.Filter.TrangThai)"
-                       asp-route-maDt="@(Model.Filter.MaDt)">
-                        <i class="bi bi-file-earmark-excel me-1"></i>Excel
-                    </a>
-                </div>
             </div>
         </form>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-                <thead class="table-primary text-center">
-                    <tr>
-                        <th class="text-nowrap fw-bold text-center" style="width: 60px;">STT</th>
-                        <th class="text-nowrap fw-bold">Ngày đăng ký</th>
-                        <th class="text-nowrap fw-bold">Sinh viên</th>
-                        <th class="text-nowrap fw-bold">Đề tài</th>
-                        <th class="text-nowrap fw-bold">Học kỳ</th>
-                        <th class="text-nowrap fw-bold">Trạng thái</th>
-                        <th class="text-nowrap fw-bold">Kết quả</th>
-                        <th class="text-nowrap fw-bold">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.Items.Any())
-                    {
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-5 fs-5">
-                                <i class="bi bi-info-circle me-2"></i>Không có đăng ký nào
-                            </td>
-                        </tr>
-                    }
-                    else
-                    {
-                        var stt = 1;
-                        foreach (var x in Model.Items)
-                        {
-                            var modalId = $"completeModal_{x.Masv}_{x.MaDt}".Replace(" ", "").Replace(".", "").Replace("/", "").Replace("\\", "");
-                            var isOverdue = IsOverdue(x.HocKy, x.NamHoc);
-                            <tr>
-                                <td class="text-center">@stt</td>
-                                <td>@(x.NgayDangKy?.ToString("dd/MM/yyyy") ?? "")</td>
-                                <td>
-                                    <div class="fw-semibold">@x.HotenSv (#@x.Masv)</div>
-                                    <div class="text-muted small">@x.Sv_TenKhoa (@x.Sv_MaKhoa)</div>
-                                    @if (!string.IsNullOrWhiteSpace(x.QueQuan))
-                                    {
-                                        <div class="text-muted small">QQ: @x.QueQuan</div>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="fw-semibold">@x.TenDt</div>
-                                    <div class="text-muted small">Mã: <span class="text-monospace">@x.MaDt</span></div>
-                                </td>
-                                <td>@($"{x.HocKy} - {x.NamHoc}")</td>
-                                <td>
-                                    @{
-                                        string statusText = x.TrangThai switch
-                                        {
-                                            0 => "Đang chờ duyệt",
-                                            1 => "Chấp nhận",
-                                            2 => "Đang thực hiện",
-                                            3 => "Hoàn thành",
-                                            4 => "Đã từ chối",
-                                            _ => "Khác"
-                                        };
-                                        string badgeClass = x.TrangThai switch
-                                        {
-                                            0 => "bg-warning text-dark",
-                                            1 => "bg-success text-white",
-                                            2 => "bg-info text-dark",
-                                            3 => "bg-success text-white",
-                                            4 => "bg-danger text-white",
-                                            _ => "bg-secondary text-white"
-                                        };
-                                    }
-                                    <span class="badge @badgeClass">@statusText</span>
-                                </td>
-
-                                <td class="text-center">
-                                    @if (x.KetQua.HasValue)
-                                    {
-                                        <span class="fw-semibold">@x.KetQua.Value</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">-</span>
-                                    }
-                                </td>
-
-                                <td class="text-nowrap action-cell">
-                                    @* 0 = Pending: giữ nguyên Duyệt/Từ chối *@
-                                    @if (x.TrangThai == 0)
-                                    {
-                                        @if (isOverdue)
-                                        {
-                                            <div class="text-center">
-                                                <span class="badge bg-warning text-dark">
-                                                    <i class="bi bi-clock-history me-1"></i>Quá hạn
-                                                </span>
+        <div class="grid-responsive">
+            <div class="grid-container">
+                <ejs-grid id="RegistrationsGrid" dataSource="@Model.Items" allowPaging="true" allowSorting="false"
+                    allowMultiSorting="false" allowFiltering="false" allowResizing="true" gridLines="Both" height="600"
+                    width="100%" grid-lines="Both" enable-hover="false" enable-alt-row="true">
+                    <e-grid-pagesettings pageSize="20"
+                        pageSizes="new List<int>{10,20,50,100,500}"></e-grid-pagesettings>
+                    <e-grid-columns>
+                        <e-grid-column field="Stt" headerText="STT" width="60" textAlign="Center"></e-grid-column>
+                        <e-grid-column field="NgayDangKy" headerText="Ngày đăng ký" width="130" type="date" format="dd/MM/yyyy"></e-grid-column>
+                        <e-grid-column field="HotenSv" headerText="Sinh viên" width="220"></e-grid-column>
+                        <e-grid-column field="Sv_TenKhoa" headerText="Khoa" width="180"></e-grid-column>
+                        <e-grid-column field="MaDt" headerText="Mã ĐT" width="120"></e-grid-column>
+                        <e-grid-column field="TenDt" headerText="Tên đề tài" width="300"></e-grid-column>
+                        <e-grid-column field="HocKyNamHoc" headerText="Học kỳ" width="140" textAlign="Center"></e-grid-column>
+                        <e-grid-column headerText="Trạng thái" width="140" textAlign="Center" template="#trangThaiTemplate"></e-grid-column>
+                        <e-grid-column field="KetQua" headerText="Kết quả" width="100" textAlign="Center"></e-grid-column>
+                        <e-grid-column headerText="Thao tác" width="180" textAlign="Center" template="#actionTemplate"></e-grid-column>
+                    </e-grid-columns>
+                </ejs-grid>
+            </div>
+        </div>
+        
+        <script id="sinhVienTemplate" type="text/x-template">
+            <div class="fw-semibold">${HotenSv} (#${Masv})</div>
+            <div class="text-muted small">${Sv_TenKhoa} (${Sv_MaKhoa})</div>
+            ${if(QueQuan)}<div class="text-muted small">QQ: ${QueQuan}</div>${/if}
+        </script>
+        <script id="deTaiTemplate" type="text/x-template">
+            <div class="fw-semibold">${TenDt}</div>
+            <div class="text-muted small">Mã: <span class="text-monospace">${MaDt}</span></div>
+        </script>
+        <script id="hocKyTemplate" type="text/x-template">
+            ${HocKy} - ${NamHoc}
+        </script>
+        <script id="trangThaiTemplate" type="text/x-template">
+            ${if(TrangThai==0)}<span class="badge bg-warning text-dark">Đang chờ duyệt</span>${/if}
+            ${if(TrangThai==1)}<span class="badge bg-success text-white">Chấp nhận</span>${/if}
+            ${if(TrangThai==2)}<span class="badge bg-info text-white">Đang thực hiện</span>${/if}
+            ${if(TrangThai==3)}<span class="badge bg-success text-white">Hoàn thành</span>${/if}
+            ${if(TrangThai==4)}<span class="badge bg-danger text-white">Đã từ chối</span>${/if}
+            ${if(TrangThai==5)}<span class="badge bg-secondary text-white">Đã rút</span>${/if}
+            ${if(TrangThai!=0 && TrangThai!=1 && TrangThai!=2 && TrangThai!=3 && TrangThai!=4 && TrangThai!=5)}<span class="badge bg-secondary text-white">Khác</span>${/if}
+        </script>
+        <script id="ketQuaTemplate" type="text/x-template">
+            ${if(KetQua==null)}<span class="text-muted">-</span>${/if}
+            ${if(KetQua!=null)}<span class="fw-semibold">${KetQua}</span>${/if}
+        </script>
+        <script id="actionTemplate" type="text/x-template">
+            ${if(TrangThai==0)}
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-primary btn-sm w-100 btn-approve" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-check-circle me-1"></i>Duyệt</button>
+                    <button type="button" class="btn btn-danger btn-sm w-100 btn-reject" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-x-circle me-1"></i>Từ chối</button>
                                             </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="d-grid gap-2">
-                                                <form method="post" asp-action="ApproveRegistration">
+            ${/if}
+            ${if(TrangThai==1)}
+                <button type="button" class="btn btn-outline-primary btn-sm btn-start" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-play-circle me-1"></i>Bắt đầu</button>
+            ${/if}
+            ${if(TrangThai==2)}
+                <button type="button" class="btn btn-success btn-sm btn-complete" data-masv="${Masv}" data-madt="${MaDt}" data-hoten="${HotenSv}" data-tendt="${TenDt}"><i class="bi bi-flag-checkered me-1"></i>Hoàn thành</button>
+            ${/if}
+            ${if(TrangThai!=0 && TrangThai!=1 && TrangThai!=2)}<span class="text-muted">—</span>${/if}
+        </script>
+
+        <form id="frmApprove" method="post" asp-action="ApproveRegistration" class="d-none">
                                                     @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="maSv" value="@x.Masv" />
-                                                    <input type="hidden" name="maDt" value="@x.MaDt" />
-                                                    <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
-                                                    <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
-                                                    <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
-                                                    <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
-                                                    <button type="submit" class="btn btn-primary btn-sm w-100">
-                                                        <i class="bi bi-check-circle me-1"></i>Duyệt
-                                                    </button>
+            <input type="hidden" name="maSv" />
+            <input type="hidden" name="maDt" />
+            <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
+            <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
+            <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
+            <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
                                                 </form>
-                                                <form method="post" asp-action="RejectRegistration">
+        <form id="frmReject" method="post" asp-action="RejectRegistration" class="d-none">
                                                     @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="maSv" value="@x.Masv" />
-                                                    <input type="hidden" name="maDt" value="@x.MaDt" />
-                                                    <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
-                                                    <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
-                                                    <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
-                                                    <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
-                                                    <button type="submit" class="btn btn-danger btn-sm w-100">
-                                                        <i class="bi bi-x-circle me-1"></i>Từ chối
-                                                    </button>
+            <input type="hidden" name="maSv" />
+            <input type="hidden" name="maDt" />
+            <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
+            <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
+            <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
+            <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
                                                 </form>
-                                            </div>
-                                        }
-                                    }
-                                    @* 1 = Accepted: thêm nút Bắt đầu -> InProgress (2) *@
-                                    else if (x.TrangThai == 1)
-                                    {
-                                        <div class="text-center">
-                                            <form method="post" asp-action="SetHuongDanInProgress" class="d-inline">
+        <form id="frmStart" method="post" asp-action="SetHuongDanInProgress" class="d-none">
                                                 @Html.AntiForgeryToken()
-                                                <input type="hidden" name="maSv" value="@x.Masv" />
-                                                <input type="hidden" name="maDt" value="@x.MaDt" />
+            <input type="hidden" name="maSv" />
+            <input type="hidden" name="maDt" />
                                                 <input type="hidden" name="ghiChu" value="Bắt đầu thực hiện" />
-                                                <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
-                                                <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
-                                                <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
-                                                <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
-                                                <button type="submit" class="btn btn-outline-primary btn-sm">
-                                                    <i class="bi bi-play-circle me-1"></i>Bắt đầu
-                                                </button>
+            <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
+            <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
+            <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
+            <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
                                             </form>
-                                        </div>
-                                    }
-                                    @* 2 = InProgress: thêm nút Hoàn thành (mở modal nhập điểm) *@
-                                    else if (x.TrangThai == 2)
-                                    {
-                                        <div class="text-center">
-                                            <button type="button"
-                                                    class="btn btn-success btn-sm"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#@modalId">
-                                                <i class="bi bi-flag-checkered me-1"></i>Hoàn thành
-                                            </button>
-                                        </div>
 
-                                        @* Modal nhập điểm *@
-                                        <div class="modal fade" id="@modalId" tabindex="-1" aria-hidden="true">
+        <div class="modal fade" id="completeModalReg" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
                                                         <h5 class="modal-title">Nhập điểm hoàn thành</h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
-                                                    <form method="post" asp-action="SetHuongDanCompleted">
+                    <form method="post" asp-action="SetHuongDanCompleted" id="frmComplete">
                                                         @Html.AntiForgeryToken()
                                                         <div class="modal-body">
                                                             <div class="mb-3">
                                                                 <label class="form-label">Sinh viên</label>
-                                                                <div class="form-control-plaintext fw-semibold">@x.HotenSv (#@x.Masv)</div>
+                                <div class="form-control-plaintext fw-semibold" id="cmSv"></div>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Đề tài</label>
-                                                                <div class="form-control-plaintext">@x.TenDt (<span class="text-monospace">@x.MaDt</span>)</div>
+                                <div class="form-control-plaintext" id="cmDt"></div>
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label" for="ketQua_@modalId">Điểm (0–10)</label>
-                                                                <input type="number" step="0.01" min="0" max="10"
-                                                                       class="form-control" id="ketQua_@modalId" name="ketQua" required />
+                                <label class="form-label" for="cmKetQua">Điểm (0–10)</label>
+                                <input type="number" step="0.01" min="0" max="10" class="form-control" id="cmKetQua"
+                                    name="ketQua" required />
                                                             </div>
                                                             <div class="mb-2">
-                                                                <label class="form-label" for="ghiChu_@modalId">Ghi chú</label>
-                                                                <input type="text" class="form-control" id="ghiChu_@modalId" name="ghiChu" />
+                                <label class="form-label" for="cmGhiChu">Ghi chú</label>
+                                <input type="text" class="form-control" id="cmGhiChu" name="ghiChu" />
                                                             </div>
-
-                                                            @* Hidden giữ ngữ cảnh *@
-                                                            <input type="hidden" name="maSv" value="@x.Masv" />
-                                                            <input type="hidden" name="maDt" value="@x.MaDt" />
-                                                            <input type="hidden" name="hocKy" value="@Model.Filter.HocKy" />
-                                                            <input type="hidden" name="namHoc" value="@Model.Filter.NamHoc" />
-                                                            <input type="hidden" name="trangThai" value="@Model.Filter.TrangThai" />
-                                                            <input type="hidden" name="filterMaDt" value="@Model.Filter.MaDt" />
+                            <input type="hidden" name="maSv" id="cmMaSv" />
+                            <input type="hidden" name="maDt" id="cmMaDt" />
+                            <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
+                            <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
+                            <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
+                            <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
@@ -325,21 +222,6 @@
                                                     </form>
                                                 </div>
                                             </div>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="text-center">
-                                            <span class="text-muted">—</span>
-                                        </div>
-                                    }
-                                </td>
-                            </tr>
-                            stt++;
-                        }
-                    }
-                </tbody>
-            </table>
         </div>
 
     </div>
@@ -351,27 +233,213 @@
 }
 
 @section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
     <script>
-        // Tự động đồng bộ dropdown HK-Năm -> hidden inputs hocKy/namHoc
-        (function () {
-            const sel = document.getElementById('hkNamSelect');
-            const hkH = document.getElementById('hocKyHidden');
-            const nhH = document.getElementById('namHocHidden');
-
-            function syncHkNam() {
-                const v = sel.value; // "1-2025" hoặc ""
-                if (!v) {
-                    hkH.value = ""; nhH.value = "";
-                    return;
+        document.addEventListener('DOMContentLoaded', function () {
+            // Function to update DeTai options based on term
+            async function updateDeTaiOptions(hocKy, namHoc) {
+                try {
+                    const url = '@Url.Action("GetTopicsByTerm", "DeTai")';
+                    const params = new URLSearchParams();
+                    if (hocKy) params.append('hocKy', hocKy);
+                    if (namHoc) params.append('namHoc', namHoc);
+                    
+                    const response = await fetch(`${url}?${params}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Use SearchableDropdown's updateOptions method instead of manual DOM manipulation
+                        const deTaiEl = document.getElementById('deTaiDropdownReg');
+                        const deTaiDd = deTaiEl.searchableDropdownInstance;
+                        
+                        if (deTaiDd) {
+                            // Clear existing options first to prevent duplicates
+                            const optionsContainer = deTaiEl.querySelector('.dropdown-options');
+                            optionsContainer.innerHTML = '';
+                            
+                            // Update options using SearchableDropdown's method (preserves event handlers)
+                            await deTaiDd.updateOptions(result.data);
+                            
+                            // Setup search function for new options
+                            deTaiDd.searchData = async function (query) {
+                                const q = (query || '').toLowerCase();
+                                const filtered = result.data.filter(o => !q || o.text.toLowerCase().includes(q));
+                                await deTaiDd.updateOptions(filtered);
+                            };
+                            
+                            // Preserve existing DeTai selection if any
+                            const deTaiInput = deTaiEl.querySelector('input.form-control');
+                            const deTaiHidden = document.querySelector('input[name="maDt"]');
+                            const currentMaDt = deTaiHidden?.value || '';
+                            
+                            if (currentMaDt) {
+                                // Try to find and maintain the selected option
+                                const selectedOption = result.data.find(opt => opt.value === currentMaDt);
+                                if (selectedOption && deTaiInput) {
+                                    deTaiInput.value = selectedOption.text;
+                                } else {
+                                    // Option not found in current term, reset to "Tất cả"
+                                    if (deTaiInput) deTaiInput.value = '-- Tất cả --';
+                                    if (deTaiHidden) deTaiHidden.value = '';
+                                }
+                            } else {
+                                // No selection, set to "Tất cả"
+                                if (deTaiInput) deTaiInput.value = '-- Tất cả --';
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching topics:', error);
                 }
-                const parts = v.split("-");
-                hkH.value = parts[0] || "";
-                nhH.value = parts[1] || "";
             }
 
-            sel.addEventListener('change', syncHkNam);
-            // Đồng bộ ngay khi load nếu có sẵn giá trị
-            syncHkNam();
-        })();
+            // Term combobox (copy logic from Index.cshtml)
+            const termEl = document.getElementById('termDropdownReg');
+            const termDd = new SearchableDropdown('termDropdownReg', { placeholder: '', searchUrl: null, allowClear: true });
+            function generateTerms(baseYear) {
+                const out = [];
+                for (let y = baseYear - 5; y <= baseYear; y++) {
+                    const nh = `${y}-${y + 1}`;
+                    for (let hk = 1; hk <= 3; hk++) out.push({ value: `${hk}|${nh}`, text: `HK${hk} (${nh})`, hk, nh });
+                }
+                return out;
+            }
+            function filterTerms(all, query) {
+                if (!query) return all;
+                const q = String(query).toLowerCase().replace(/\s+/g, '');
+                const m = q.match(/^(\d{4})$/);
+                if (m) {
+                    const Y = parseInt(m[1], 10);
+                    const expanded = [];
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y}-${Y + 1}`, text: `HK${hk} (${Y}-${Y + 1})`, hk, nh: `${Y}-${Y + 1}` });
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y - 1}-${Y}`, text: `HK${hk} (${Y - 1}-${Y})`, hk, nh: `${Y - 1}-${Y}` });
+                    return expanded;
+                }
+                return all.filter(x => x.text.toLowerCase().includes(q));
+            }
+            const nowY = new Date().getFullYear();
+            let allTerms = generateTerms(nowY).sort((a, b) => (a.nh < b.nh ? 1 : a.nh > b.nh ? -1 : b.hk - a.hk));
+            termDd.searchData = async function (query) {
+                const options = filterTerms(allTerms, query);
+                await termDd.updateOptions(options.map(o => ({ value: o.value, text: o.text })));
+            };
+            termDd.searchData('');
+            termEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const [hk, nh] = val.includes('|') ? val.split('|') : ['', ''];
+                const hkInput = document.querySelector('input[name="hocKy"]');
+                const nhInput = document.querySelector('input[name="namHoc"]');
+                if (hkInput) hkInput.value = hk;
+                if (nhInput) nhInput.value = nh;
+                
+                // Fetch đề tài theo học kỳ đã chọn
+                updateDeTaiOptions(hk, nh);
+            });
+            
+            // Initialize display value and load initial topics
+            (function initTermDisplay() {
+                const input = termEl?.querySelector('input.form-control');
+                const hkHidden = document.querySelector('input[name="hocKy"]');
+                const nhHidden = document.querySelector('input[name="namHoc"]');
+                if (input) {
+                    if (hkHidden?.value && nhHidden?.value) {
+                        input.value = `HK${hkHidden.value} (${nhHidden.value})`;
+                        // Load topics for initial term
+                        updateDeTaiOptions(hkHidden.value, nhHidden.value);
+                    } else {
+                        input.value = '-- Tất cả --';
+                        // Load all topics when no term is selected
+                        updateDeTaiOptions('', '');
+                    }
+                }
+            })();
+
+            // Status combobox with static options
+            const statusEl = document.getElementById('statusDropdownReg');
+            const statusDd = new SearchableDropdown('statusDropdownReg', { placeholder: '', searchUrl: null, allowClear: false });
+            function getOptionsFromDom(container) {
+                const opts = [];
+                container.querySelectorAll('.dropdown-options a.dropdown-item').forEach(a => {
+                    const v = a.getAttribute('data-value') ?? '';
+                    const t = a.textContent ?? '';
+                    opts.push({ value: v, text: t });
+                });
+                return opts;
+            }
+            statusDd.searchData = async function (query) {
+                const all = getOptionsFromDom(statusEl);
+                const q = (query || '').toLowerCase();
+                const filtered = all.filter(o => !q || o.text.toLowerCase().includes(q) || o.value === q);
+                await statusDd.updateOptions(filtered);
+            };
+            statusDd.searchData('');
+            (function initStatusDisplay() {
+                const hidden = document.querySelector('input[name="trangThai"]');
+                const input = statusEl?.querySelector('input.form-control');
+                const currentVal = hidden?.value ?? '';
+                const anchor = statusEl.querySelector(`.dropdown-options a.dropdown-item[data-value="${currentVal}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            })();
+            statusEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const input = this.querySelector('input.form-control');
+                const hidden = document.querySelector('input[name="trangThai"]');
+                if (hidden) hidden.value = val;
+                const anchor = this.querySelector(`.dropdown-options a.dropdown-item[data-value="${val}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            });
+
+            // DeTai combobox with dynamic options
+            const deTaiEl = document.getElementById('deTaiDropdownReg');
+            const deTaiDd = new SearchableDropdown('deTaiDropdownReg', { placeholder: 'Tìm kiếm đề tài...', searchUrl: null, allowClear: true });
+            
+            // Store reference for later use
+            deTaiEl.searchableDropdownInstance = deTaiDd;
+            // searchData will be set dynamically after loading options from API
+            // initDeTaiDisplay will be handled by updateDeTaiOptions after loading from API
+            deTaiEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const input = this.querySelector('input.form-control');
+                const hidden = document.querySelector('input[name="maDt"]');
+                if (hidden) hidden.value = val;
+                const anchor = this.querySelector(`.dropdown-options a.dropdown-item[data-value="${val}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            });
+
+            // Actions delegation
+            document.addEventListener('click', function (e) {
+                const t = e.target.closest('.btn-approve, .btn-reject, .btn-start, .btn-complete');
+                if (!t) return;
+                const maSv = t.getAttribute('data-masv');
+                const maDt = t.getAttribute('data-madt');
+                if (t.classList.contains('btn-approve')) {
+                    const f = document.getElementById('frmApprove');
+                    f.querySelector('input[name="maSv"]').value = maSv;
+                    f.querySelector('input[name="maDt"]').value = maDt;
+                    f.submit();
+                } else if (t.classList.contains('btn-reject')) {
+                    const f = document.getElementById('frmReject');
+                    f.querySelector('input[name="maSv"]').value = maSv;
+                    f.querySelector('input[name="maDt"]').value = maDt;
+                    f.submit();
+                } else if (t.classList.contains('btn-start')) {
+                    const f = document.getElementById('frmStart');
+                    f.querySelector('input[name="maSv"]').value = maSv;
+                    f.querySelector('input[name="maDt"]').value = maDt;
+                    f.submit();
+                } else if (t.classList.contains('btn-complete')) {
+                    const hoten = t.getAttribute('data-hoten') || '';
+                    const tendt = t.getAttribute('data-tendt') || '';
+                    document.getElementById('cmSv').textContent = hoten + ' (#' + maSv + ')';
+                    document.getElementById('cmDt').innerHTML = `${tendt} (<span class="text-monospace">${maDt}</span>)`;
+                    document.getElementById('cmMaSv').value = maSv;
+                    document.getElementById('cmMaDt').value = maDt;
+                    const modal = new bootstrap.Modal(document.getElementById('completeModalReg'));
+                    modal.show();
+                }
+            });
+
+        });
     </script>
 }
