@@ -34,22 +34,72 @@
         <div class="small text-muted">Tổng: <strong>@Model.SoThamGia</strong></div>
     </div>
     <div class="card-body p-3">
-        <ejs-grid id="studentsGrid" dataSource="@Model.Students" allowPaging="true" allowSorting="true" allowFiltering="true" 
+        <ejs-grid id="studentsGrid" dataSource="@Model.Students"
+                  allowPaging="true" height="400" gridLines="Both"
                   pageSettings="@(new Syncfusion.EJ2.Grids.GridPageSettings { PageSize = 10 })"
-                  filterSettings="@(new Syncfusion.EJ2.Grids.GridFilterSettings { Type = Syncfusion.EJ2.Grids.FilterType.Menu })"
-                  height="400">
+                  queryCellInfo="onCellRender">
             <e-grid-columns>
                 <e-grid-column field="MaSv" headerText="Mã SV" width="90" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center"></e-grid-column>
                 <e-grid-column field="HoTenSv" headerText="Họ tên" width="150"></e-grid-column>
                 <e-grid-column field="NamSinh" headerText="Năm sinh" width="110" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center"></e-grid-column>
                 <e-grid-column field="QueQuan" headerText="Quê quán" width="120"></e-grid-column>
                 <e-grid-column field="TrangThai" headerText="Trạng thái" width="140" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center"></e-grid-column>
-                <e-grid-column field="NgayDangKy" headerText="Ngày đăng ký" width="130" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center" format="dd/MM/yyyy"></e-grid-column>
-                <e-grid-column field="NgayChapNhan" headerText="Ngày chấp nhận" width="140" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center" format="dd/MM/yyyy"></e-grid-column>
-                <e-grid-column field="KetQua" headerText="Kết quả" width="90" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center" format="N2"></e-grid-column>
+                <e-grid-column field="NgayDangKy" headerText="Ngày đăng ký" width="130" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center"></e-grid-column>
+                <e-grid-column field="NgayChapNhan" headerText="Ngày chấp nhận" width="140" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center"></e-grid-column>
+                <e-grid-column field="KetQua" headerText="Kết quả" width="90" textAlign="@Syncfusion.EJ2.Grids.TextAlign.Center"></e-grid-column>
                 <e-grid-column field="GhiChu" headerText="Ghi chú" width="150"></e-grid-column>
             </e-grid-columns>
         </ejs-grid>
+
+        <script>
+            // Format dd/MM/yyyy
+            function toViDate(raw) {
+                if (!raw) return '—';
+                var d = new Date(raw);
+                if (isNaN(d.getTime())) return '—';
+                var dd = String(d.getDate()).padStart(2, '0');
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var yyyy = d.getFullYear();
+                return dd + '/' + mm + '/' + yyyy;
+            }
+
+            // Cell render hook to inject HTML and formatted text safely
+            window.onCellRender = function(args) {
+                if (!args || !args.data || !args.column) return;
+                var f = args.column.field;
+                if (f === 'TrangThai') {
+                    var map = {
+                        0: { text: 'Chờ duyệt', cls: '' },
+                        1: { text: 'Chấp nhận', cls: 'text-success' },
+                        2: { text: 'Đang thực hiện', cls: 'text-warning' },
+                        3: { text: 'Hoàn thành', cls: 'text-primary' },
+                        4: { text: 'Từ chối', cls: 'text-danger' },
+                        5: { text: 'Rút', cls: 'text-muted' }
+                    };
+                    var s = map[args.data.TrangThai] || { text: 'Khác', cls: '' };
+                    args.cell.innerHTML = '<span class="' + s.cls + '">' + s.text + '</span>';
+                } else if (f === 'NgayDangKy' || f === 'NgayChapNhan') {
+                    args.cell.innerText = toViDate(args.data[f]);
+                } else if (f === 'KetQua') {
+                    var v = args.data.KetQua;
+                    if (v === null || v === undefined || v === '') {
+                        args.cell.innerText = '—';
+                        return;
+                    }
+                    var num = Number(v);
+                    if (isNaN(num)) { args.cell.innerText = '—'; return; }
+                    var txt = num.toFixed(2);
+                    if (num < 5) {
+                        args.cell.innerHTML = '<span class="text-danger">' + txt + '</span>';
+                    } else {
+                        args.cell.innerText = txt;
+                    }
+                } else if (f === 'GhiChu') {
+                    args.cell.innerText = args.data.GhiChu || '—';
+                }
+            }
+        </script>
+
     </div>
 </div>
 

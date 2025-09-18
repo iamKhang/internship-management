@@ -427,6 +427,10 @@ namespace InternshipManagement.Repositories.Implementations
                 SoChoConLai = soChoConLai,
 
                 Students = topic.HuongDans
+                    .Where(h => 
+                        h.TrangThai == HuongDanStatus.Accepted || 
+                        h.TrangThai == HuongDanStatus.InProgress || 
+                        h.TrangThai == HuongDanStatus.Completed)
                     .Select(h => new DeTaiDetailStudentVm
                     {
                         MaSv = h.MaSv,

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using InternshipManagement.Models.Enums;
 
 namespace InternshipManagement.Controllers
 {
@@ -669,9 +670,16 @@ namespace InternshipManagement.Controllers
         {
             if (string.IsNullOrWhiteSpace(id)) return BadRequest();
 
-            // 1) Lấy thông tin đề tài (đang dùng SP_DETAIL như bạn có)
+            // 1) Lấy thông tin đề tài và sinh viên đã tham gia (status 1,2,3)
             var vm = await _repo.GetDetailAsync(id);
             if (vm == null) return NotFound();
+            
+            // Chỉ lấy sinh viên có trạng thái Accepted (1), InProgress (2), hoặc Completed (3)
+            vm.Students = vm.Students.Where(s => 
+                s.TrangThai == (byte)HuongDanStatus.Accepted || 
+                s.TrangThai == (byte)HuongDanStatus.InProgress || 
+                s.TrangThai == (byte)HuongDanStatus.Completed
+            ).ToList();
 
             // 2) Lấy MaSv từ claims (nếu có)
             int? maSv = null;
