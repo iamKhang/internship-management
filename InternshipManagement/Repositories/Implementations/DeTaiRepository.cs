@@ -616,10 +616,9 @@ namespace InternshipManagement.Repositories.Implementations
                 .Select(d => new { d.MaDt, d.TenDt })
                 .ToListAsync();
 
-            var items = new List<SelectListItem> { new("-- Tất cả --", "") };
-            items.AddRange(topics.Select(t => new SelectListItem(
+            var items = topics.Select(t => new SelectListItem(
                 string.IsNullOrWhiteSpace(t.TenDt) ? t.MaDt?.Trim() : $"{t.MaDt?.Trim()} - {t.TenDt.Trim()}", 
-                t.MaDt)));
+                t.MaDt)).ToList();
 
             return items;
         }

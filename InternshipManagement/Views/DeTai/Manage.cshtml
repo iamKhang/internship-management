@@ -13,37 +13,62 @@
 }
 
 
-<form method="get" class="card mb-3">
+<form method="get" class="card mb-3" id="filterForm">
     <div class="card-header bg-white">Bộ lọc</div>
     <div class="card-body">
-        <div class="row g-2 align-items-end">
-            <div class="col-12 col-sm-2">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
                 <label class="form-label">Học kỳ</label>
-                <select class="form-select" asp-items="Model.HocKyOptions" name="hocKy">
-                    <option value="">Chọn học kỳ</option>
-                </select>
+                <div class="searchable-dropdown" id="termDropdownManage">
+                    <input type="hidden"
+                        value="@(Model.Filter.HocKy.HasValue && !string.IsNullOrEmpty(Model.Filter.NamHoc) ? ($"{Model.Filter.HocKy}|{Model.Filter.NamHoc}") : "")" />
+                    <input type="text" class="form-control" autocomplete="off">
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-options">
+                            <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy?.ToString() ?? "")" />
+                <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc ?? "")" />
             </div>
-            <div class="col-12 col-sm-2">
-                <label class="form-label">Năm học</label>
-                <select class="form-select" asp-items="Model.NamHocOptions" name="namHoc">
-                    <option value="">Chọn năm học</option>
-                </select>
-            </div>
-            <div class="col-12 col-sm-3">
+            <div class="col-md-4">
                 <label class="form-label">Đề tài</label>
-                <select class="form-select" asp-items="Model.DeTaiOptions" name="maDt">
-                    <option value="">Chọn đề tài</option>
-                </select>
+                <div class="searchable-dropdown" id="deTaiDropdownManage">
+                    <input type="hidden" name="maDt" value="@Model.Filter.MaDt" />
+                    <input type="text" class="form-control" placeholder="Tìm kiếm đề tài..." autocomplete="off">
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-options">
+                            <!-- Options will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-sm-2">
+            <div class="col-md-4">
                 <label class="form-label">Trạng thái</label>
-                <select class="form-select" asp-items="@(new SelectList(Model.TrangThaiOptions.Where(x => new[] { "1", "2", "3" }.Contains(x.Value)), "Value", "Text"))" name="trangThai">
-                    <option value="">Chọn trạng thái</option>
-                </select>
+                <div class="searchable-dropdown" id="statusDropdownManage">
+                    <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai?.ToString() ?? "")" />
+                    <input type="text" class="form-control" autocomplete="off">
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-options">
+                            <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            <a class="dropdown-item" href="#" data-value="1">Chấp nhận</a>
+                            <a class="dropdown-item" href="#" data-value="2">Đang thực hiện</a>
+                            <a class="dropdown-item" href="#" data-value="3">Hoàn thành</a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-sm-3 d-flex gap-2">
-                <button class="btn btn-primary d-flex align-items-center justify-content-center py-2" type="submit"><i class="bi bi-funnel me-1"></i>Lọc</button>
-                <a class="btn btn-outline-secondary d-flex align-items-center justify-content-center py-2" href="@Url.Action("Manage","DeTai")"><i class="bi bi-trash me-1"></i>Xóa lọc</a>
+            <div class="col-12 d-flex gap-2 justify-content-end">
+                <a class="btn btn-outline-secondary py-2" asp-action="Manage">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Hủy
+                </a>
+                <button class="btn btn-primary py-2" type="submit" id="btnFilter">
+                    <i class="bi bi-funnel me-1"></i>Lọc
+                </button>
             </div>
         </div>
     </div>
@@ -52,113 +77,124 @@
 <div class="col-12">
     <div class="card mb-3">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <span>Đề tài của tôi</span>
+            <span class="mb-0 fw-bold fs-5">Đề tài của tôi</span>
             <a class="btn btn-sm btn-primary" asp-action="CreateDeTai">
                 <i class="bi bi-plus-circle me-1"></i> Thêm đề tài
             </a>
         </div>
 
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-                    <thead class="table-primary">
-                        <tr>
-                            <th class="text-nowrap fw-bold">Mã</th>
-                            <th class="text-nowrap fw-bold">Tên</th>
-                            <th class="text-nowrap fw-bold">HK/NH</th>
-                            <th class="text-nowrap fw-bold">Tối đa</th>
-                            <th class="text-nowrap fw-bold">Tham gia</th>
-                            <th class="text-nowrap fw-bold">Còn</th>
-                            <th class="text-nowrap fw-bold text-center">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var t in Model.Topics)
-                        {
-                            <tr>
-                                <td class="text-nowrap text-monospace">@t.MaDt</td>
-                                <td class="text-truncate" style="max-width: 360px;">@t.TenDt</td>
-                                <td>@($"HK{t.HocKy} / {t.NamHoc}")</td>
-                                <td class="text-center">@t.SoLuongToiDa</td>
-                                <td class="text-center">@t.ThamGia</td>
-                                <td class="text-center @(t.ConLai > 0 ? "text-success" : "text-danger")">@t.ConLai</td>
-                                <td class="text-center text-nowrap">
-                                    <!-- Sửa -->
-                                    <a class="btn btn-primary btn-sm me-1 text-white"
-                                       asp-action="EditDeTai" asp-route-id="@t.MaDt" title="Sửa">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
-                                    <!-- Xóa (mở modal) -->
-                                    <button type="button" class="btn btn-danger btn-sm"
-                                            data-bs-toggle="modal" data-bs-target="#deleteTopicModal"
-                                            data-madt="@t.MaDt" data-tendt="@t.TenDt" title="Xóa">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                        @if (!Model.Topics.Any())
-                        {
-                            <tr><td colspan="7" class="text-center text-muted py-5 fs-5"><i class="bi bi-info-circle me-2"></i>Không có đề tài</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <ejs-grid id="topicsGrid" dataSource="@Model.Topics" allowSorting="false" allowPaging="true" height="auto">
+                <e-grid-columns>
+                    <e-grid-column field="MaDt" headerText="Mã" width="100" textAlign="Left" customAttributes="@(new { @class = "text-monospace" })"></e-grid-column>
+                    <e-grid-column field="TenDt" headerText="Tên" width="300" textAlign="Left"></e-grid-column>
+                    <e-grid-column headerText="Học kỳ" width="100" textAlign="Center" template="#hocKyTemplate"></e-grid-column>
+                    <e-grid-column field="SoLuongToiDa" headerText="Tối đa" width="90" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="ThamGia" headerText="Tham gia" width="100" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="ConLai" headerText="Còn" width="80" textAlign="Center" template="#conLaiTemplate"></e-grid-column>
+                    <e-grid-column headerText="Hành động" width="130" textAlign="Center" template="#actionsTemplate" allowSorting="false"></e-grid-column>
+                </e-grid-columns>
+                <e-grid-pagesettings pageSize="15"></e-grid-pagesettings>
+            </ejs-grid>
+            
+            <!-- Templates -->
+            <script id="hocKyTemplate" type="text/x-template">
+                HK${HocKy} (${NamHoc})
+            </script>
+            
+            <script id="conLaiTemplate" type="text/x-template">
+                ${if(ConLai > 0)}
+                    <span class="text-success">${ConLai}</span>
+                ${else}
+                    <span class="text-danger">${ConLai}</span>
+                ${/if}
+            </script>
+            
+            <script id="actionsTemplate" type="text/x-template">
+                <a class="btn btn-primary btn-sm me-1 text-white" href="@Url.Action("EditDeTai", "DeTai")/${MaDt}" title="Sửa">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
+                <button type="button" class="btn btn-danger btn-sm" 
+                        data-bs-toggle="modal" data-bs-target="#deleteTopicModal"
+                        data-madt="${MaDt}" data-tendt="${TenDt}" title="Xóa">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </script>
+            
+            @if (!Model.Topics.Any())
+            {
+                <div class="text-center text-muted py-5 fs-5">
+                    <i class="bi bi-info-circle me-2"></i>Không có đề tài
+                </div>
+            }
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header bg-white">Sinh viên đang hướng dẫn</div>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="mb-0 fw-bold fs-5">Sinh viên đang hướng dẫn</span>
+        </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-                    <thead class="table-primary">
-                        <tr>
-                            <th class="text-nowrap fw-bold">Mã SV</th>
-                            <th class="text-nowrap fw-bold">Họ tên</th>
-                            <th class="text-nowrap fw-bold">Khoa</th>
-                            <th class="text-nowrap fw-bold">Đề tài</th>
-                            <th class="text-nowrap fw-bold">HK/NH</th>
-                            <th class="text-nowrap fw-bold">Trạng thái</th>
-                            <th class="text-nowrap fw-bold">ĐK</th>
-                            <th class="text-nowrap fw-bold">CN</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var s in Model.Students)
-                        {
-                            <tr>
-                                <td class="text-monospace">@s.Masv</td>
-                                <td>@s.HotenSv</td>
-                                <td>@s.Sv_TenKhoa</td>
-                                <td class="text-monospace">@s.MaDt</td>
-                                <td>@s.HocKy / @s.NamHoc</td>
-                                <td>
-                                    @{
-                                        var (label, badgeClass) = s.TrangThai switch
-                                        {
-                                            0 => ("Chờ duyệt", "bg-warning text-dark"),
-                                            1 => ("Chấp nhận", "bg-success text-white"),
-                                            2 => ("Đang thực hiện", "bg-info text-dark"),
-                                            3 => ("Hoàn thành", "bg-success text-white"),
-                                            4 => ("Từ chối", "bg-danger text-white"),
-                                            5 => ("Rút đăng ký", "bg-secondary text-white"),
-                                            _ => ("?", "bg-secondary text-white")
-                                        };
-                                    }
-                                    <span class="badge @badgeClass">@label</span>
-                                </td>
-                                <td>@(s.NgayDangKy?.ToString("dd/MM/yyyy") ?? "—")</td>
-                                <td>@(s.NgayChapNhan?.ToString("dd/MM/yyyy") ?? "—")</td>
-                            </tr>
-                        }
-                        @if (!Model.Students.Any())
-                        {
-                            <tr><td colspan="8" class="text-center text-muted py-5 fs-5"><i class="bi bi-info-circle me-2"></i>Không có sinh viên</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <ejs-grid id="studentsGrid" dataSource="@Model.Students" allowSorting="false" allowPaging="true" height="auto" allowResizing="true">
+                <e-grid-pagesettings pageSize="15"></e-grid-pagesettings>
+                <e-grid-columns>
+                    <e-grid-column field="Masv" headerText="Mã SV" width="100" textAlign="Left" customAttributes="@(new { @class = "text-monospace" })"></e-grid-column>
+                    <e-grid-column field="HotenSv" headerText="Họ tên" width="180" textAlign="Left"></e-grid-column>
+                    @* <e-grid-column field="Sv_TenKhoa" headerText="Khoa" width="150" textAlign="Left"></e-grid-column> *@
+                    <e-grid-column field="MaDt" headerText="Đề tài" width="100" textAlign="Left" customAttributes="@(new { @class = "text-monospace" })"></e-grid-column>
+                    <e-grid-column headerText="Học kỳ" width="100" textAlign="Center" template="#studentHocKyTemplate"></e-grid-column>
+                    <e-grid-column field="TrangThai" headerText="Trạng thái" width="130" textAlign="Center" template="#trangThaiTemplate"></e-grid-column>
+                    <e-grid-column field="NgayDangKy" headerText="Đăng ký" width="110" textAlign="Center" template="#ngayDkTemplate"></e-grid-column>
+                    <e-grid-column field="NgayChapNhan" headerText="Chấp nhận" width="110" textAlign="Center" template="#ngayCnTemplate"></e-grid-column>
+                </e-grid-columns>
+                <e-grid-pagesettings pageSize="15"></e-grid-pagesettings>
+            </ejs-grid>
+            
+            <!-- Templates -->
+            <script id="studentHocKyTemplate" type="text/x-template">
+                HK${HocKy} (${NamHoc})
+            </script>
+            
+            <script id="trangThaiTemplate" type="text/x-template">
+                ${if(TrangThai == 0)}
+                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                ${else if(TrangThai == 1)}
+                    <span class="badge bg-success text-white">Chấp nhận</span>
+                ${else if(TrangThai == 2)}
+                    <span class="badge bg-info text-dark">Đang thực hiện</span>
+                ${else if(TrangThai == 3)}
+                    <span class="badge bg-success text-white">Hoàn thành</span>
+                ${else if(TrangThai == 4)}
+                    <span class="badge bg-danger text-white">Từ chối</span>
+                ${else if(TrangThai == 5)}
+                    <span class="badge bg-secondary text-white">Rút đăng ký</span>
+                ${else}
+                    <span class="badge bg-secondary text-white">?</span>
+                ${/if}
+            </script>
+            
+            <script id="ngayDkTemplate" type="text/x-template">
+                ${if(NgayDangKy != null)}
+                    ${new Date(NgayDangKy).toLocaleDateString('vi-VN')}
+                ${else}
+                    —
+                ${/if}
+            </script>
+            
+            <script id="ngayCnTemplate" type="text/x-template">
+                ${if(NgayChapNhan != null)}
+                    ${new Date(NgayChapNhan).toLocaleDateString('vi-VN')}
+                ${else}
+                    —
+                ${/if}
+            </script>
+            
+            @if (!Model.Students.Any())
+            {
+                <div class="text-center text-muted py-5 fs-5">
+                    <i class="bi bi-info-circle me-2"></i>Không có sinh viên
+                </div>
+            }
         </div>
     </div>
 
@@ -204,19 +240,191 @@
 </div>
 
 @section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
     <script>
-        // Khi mở modal, lấy data-* từ nút bấm và set vào nội dung/hidden input
-        const delModal = document.getElementById('deleteTopicModal');
-        if (delModal) {
-            delModal.addEventListener('show.bs.modal', function (event) {
-                const btn = event.relatedTarget;
-                const ma = btn?.getAttribute('data-madt') || '';
-                const ten = btn?.getAttribute('data-tendt') || '';
+        document.addEventListener('DOMContentLoaded', function () {
+            // Function to update DeTai options based on term
+            async function updateDeTaiOptions(hocKy, namHoc) {
+                try {
+                    const url = '@Url.Action("GetTopicsByTerm", "DeTai")';
+                    const params = new URLSearchParams();
+                    if (hocKy) params.append('hocKy', hocKy);
+                    if (namHoc) params.append('namHoc', namHoc);
+                    
+                    const response = await fetch(`${url}?${params}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Use SearchableDropdown's updateOptions method instead of manual DOM manipulation
+                        const deTaiEl = document.getElementById('deTaiDropdownManage');
+                        const deTaiDd = deTaiEl.searchableDropdownInstance;
+                        
+                        if (deTaiDd) {
+                            // Clear existing options first to prevent duplicates
+                            const optionsContainer = deTaiEl.querySelector('.dropdown-options');
+                            optionsContainer.innerHTML = '';
+                            
+                            // Update options using SearchableDropdown's method (preserves event handlers)
+                            await deTaiDd.updateOptions(result.data);
+                            
+                            // Setup search function for new options
+                            deTaiDd.searchData = async function (query) {
+                                const q = (query || '').toLowerCase();
+                                const filtered = result.data.filter(o => !q || o.text.toLowerCase().includes(q));
+                                await deTaiDd.updateOptions(filtered);
+                            };
+                            
+                            // Preserve existing DeTai selection if any
+                            const deTaiInput = deTaiEl.querySelector('input.form-control');
+                            const deTaiHidden = document.querySelector('input[name="maDt"]');
+                            const currentMaDt = deTaiHidden?.value || '';
+                            
+                            if (currentMaDt) {
+                                // Try to find and maintain the selected option
+                                const selectedOption = result.data.find(opt => opt.value === currentMaDt);
+                                if (selectedOption && deTaiInput) {
+                                    deTaiInput.value = selectedOption.text;
+                                } else {
+                                    // Option not found in current term, reset to "Tất cả"
+                                    if (deTaiInput) deTaiInput.value = '-- Tất cả --';
+                                    if (deTaiHidden) deTaiHidden.value = '';
+                                }
+                            } else {
+                                // No selection, set to "Tất cả"
+                                if (deTaiInput) deTaiInput.value = '-- Tất cả --';
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching topics:', error);
+                }
+            }
 
-                delModal.querySelector('#delMaDt').textContent = ma;
-                delModal.querySelector('#delTenDt').textContent = ten;
-                delModal.querySelector('#delMaDtInput').value = ma;
+            // Term combobox
+            const termEl = document.getElementById('termDropdownManage');
+            const termDd = new SearchableDropdown('termDropdownManage', { placeholder: '', searchUrl: null, allowClear: true });
+            function generateTerms(baseYear) {
+                const out = [];
+                for (let y = baseYear - 5; y <= baseYear; y++) {
+                    const nh = `${y}-${y + 1}`;
+                    for (let hk = 1; hk <= 3; hk++) out.push({ value: `${hk}|${nh}`, text: `HK${hk} (${nh})`, hk, nh });
+                }
+                return out;
+            }
+            function filterTerms(all, query) {
+                if (!query) return all;
+                const q = String(query).toLowerCase().replace(/\s+/g, '');
+                const m = q.match(/^(\d{4})$/);
+                if (m) {
+                    const Y = parseInt(m[1], 10);
+                    const expanded = [];
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y}-${Y + 1}`, text: `HK${hk} (${Y}-${Y + 1})`, hk, nh: `${Y}-${Y + 1}` });
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y - 1}-${Y}`, text: `HK${hk} (${Y - 1}-${Y})`, hk, nh: `${Y - 1}-${Y}` });
+                    return expanded;
+                }
+                return all.filter(x => x.text.toLowerCase().includes(q));
+            }
+            const nowY = new Date().getFullYear();
+            let allTerms = generateTerms(nowY).sort((a, b) => (a.nh < b.nh ? 1 : a.nh > b.nh ? -1 : b.hk - a.hk));
+            termDd.searchData = async function (query) {
+                const options = filterTerms(allTerms, query);
+                await termDd.updateOptions(options.map(o => ({ value: o.value, text: o.text })));
+            };
+            termDd.searchData('');
+            termEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const [hk, nh] = val.includes('|') ? val.split('|') : ['', ''];
+                const hkInput = document.querySelector('input[name="hocKy"]');
+                const nhInput = document.querySelector('input[name="namHoc"]');
+                if (hkInput) hkInput.value = hk;
+                if (nhInput) nhInput.value = nh;
+                
+                // Fetch đề tài theo học kỳ đã chọn
+                updateDeTaiOptions(hk, nh);
             });
-        }
+            
+            // Initialize display value and load initial topics
+            (function initTermDisplay() {
+                const input = termEl?.querySelector('input.form-control');
+                const hkHidden = document.querySelector('input[name="hocKy"]');
+                const nhHidden = document.querySelector('input[name="namHoc"]');
+                if (input) {
+                    if (hkHidden?.value && nhHidden?.value) {
+                        input.value = `HK${hkHidden.value} (${nhHidden.value})`;
+                        // Load topics for initial term
+                        updateDeTaiOptions(hkHidden.value, nhHidden.value);
+                    } else {
+                        input.value = '-- Tất cả --';
+                        // Load all topics when no term is selected
+                        updateDeTaiOptions('', '');
+                    }
+                }
+            })();
+
+            // Status combobox with static options
+            const statusEl = document.getElementById('statusDropdownManage');
+            const statusDd = new SearchableDropdown('statusDropdownManage', { placeholder: '', searchUrl: null, allowClear: false });
+            function getOptionsFromDom(container) {
+                const opts = [];
+                container.querySelectorAll('.dropdown-options a.dropdown-item').forEach(a => {
+                    const v = a.getAttribute('data-value') ?? '';
+                    const t = a.textContent ?? '';
+                    opts.push({ value: v, text: t });
+                });
+                return opts;
+            }
+            statusDd.searchData = async function (query) {
+                const all = getOptionsFromDom(statusEl);
+                const q = (query || '').toLowerCase();
+                const filtered = all.filter(o => !q || o.text.toLowerCase().includes(q) || o.value === q);
+                await statusDd.updateOptions(filtered);
+            };
+            statusDd.searchData('');
+            (function initStatusDisplay() {
+                const hidden = document.querySelector('input[name="trangThai"]');
+                const input = statusEl?.querySelector('input.form-control');
+                const currentVal = hidden?.value ?? '';
+                const anchor = statusEl.querySelector(`.dropdown-options a.dropdown-item[data-value="${currentVal}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            })();
+            statusEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const input = this.querySelector('input.form-control');
+                const hidden = document.querySelector('input[name="trangThai"]');
+                if (hidden) hidden.value = val;
+                const anchor = this.querySelector(`.dropdown-options a.dropdown-item[data-value="${val}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            });
+
+            // DeTai combobox with dynamic options
+            const deTaiEl = document.getElementById('deTaiDropdownManage');
+            const deTaiDd = new SearchableDropdown('deTaiDropdownManage', { placeholder: 'Tìm kiếm đề tài...', searchUrl: null, allowClear: true });
+            
+            // Store reference for later use
+            deTaiEl.searchableDropdownInstance = deTaiDd;
+            deTaiEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const input = this.querySelector('input.form-control');
+                const hidden = document.querySelector('input[name="maDt"]');
+                if (hidden) hidden.value = val;
+                const anchor = this.querySelector(`.dropdown-options a.dropdown-item[data-value="${val}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            });
+
+            // Delete modal logic
+            const delModal = document.getElementById('deleteTopicModal');
+            if (delModal) {
+                delModal.addEventListener('show.bs.modal', function (event) {
+                    const btn = event.relatedTarget;
+                    const ma = btn?.getAttribute('data-madt') || '';
+                    const ten = btn?.getAttribute('data-tendt') || '';
+
+                    delModal.querySelector('#delMaDt').textContent = ma;
+                    delModal.querySelector('#delTenDt').textContent = ten;
+                    delModal.querySelector('#delMaDtInput').value = ma;
+                });
+            }
+        });
     </script>
 }
