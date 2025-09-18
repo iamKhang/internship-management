@@ -111,6 +111,34 @@ namespace InternshipManagement.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetLecturersForCurrentStudent(string? q = null)
+        {
+            try
+            {
+                // Determine student's department (MaKhoa) from claim or DB
+                string? maKhoa = User.FindFirst("MaKhoa")?.Value;
+                if (string.IsNullOrWhiteSpace(maKhoa))
+                {
+                    var raw = User.FindFirst("MaSv")?.Value
+                               ?? User.FindFirst("code")?.Value
+                               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (int.TryParse(raw, out var maSv))
+                    {
+                        var sv = await _db.SinhViens.AsNoTracking().FirstOrDefaultAsync(s => s.MaSv == maSv);
+                        if (sv != null) maKhoa = sv.MaKhoa;
+                    }
+                }
+
+                var lecturers = await _gvRepo.SearchBasicAsync(q, maKhoa);
+                return Json(new { success = true, data = lecturers });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Export([FromQuery] DeTaiFilterVm filter,
             bool includeMaDt = true, bool includeTenDt = true, bool includeGiangVien = true,
             bool includeKhoa = true, bool includeHocKy = true, bool includeSoLuong = true,
@@ -1096,7 +1124,7 @@ namespace InternshipManagement.Controllers
 
         [HttpGet]
         [Authorize(Roles = "SinhVien")]
-        public async Task<IActionResult> MyTopics(byte? hocKy, string? namHoc, byte? trangThai)
+        public async Task<IActionResult> MyTopics(byte? hocKy, string? namHoc, byte? trangThai, int? maGv)
         {
             // Bắt buộc đăng nhập
             if (!(User?.Identity?.IsAuthenticated ?? false)) return Challenge();
@@ -1109,6 +1137,10 @@ namespace InternshipManagement.Controllers
 
             // Gọi repo
             var items = await _repo.GetStudentMyTopicsAsync(maSv, hocKy, namHoc, trangThai);
+            if (maGv.HasValue)
+            {
+                items = items.Where(x => x.Gv_MaGv == maGv.Value).ToList();
+            }
 
             // Combobox HK
             var hocKyOptions = new List<SelectListItem> {
@@ -1147,6 +1179,28 @@ namespace InternshipManagement.Controllers
             };
 
             return View(vm); // Views/DeTai/MyTopics.cshtml
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "SinhVien")]
+        public async Task<IActionResult> GetMyLecturers(string? q)
+        {
+            if (!TryGetMaSv(out var maSv)) return Json(new { success = false, message = "NO_STUDENT" });
+
+            var items = await _repo.GetStudentMyTopicsAsync(maSv, null, null, null);
+            var list = items
+                .Where(x => x.Gv_MaGv.HasValue && !string.IsNullOrWhiteSpace(x.Gv_HoTenGv))
+                .GroupBy(x => x.Gv_MaGv!.Value)
+                .Select(g => new { MaGv = g.Key, HoTenGv = g.First().Gv_HoTenGv! })
+                .ToList();
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var term = q.Trim().ToLowerInvariant();
+                list = list.Where(x => x.HoTenGv.ToLowerInvariant().Contains(term) || x.MaGv.ToString().Contains(term)).ToList();
+            }
+
+            return Json(new { success = true, data = list });
         }
 
         [HttpPost]

@@ -119,7 +119,7 @@ namespace InternshipManagement.Repositories.Implementations
                         query = query.Where(d => !d.HuongDans.Any());
                         break;
 
-                    case TinhTrangFilter.OnlyFull:
+                    case TinhTrangFilter.Full:
                         // Đã đủ số lượng (Accepted + InProgress >= SoLuongToiDa)
                         query = query.Where(d =>
                             d.HuongDans.Count(h =>
@@ -133,14 +133,6 @@ namespace InternshipManagement.Repositories.Implementations
                             d.HuongDans.Count(h =>
                                 h.TrangThai == HuongDanStatus.Accepted ||
                                 h.TrangThai == HuongDanStatus.InProgress) < d.SoLuongToiDa);
-                        break;
-
-                    case TinhTrangFilter.IsFull:
-                        // Chỉ đầy chỗ (có thể là duplicate với OnlyFull)
-                        query = query.Where(d =>
-                            d.HuongDans.Count(h =>
-                                h.TrangThai == HuongDanStatus.Accepted ||
-                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
                         break;
                 }
             }
@@ -234,7 +226,7 @@ namespace InternshipManagement.Repositories.Implementations
                         query = query.Where(d => !d.HuongDans.Any());
                         break;
 
-                    case TinhTrangFilter.OnlyFull:
+                    case TinhTrangFilter.Full:
                         // Đã đủ số lượng (Accepted + InProgress >= SoLuongToiDa)
                         query = query.Where(d =>
                             d.HuongDans.Count(h =>
@@ -248,14 +240,6 @@ namespace InternshipManagement.Repositories.Implementations
                             d.HuongDans.Count(h =>
                                 h.TrangThai == HuongDanStatus.Accepted ||
                                 h.TrangThai == HuongDanStatus.InProgress) < d.SoLuongToiDa);
-                        break;
-
-                    case TinhTrangFilter.IsFull:
-                        // Chỉ đầy chỗ (có thể là duplicate với OnlyFull)
-                        query = query.Where(d =>
-                            d.HuongDans.Count(h =>
-                                h.TrangThai == HuongDanStatus.Accepted ||
-                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
                         break;
                 }
             }
@@ -343,7 +327,7 @@ namespace InternshipManagement.Repositories.Implementations
                         query = query.Where(d => !d.HuongDans.Any());
                         break;
 
-                    case TinhTrangFilter.OnlyFull:
+                    case TinhTrangFilter.Full:
                         // Đã đủ số lượng (Accepted + InProgress >= SoLuongToiDa)
                         query = query.Where(d =>
                             d.HuongDans.Count(h =>
@@ -357,14 +341,6 @@ namespace InternshipManagement.Repositories.Implementations
                             d.HuongDans.Count(h =>
                                 h.TrangThai == HuongDanStatus.Accepted ||
                                 h.TrangThai == HuongDanStatus.InProgress) < d.SoLuongToiDa);
-                        break;
-
-                    case TinhTrangFilter.IsFull:
-                        // Chỉ đầy chỗ (có thể là duplicate với OnlyFull)
-                        query = query.Where(d =>
-                            d.HuongDans.Count(h =>
-                                h.TrangThai == HuongDanStatus.Accepted ||
-                                h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa);
                         break;
                 }
             }

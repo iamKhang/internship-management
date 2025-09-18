@@ -30,14 +30,21 @@
                     <input class="form-control" asp-for="Filter.MaxKinhPhi" type="number" />
                 </div>
 
-                          <div class="col-md-4">
-                    <label asp-for="Filter.TinhTrang" class="form-label">Tình trạng</label>
-                    <select asp-for="Filter.TinhTrang" class="form-select">
-                        <option value="0">-- Tất cả --</option>
-                        <option value="2">Chưa có sinh viên đăng ký</option>
-                        <option value="3">Đã đủ số lượng</option>
-                        <option value="4">Còn trống</option>
-                    </select>
+                <div class="col-md-4">
+                    <label class="form-label">Tình trạng</label>
+                    <div class="searchable-dropdown" id="statusDropdownIndex">
+                        <input type="hidden" asp-for="Filter.TinhTrang" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="All">-- Tất cả --</a>
+                                <a class="dropdown-item" href="#" data-value="OnlyNoStudent">Chưa có sinh viên đăng ký</a>
+                                <a class="dropdown-item" href="#" data-value="Full">Đã đủ số lượng</a>
+                                <a class="dropdown-item" href="#" data-value="OnlyNotEnough">Còn trống</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -75,17 +82,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Học kỳ</label>
-                    <select class="form-select" asp-for="Filter.HocKy" asp-items="Model.HocKyOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Năm học</label>
-                    <select class="form-select" asp-for="Filter.NamHoc" asp-items="Model.NamHocOptions">
-                        <option value="">-- Tất cả --</option>
-                    </select>
+                <div class="col-md-4">
+                    <label class="form-label">Học kỳ/Năm học</label>
+                    <div class="searchable-dropdown" id="termDropdownIndex">
+                        <input type="hidden" value="@(Model.Filter.HocKy.HasValue && !string.IsNullOrEmpty(Model.Filter.NamHoc) ? ($"{Model.Filter.HocKy}|{Model.Filter.NamHoc}") : "")" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" asp-for="Filter.HocKy" />
+                    <input type="hidden" asp-for="Filter.NamHoc" />
                 </div>
 
                 <div class="col-md-12 d-flex justify-content-end gap-2">
@@ -514,14 +524,13 @@
             // Initialize SearchableDropdown for giảng viên
             const isStudent = !document.getElementById('khoaDropdown');
             const giangVienDropdown = new SearchableDropdown('giangVienDropdown', {
-                placeholder: isStudent ? 'Tìm giảng viên trong khoa của bạn...' : 'Tìm kiếm giảng viên...',
-                searchUrl: '@Url.Action("GetLecturersByDepartment", "DeTai")',
+                placeholder: isStudent ? '' : 'Tìm kiếm giảng viên...',
+                searchUrl: isStudent ? '@Url.Action("GetLecturersForCurrentStudent", "DeTai")' : '@Url.Action("GetLecturersByDepartment", "DeTai")',
                 searchParam: 'q',
                 filterParam: 'maKhoa',
                 debounceDelay: 300,
-                allowClear: !isStudent,
+                allowClear: true,
                 labelFormatter: function(item) {
-                    // Expect API returns {MaGv, HoTenGv}
                     if (item) {
                         const mgv = item.MaGv ?? item.maGv;
                         const hten = item.HoTenGv ?? item.hoTenGv;
@@ -529,10 +538,10 @@
                             return { value: String(mgv), text: `${mgv} - ${hten}` };
                         }
                     }
-                    // Fallback to default parser
                     return null;
                 }
             });
+            
 
             // Handle khoa change to update lecturers
             if (khoaEl) {
@@ -541,12 +550,166 @@
                     giangVienDropdown.setFilterValue(selectedMaKhoa);
                 });
             } else {
-                // Student: force lecturer list to student's khoa
-                const hiddenMaKhoa = document.querySelector('input[name="Filter.MaKhoa"]')?.value || '';
-                if (hiddenMaKhoa) {
-                    giangVienDropdown.setFilterValue(hiddenMaKhoa);
+                // Student: use dedicated API; ignore filterParam
+                giangVienDropdown.setFilterValue('');
+                giangVienDropdown.searchData('');
+                // show '-- Tất cả --' like combobox behavior
+                const gvInput = document.querySelector('#giangVienDropdown input.form-control');
+                const gvHidden = document.querySelector('#giangVienDropdown input[type="hidden"][name="Filter.MaGv"]');
+                if (gvInput && (!gvInput.value || gvInput.value.trim() === '') && (!gvHidden || !gvHidden.value)) {
+                    gvInput.value = '-- Tất cả --';
                 }
             }
+            // Term dropdown (combine HK/Năm học)
+            const termEl = document.getElementById('termDropdownIndex');
+            const termDd = new SearchableDropdown('termDropdownIndex', { placeholder: '', searchUrl: null, allowClear: true });
+            function generateTerms(baseYear) {
+                const out = [];
+                for (let y = baseYear - 5; y <= baseYear; y++) {
+                    const nh = `${y}-${y + 1}`;
+                    for (let hk = 1; hk <= 3; hk++) out.push({ value: `${hk}|${nh}`, text: `HK${hk} (${nh})`, hk, nh });
+                }
+                return out;
+            }
+            function filterTerms(all, query) {
+                if (!query) return all;
+                const q = String(query).toLowerCase().replace(/\s+/g, '');
+                const m = q.match(/^(\d{4})$/);
+                if (m) {
+                    const Y = parseInt(m[1], 10);
+                    const expanded = [];
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y}-${Y + 1}`, text: `HK${hk} (${Y}-${Y + 1})`, hk, nh: `${Y}-${Y + 1}` });
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y - 1}-${Y}`, text: `HK${hk} (${Y - 1}-${Y})`, hk, nh: `${Y - 1}-${Y}` });
+                    return expanded;
+                }
+                return all.filter(x => x.text.toLowerCase().includes(q));
+            }
+            const nowY = new Date().getFullYear();
+            let allTerms = generateTerms(nowY).sort((a, b) => (a.nh < b.nh ? 1 : a.nh > b.nh ? -1 : b.hk - a.hk));
+            termDd.searchData = async function (query) {
+                const options = filterTerms(allTerms, query);
+                await termDd.updateOptions(options.map(o => ({ value: o.value, text: o.text })));
+            };
+            termDd.searchData('');
+            termEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const [hk, nh] = val.includes('|') ? val.split('|') : ['', ''];
+                const hkInput = document.querySelector('input[name="Filter.HocKy"]');
+                const nhInput = document.querySelector('input[name="Filter.NamHoc"]');
+                if (hkInput) hkInput.value = hk;
+                if (nhInput) nhInput.value = nh;
+            });
+            // Prevent empty state: if user clears, revert to All
+            const termTextInput = termEl?.querySelector('input.form-control');
+            termTextInput?.addEventListener('input', function(){
+                if (this.value.trim() === '') {
+                    const hkInput = document.querySelector('input[name="Filter.HocKy"]');
+                    const nhInput = document.querySelector('input[name="Filter.NamHoc"]');
+                    if (hkInput) hkInput.value = '';
+                    if (nhInput) nhInput.value = '';
+                    this.value = '-- Tất cả --';
+                }
+            });
+
+            // Status dropdown custom on Index
+            const statusEl = document.getElementById('statusDropdownIndex');
+            const statusDd = new SearchableDropdown('statusDropdownIndex', { placeholder: '', searchUrl: null, allowClear: false });
+            // Bind static options from DOM to enable selection and search without remote URL
+            function getStatusOptionsFromDom() {
+                const opts = [];
+                statusEl.querySelectorAll('.dropdown-options a.dropdown-item').forEach(a => {
+                    const v = a.getAttribute('data-value') ?? '';
+                    const t = a.textContent ?? '';
+                    opts.push({ value: v, text: t });
+                });
+                return opts;
+            }
+            statusDd.searchData = async function(query){
+                const all = getStatusOptionsFromDom();
+                const q = (query || '').toLowerCase();
+                const filtered = all.filter(o => !q || o.text.toLowerCase().includes(q) || o.value === q);
+                await statusDd.updateOptions(filtered);
+            };
+            // Initialize option click handlers
+            statusDd.searchData('');
+            // Initialize display only
+            // Initialize display and hidden
+            (function initStatusDisplay(){
+                const hidden = document.querySelector('input[name="Filter.TinhTrang"]');
+                const input = statusEl?.querySelector('input.form-control');
+                if (!hidden || !input) return;
+                // Keep enum string values (All, IsFull, OnlyNoStudent, OnlyFull, OnlyNotEnough)
+                const currentVal = hidden.value || 'All';
+                const anchor = statusEl.querySelector(`.dropdown-options a.dropdown-item[data-value="${currentVal}"]`);
+                input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            })();
+            statusEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? 'All';
+                const input = this.querySelector('input.form-control');
+                const hidden = document.querySelector('input[name="Filter.TinhTrang"]');
+                if (hidden) hidden.value = val;
+                const anchor = this.querySelector(`.dropdown-options a.dropdown-item[data-value="${val}"]`);
+                if (input) input.value = anchor ? anchor.textContent : '-- Tất cả --';
+            });
+            // Prevent empty state: if user clears text, revert to All
+            const statusTextInput = statusEl?.querySelector('input.form-control');
+            statusTextInput?.addEventListener('input', function(){
+                if (this.value.trim() === '') {
+                    const hidden = document.querySelector('input[name=\"Filter.TinhTrang\"]');
+                    if (hidden) hidden.value = 'All';
+                    this.value = '-- Tất cả --';
+                }
+            });
+
+            // Helpers to default to '-- Tất cả --' and behave like comboboxes
+            function setAllIfEmpty(container, hiddenSelector) {
+                const input = container?.querySelector('input.form-control');
+                const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container?.querySelector('input[type="hidden"]');
+                if (input && (!input.value || input.value.trim() === '') && (!hidden || !hidden.value || hidden.value === '0')) {
+                    input.value = '-- Tất cả --';
+                }
+            }
+            function installComboBehavior(container, hiddenSelector) {
+                const input = container?.querySelector('input.form-control');
+                const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container?.querySelector('input[type="hidden"]');
+                if (!input) return;
+                input.addEventListener('focus', function () {
+                    if (this.value.trim() === '-- Tất cả --') this.value = '';
+                });
+                input.addEventListener('blur', function () {
+                    const hv = hidden ? hidden.value : '';
+                    if (this.value.trim() === '' && (!hv || hv === '0')) {
+                        this.value = '-- Tất cả --';
+                    }
+                });
+            }
+
+            // Initialize display values (normalize enum string 'All' -> '0')
+            // Term
+            const termInput = termEl?.querySelector('input.form-control');
+            const hkHidden = document.querySelector('input[name="Filter.HocKy"]');
+            const nhHidden = document.querySelector('input[name="Filter.NamHoc"]');
+            if (termInput) {
+                if (hkHidden?.value && nhHidden?.value) {
+                    termInput.value = `HK${hkHidden.value} (${nhHidden.value})`;
+                } else {
+                    termInput.value = '-- Tất cả --';
+                }
+            }
+            // Status
+            const statusInput = statusEl?.querySelector('input.form-control');
+            const stHidden = document.querySelector('input[name="Filter.TinhTrang"]');
+            if (statusInput) {
+                const stVal = stHidden?.value || 'All';
+                const anchor = statusEl.querySelector(`.dropdown-options a.dropdown-item[data-value="${stVal}"]`);
+                statusInput.value = anchor ? anchor.textContent : '-- Tất cả --';
+            }
+
+            // Apply combobox behaviors
+            setAllIfEmpty(termEl, 'input[name="Filter.HocKy"]');
+            setAllIfEmpty(statusEl, 'input[name="Filter.TinhTrang"]');
+            installComboBehavior(termEl, 'input[name="Filter.HocKy"]');
+            installComboBehavior(statusEl, 'input[name="Filter.TinhTrang"]');
 
             // Listen for selection changes
             document.getElementById('giangVienDropdown').addEventListener('selectionChanged', function(e) {

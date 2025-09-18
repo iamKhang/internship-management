@@ -6,86 +6,332 @@
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
         <h5 class="mb-0">Đề tài của tôi</h5>
-        <small class="text-muted">Tổng: <strong>@Model.Items.Count</strong></small>
+        <div class="small text-muted">Tổng: <strong>@Model.Items.Count</strong> bản ghi</div>
     </div>
 
-    <div class="card-body">
-        <form method="get" class="row g-3 mb-3">
-            <div class="col-md-2">
-                <label class="form-label">Học kỳ</label>
-                <select class="form-select" name="hocKy" asp-items="Model.HocKyOptions"></select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Năm học</label>
-                <select class="form-select" name="namHoc" asp-items="Model.NamHocOptions"></select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Trạng thái</label>
-                <select class="form-select" name="trangThai" asp-items="Model.TrangThaiOptions"></select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end gap-2">
-                <button class="btn btn-primary py-2" type="submit">
-                    <i class="bi bi-funnel"></i> Lọc
-                </button>
-                <a class="btn btn-outline-secondary py-2" href="@Url.Action("MyTopics","DeTai")">Xóa lọc</a>
-            </div>
-        </form>
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Học kỳ/Năm học</label>
+                    <div class="searchable-dropdown" id="termDropdown">
+                        <input type="hidden"
+                            value="@(Model.Filter.HocKy.HasValue && !string.IsNullOrEmpty(Model.Filter.NamHoc) ? ($"{Model.Filter.HocKy}|{Model.Filter.NamHoc}") : "")" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy?.ToString() ?? "")" />
+                    <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc ?? "")" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Trạng thái</label>
+                    <div class="searchable-dropdown" id="statusDropdown">
+                        <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai?.ToString() ?? "")" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Giảng viên đã đăng ký</label>
+                    <div class="searchable-dropdown" id="myGvDropdown">
+                        <input type="hidden" name="maGv" value="@Context.Request.Query["maGv"]" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-1 d-flex align-items-end mx-2">
+                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                </div>
+                <div class="col-md-1 d-flex align-items-end mx-2">
+                    <a asp-action="MyTopics" class="btn btn-outline-secondary d-flex align-items-center px-3 py-2">
+                        <i class="bi-arrow-clockwise me-1"></i> Hủy
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered table-hover table-sm align-middle mb-0 bg-white">
-                <thead class="table-primary">
-                    <tr>
-                        <th class="text-nowrap fw-bold">Mã ĐT</th>
-                        <th class="text-nowrap fw-bold">Tên đề tài</th>
-                        <th class="text-nowrap fw-bold">GV phụ trách</th>
-                        <th class="text-nowrap fw-bold">Khoa</th>
-                        <th class="text-nowrap fw-bold">Học kỳ</th>
-                        <th class="text-nowrap fw-bold">Trạng thái</th>
-                        <th class="text-nowrap fw-bold">Ngày đăng ký</th>
-                        <th class="text-nowrap fw-bold">Ngày chấp nhận</th>
-                        <th class="text-nowrap fw-bold">Kết quả</th>
-                        <th class="text-nowrap fw-bold"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Items.Count == 0)
-                    {
-                        <tr><td colspan="10" class="text-center text-muted py-5 fs-5"><i class="bi bi-info-circle me-2"></i>Chưa có dữ liệu</td></tr>
-                    }
-                    else
-                    {
-                        foreach (var x in Model.Items)
-                        {
-                            string statusText = x.TrangThai switch
-                            {
-                                0 => "Chờ duyệt",
-                                1 => "Chấp nhận",
-                                2 => "Đang thực hiện",
-                                3 => "Hoàn thành",
-                                4 => "Từ chối",
-                                5 => "Rút",
-                                _ => "Khác"
-                            };
-                            <tr>
-                                <td class="fw-semibold text-monospace">@x.MaDt</td>
-                                <td>@(x.TenDt ?? "")</td>
-                                <td>@(x.Gv_HoTenGv ?? "") (@x.Gv_MaGv)</td>
-                                <td>@(x.Gv_TenKhoa ?? "") (@x.Gv_MaKhoa)</td>
-                                <td>@x.HocKy/@x.NamHoc</td>
-                                <td class="@(x.TrangThai == 1 ? "text-success" : x.TrangThai == 4 ? "text-danger" : "")">@statusText</td>
-                                <td>@(x.NgayDangKy?.ToString("dd/MM/yyyy") ?? "")</td>
-                                <td>@(x.NgayChapNhan?.ToString("dd/MM/yyyy") ?? "")</td>
-                                <td>@(x.KetQua?.ToString("0.##") ?? "")</td>
-                                <td>
-                                    <a class="btn btn-sm btn-primary text-white" href='@Url.Action("Details", "DeTai", new { id = x.MaDt })' title="Xem chi tiết">
-                                        <i class="bi bi-eye-fill"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
+    <!-- Responsive Grid Container -->
+    <div class="grid-responsive">
+        <div class="grid-container">
+            <ejs-grid id="DeTaiGrid" dataSource="@Model.Items" allowPaging="true" allowSorting="true"
+                allowMultiSorting="true" allowFiltering="false" allowResizing="true" gridLines="Both" height="600"
+                width="100%" queryCellInfo="onCellRender">
+                <e-grid-pagesettings pageSize="20" pageSizes="new List<int>{10,20,50,100,500}"></e-grid-pagesettings>
+                <e-grid-columns>
+                    <e-grid-column field="MaDt" headerText="Mã đề tài" width="120"
+                        template="#maDtTemplate"></e-grid-column>
+                    <e-grid-column field="TenDt" headerText="Tên đề tài" width="300"></e-grid-column>
+                    <e-grid-column field="Gv_HoTenGv" headerText="GV phụ trách" width="150"></e-grid-column>
+                    <e-grid-column field="Gv_TenKhoa" headerText="Khoa" width="150"></e-grid-column>
+                    <e-grid-column headerText="Học kỳ" width="120" template="#hocKyTemplate"></e-grid-column>
+                    <e-grid-column field="TrangThai" headerText="Trạng thái" width="140"
+                        textAlign="Center"></e-grid-column>
+                    <e-grid-column field="NgayDangKy" headerText="Ngày đăng ký" width="120"
+                        textAlign="Center"></e-grid-column>
+                    <e-grid-column field="NgayChapNhan" headerText="Ngày chấp nhận" width="130"
+                        textAlign="Center"></e-grid-column>
+                    <e-grid-column field="KetQua" headerText="Kết quả" width="100" textAlign="Center"
+                        format="N2"></e-grid-column>
+                    <e-grid-column headerText="Thao tác" width="120" textAlign="Center"
+                        template="#actionTemplate"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
         </div>
     </div>
 </div>
+
+@* Templates for custom column rendering *@
+<script id="maDtTemplate" type="text/x-template">
+    <span class="ma-dt-code">${MaDt}</span>
+</script>
+
+<script id="hocKyTemplate" type="text/x-template">
+    HK${HocKy} (${NamHoc})
+</script>
+
+@section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Term dropdown HKX (YYYY-YYYY)
+            const termDd = new SearchableDropdown('termDropdown', {
+                placeholder: '',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            // Generate initial 6 years (5 before current + current), each with HK1..HK3
+            function generateTerms(baseYear) {
+                const out = [];
+                for (let y = baseYear - 5; y <= baseYear; y++) {
+                    const nh = `${y}-${y + 1}`;
+                    for (let hk = 1; hk <= 3; hk++) {
+                        out.push({ value: `${hk}|${nh}`, text: `HK${hk} (${nh})`, hk, nh });
+                    }
+                }
+                return out;
+            }
+
+            function filterTerms(all, query) {
+                if (!query) return all;
+                const q = String(query).toLowerCase().replace(/\s+/g, '');
+                // If user types a 4-digit year like 2000, expand around that year
+                const m = q.match(/^(\d{4})$/);
+                if (m) {
+                    const Y = parseInt(m[1], 10);
+                    const expanded = [];
+                    // current Y..Y+1
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y}-${Y + 1}`, text: `HK${hk} (${Y}-${Y + 1})`, hk, nh: `${Y}-${Y + 1}` });
+                    // previous (Y-1..Y)
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y - 1}-${Y}`, text: `HK${hk} (${Y - 1}-${Y})`, hk, nh: `${Y - 1}-${Y}` });
+                    return expanded;
+                }
+                return all.filter(x => x.text.toLowerCase().includes(q));
+            }
+
+            // Override dropdown search to use local generation and filtering
+            const now = new Date();
+            const baseYear = now.getFullYear();
+            let allTerms = generateTerms(baseYear).sort((a, b) => (a.nh < b.nh ? 1 : a.nh > b.nh ? -1 : b.hk - a.hk));
+            termDd.searchData = async function (query) {
+                const options = filterTerms(allTerms, query);
+                await termDd.updateOptions(options.map(o => ({ value: o.value, text: o.text })));
+            };
+
+            // Initial load
+            termDd.searchData('');
+
+            const termEl = document.getElementById('termDropdown');
+            termEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const [hk, nh] = val.includes('|') ? val.split('|') : ['', ''];
+                const hkInput = document.querySelector('input[name="hocKy"]');
+                const nhInput = document.querySelector('input[name="namHoc"]');
+                if (hkInput) hkInput.value = hk;
+                if (nhInput) nhInput.value = nh;
+            });
+
+            // If user clears the input => set to Tất cả (hidden values empty and show 'Tất cả')
+            termEl.querySelector('input.form-control')?.addEventListener('input', function () {
+                if (this.value.trim() === '') {
+                    const hkInput = document.querySelector('input[name="hocKy"]');
+                    const nhInput = document.querySelector('input[name="namHoc"]');
+                    if (hkInput) hkInput.value = '';
+                    if (nhInput) nhInput.value = '';
+                    // Show All label to users (not a placeholder)
+                    this.value = '-- Tất cả --';
+                    // Also reset hidden of the dropdown itself
+                    const hidden = termEl.querySelector('input[type="hidden"]');
+                    if (hidden) hidden.value = '';
+                }
+            });
+            const gvEl = document.getElementById('myGvDropdown');
+            const gvDd = new SearchableDropdown('myGvDropdown', {
+                placeholder: '',
+                searchUrl: '@Url.Action("GetMyLecturers", "DeTai")',
+                searchParam: 'q',
+                debounceDelay: 300,
+                allowClear: true,
+                labelFormatter: function (item) {
+                    if (item) {
+                        const id = item.MaGv ?? item.maGv;
+                        const name = item.HoTenGv ?? item.hoTenGv;
+                        if (id !== undefined && name !== undefined) {
+                            return { value: String(id), text: `${id} - ${name}` };
+                        }
+                    }
+                    return null;
+                }
+            });
+
+            // Preload lecturer options so the list shows immediately
+            gvDd.searchData('');
+
+            // Ensure hidden input updates and visible text reflects selection
+            gvEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const text = e?.detail?.text ?? '';
+                const hidden = this.querySelector('input[type="hidden"][name="maGv"]');
+                if (hidden) hidden.value = val;
+                const input = this.querySelector('input.form-control');
+                if (input) input.value = text;
+            });
+
+            // Helpers to behave like combobox (no placeholder, default '-- Tất cả --')
+            function setAllIfEmpty(container, hiddenSelector) {
+                const input = container.querySelector('input.form-control');
+                const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container.querySelector('input[type="hidden"]');
+                if (input && (!input.value || input.value.trim() === '') && (!hidden || !hidden.value)) {
+                    input.value = '-- Tất cả --';
+                }
+            }
+
+            function installComboBehavior(container, hiddenSelector) {
+                const input = container.querySelector('input.form-control');
+                const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container.querySelector('input[type="hidden"]');
+                if (!input) return;
+                input.addEventListener('focus', function () {
+                    if (this.value.trim() === '-- Tất cả --') this.value = '';
+                });
+                input.addEventListener('blur', function () {
+                    const hv = hidden ? hidden.value : '';
+                    if (this.value.trim() === '' && !hv) {
+                        this.value = '-- Tất cả --';
+                    }
+                });
+            }
+
+            // STATUS dropdown (local options)
+            const statusEl = document.getElementById('statusDropdown');
+            const statusDd = new SearchableDropdown('statusDropdown', {
+                placeholder: '',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            const statusOptions = [
+                { value: '0', text: 'Chờ duyệt' },
+                { value: '1', text: 'Chấp nhận' },
+                { value: '2', text: 'Đang thực hiện' },
+                { value: '3', text: 'Hoàn thành' },
+                { value: '4', text: 'Từ chối' },
+                { value: '5', text: 'Rút' }
+            ];
+            statusDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const opts = statusOptions.filter(o => !q || o.text.toLowerCase().includes(q) || o.value === q);
+                await statusDd.updateOptions(opts);
+            };
+            statusDd.searchData('');
+            // reflect selection to hidden + combobox behavior
+            statusEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const text = e?.detail?.text ?? '';
+                const hidden = this.querySelector('input[type="hidden"][name="trangThai"]');
+                const input = this.querySelector('input.form-control');
+                if (hidden) hidden.value = val;
+                if (input) input.value = text || '-- Tất cả --';
+            });
+
+            // Apply defaults and behaviors
+            setAllIfEmpty(termEl, null);
+            setAllIfEmpty(gvEl, 'input[name="maGv"]');
+            setAllIfEmpty(statusEl, 'input[name="trangThai"]');
+            installComboBehavior(termEl, null);
+            installComboBehavior(gvEl, 'input[name="maGv"]');
+            installComboBehavior(statusEl, 'input[name="trangThai"]');
+        });
+    </script>
+}
+
+<script>
+    // Format dd/MM/yyyy
+    function toViDate(raw) {
+        if (!raw) return '—';
+        var d = new Date(raw);
+        if (isNaN(d.getTime())) return '—';
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        return dd + '/' + mm + '/' + yyyy;
+    }
+
+    // Cell render hook to inject HTML and formatted text safely
+    function onCellRender(args) {
+        if (!args || !args.data || !args.column) return;
+        var f = args.column.field;
+        if (f === 'TrangThai') {
+            var map = {
+                0: { text: 'Chờ duyệt', cls: '' },
+                1: { text: 'Chấp nhận', cls: 'text-success' },
+                2: { text: 'Đang thực hiện', cls: 'text-warning' },
+                3: { text: 'Hoàn thành', cls: 'text-primary' },
+                4: { text: 'Từ chối', cls: 'text-danger' },
+                5: { text: 'Rút', cls: 'text-muted' }
+            };
+            var s = map[args.data.TrangThai] || { text: 'Khác', cls: '' };
+            args.cell.innerHTML = '<span class="' + s.cls + '">' + s.text + '</span>';
+        } else if (f === 'NgayDangKy' || f === 'NgayChapNhan') {
+            args.cell.innerText = toViDate(args.data[f]);
+        } else if (f === 'KetQua') {
+            var v = args.data.KetQua;
+            if (v === null || v === undefined || v === '') {
+                args.cell.innerText = '—';
+                return;
+            }
+            var num = Number(v);
+            if (isNaN(num)) { args.cell.innerText = '—'; return; }
+            var txt = num.toFixed(2);
+            if (num < 5) {
+                args.cell.innerHTML = '<span class="text-danger">' + txt + '</span>';
+            } else {
+                args.cell.innerText = txt;
+            }
+        }
+    }
+</script>
+
+<script id="actionTemplate" type="text/x-template">
+    <a class="btn btn-sm btn-primary text-white" href="/DeTai/Details/${MaDt}" title="Xem chi tiết">
+        <i class="bi bi-eye"></i> Xem
+    </a>
+</script>

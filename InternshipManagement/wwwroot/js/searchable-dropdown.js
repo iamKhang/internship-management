@@ -43,6 +43,10 @@ class SearchableDropdown {
         
         this.setupEventListeners();
         this.loadInitialData();
+        // Ensure static DOM options (if any) are clickable even without remote search
+        this.bindDomOptions();
+        // Enable combobox behavior by default
+        this._setupComboboxBehavior();
     }
     
     setupEventListeners() {
@@ -238,10 +242,25 @@ class SearchableDropdown {
             });
         });
     }
+
+    bindDomOptions() {
+        const items = this.optionsContainer.querySelectorAll('.dropdown-item');
+        if (!items || items.length === 0) return;
+        items.forEach((item, idx) => {
+            // Avoid double-binding
+            if (item._sdBound) return;
+            item._sdBound = true;
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.selectOption(idx);
+            });
+        });
+    }
     
     async searchData(query = '', filterValue = '') {
         if (!this.options.searchUrl) {
-            console.warn('Search URL not provided');
+            // No remote URL: just ensure existing DOM options are clickable
+            this.bindDomOptions();
             return;
         }
         
@@ -319,6 +338,34 @@ class SearchableDropdown {
         }
     }
     
+    // Helper to find and select default option
+    _findAndSelectDefaultOption() {
+        const firstOption = this.optionsContainer.querySelector('.dropdown-item[data-value=""]') ||
+                           this.optionsContainer.querySelector('.dropdown-item[data-value="All"]') ||
+                           this.optionsContainer.querySelector('.dropdown-item');
+        if (firstOption) {
+            const defaultValue = firstOption.getAttribute('data-value') || '';
+            const defaultText = firstOption.textContent || '-- Tất cả --';
+            this.hiddenInput.value = defaultValue;
+            this.textInput.value = defaultText;
+        }
+    }
+
+    // Ensure combobox never stays empty - auto-revert to default when cleared
+    _setupComboboxBehavior() {
+        this.textInput.addEventListener('input', (e) => {
+            if (e.target.value.trim() === '' && this.hiddenInput.value === '') {
+                this._findAndSelectDefaultOption();
+            }
+        });
+        
+        this.textInput.addEventListener('blur', (e) => {
+            if (e.target.value.trim() === '' && this.hiddenInput.value === '') {
+                this._findAndSelectDefaultOption();
+            }
+        });
+    }
+    
     clearSelection() {
         this.optionsContainer.querySelectorAll('.dropdown-item').forEach(item => {
             item.classList.remove('active');
@@ -372,7 +419,7 @@ class SearchableDropdown {
         const initialValue = this.hiddenInput.value;
         const filterValue = this.getFilterValue();
         
-        if (filterValue) {
+        if (this.options.searchUrl && filterValue) {
             await this.searchData('', filterValue);
             
             if (initialValue) {
@@ -390,7 +437,7 @@ class SearchableDropdown {
                     }
                 }
             }
-        } else if (initialValue) {
+        } else if (this.options.searchUrl && initialValue) {
             // If no filter but there's a value, load all data to find the selected one
             await this.searchData('', '');
             const selectedOption = this.optionsContainer.querySelector(`[data-value="${initialValue}"]`);
@@ -406,6 +453,15 @@ class SearchableDropdown {
                     this.textInput.value = `#${initialValue}`;
                 }
             }
+        } else if (!this.options.searchUrl) {
+            // Static DOM mode: reflect initial hidden value to text if possible
+            if (initialValue) {
+                const selectedOption = this.optionsContainer.querySelector(`[data-value="${initialValue}"]`);
+                if (selectedOption) {
+                    this.textInput.value = selectedOption.textContent;
+                }
+            }
+            this.bindDomOptions();
         }
     }
     
