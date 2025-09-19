@@ -139,6 +139,134 @@ namespace InternshipManagement.Controllers
             }
         }
 
+        [HttpGet("GetStudentsByTopicAdmin")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetStudentsByTopicAdmin(string maDt)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(maDt))
+                    return Json(new { success = false, message = "Mã đề tài không hợp lệ" });
+
+                var students = await _db.HuongDans
+                    .Include(h => h.SinhVien)
+                    .Where(h => h.MaDt == maDt &&
+                               (h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress))
+                    .Select(h => new {
+                        value = h.MaSv.ToString(),
+                        text = $"{h.MaSv} - {h.SinhVien!.HoTenSv}"
+                    })
+                    .ToListAsync();
+
+                return Json(new { success = true, data = students });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetLecturerTopicOptionsAsync(int maGv, byte? hocKy, string? namHoc)
+        {
+            try
+            {
+                var topics = await _repo.GetLecturerTopicOptionsAsync(maGv, hocKy, namHoc);
+                return Json(new { success = true, data = topics });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TestDiemData()
+        {
+            try
+            {
+                var filter = new NhapDiemFilterVm();
+                var items = await _repo.GetHuongDanForDiemAsync(filter);
+
+                var result = new {
+                    success = true,
+                    count = items.Count,
+                    data = items.Take(5).Select(i => new {
+                        i.MaSv,
+                        i.HoTenSv,
+                        i.MaDt,
+                        i.TenDt,
+                        i.MaGv,
+                        i.HoTenGv,
+                        i.TrangThai,
+                        i.TrangThaiText,
+                        i.KetQua,
+                        i.CoTheCapNhatDiem
+                    }).ToList()
+                };
+
+                // Return HTML for easier viewing
+                var html = $@"
+                <html>
+                <head><title>Test Diem Data</title></head>
+                <body>
+                    <h1>Test Diem Data</h1>
+                    <p><strong>Success:</strong> {result.success}</p>
+                    <p><strong>Count:</strong> {result.count}</p>
+                    <h2>Sample Data (first 5 items):</h2>
+                    <table border='1' style='border-collapse: collapse;'>
+                        <tr>
+                            <th>MaSv</th><th>HoTenSv</th><th>MaDt</th><th>TenDt</th><th>MaGv</th><th>HoTenGv</th>
+                            <th>TrangThai</th><th>TrangThaiText</th><th>KetQua</th><th>CoTheCapNhatDiem</th>
+                        </tr>";
+
+                foreach (var item in result.data)
+                {
+                    html += $@"
+                        <tr>
+                            <td>{item.MaSv}</td>
+                            <td>{item.HoTenSv}</td>
+                            <td>{item.MaDt}</td>
+                            <td>{item.TenDt}</td>
+                            <td>{item.MaGv}</td>
+                            <td>{item.HoTenGv}</td>
+                            <td>{item.TrangThai}</td>
+                            <td>{item.TrangThaiText}</td>
+                            <td>{item.KetQua}</td>
+                            <td>{item.CoTheCapNhatDiem}</td>
+                        </tr>";
+                }
+
+                html += @"
+                    </table>
+                    <h2>JSON Data:</h2>
+                    <pre>" + System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }) + @"</pre>
+                </body>
+                </html>";
+
+                return Content(html, "text/html");
+            }
+            catch (Exception ex)
+            {
+                var errorHtml = $@"
+                <html>
+                <head><title>Error</title></head>
+                <body>
+                    <h1>Error</h1>
+                    <p><strong>Message:</strong> {ex.Message}</p>
+                    <h2>Stack Trace:</h2>
+                    <pre>{ex.StackTrace}</pre>
+                </body>
+                </html>";
+                return Content(errorHtml, "text/html");
+            }
+        }
+
+
+
+
+
         [HttpGet]
         public async Task<IActionResult> Export([FromQuery] DeTaiFilterVm filter,
             bool includeMaDt = true, bool includeTenDt = true, bool includeGiangVien = true,
@@ -1295,7 +1423,251 @@ namespace InternshipManagement.Controllers
             return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
         }
 
+        #region Admin - Nhập/Cập nhật điểm
 
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> NhapDiem()
+        {
+            var vm = new NhapDiemVm();
+
+            // Load options for dropdowns
+            await LoadNhapDiemOptionsAsync(vm);
+
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> NhapDiem(NhapDiemVm vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                await LoadNhapDiemOptionsAsync(vm);
+                return View(vm);
+            }
+
+            var (ok, error) = await _repo.UpdateDiemAsync(
+                vm.MaGv!.Value,
+                vm.MaSv!.Value,
+                vm.MaDt!,
+                vm.DiemMoi!.Value,
+                vm.GhiChu);
+
+            if (ok)
+            {
+                TempData["Success"] = "Cập nhật điểm thành công!";
+                return RedirectToAction(nameof(DanhSachDiem));
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, error ?? "Có lỗi xảy ra khi cập nhật điểm.");
+                await LoadNhapDiemOptionsAsync(vm);
+                return View(vm);
+            }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DanhSachDiem([FromQuery] NhapDiemFilterVm filter)
+        {
+            try
+            {
+                var items = await _repo.GetHuongDanForDiemAsync(filter);
+
+                var vm = new HuongDanDiemListVm
+                {
+                    Items = items,
+                    Filter = filter
+                };
+
+                // Load filter options
+                await LoadDanhSachDiemOptionsAsync(vm);
+
+                // Debug: Log số lượng items
+                System.Diagnostics.Debug.WriteLine($"DanhSachDiem: Found {items.Count} items");
+                if (items.Any())
+                {
+                    var firstItem = items.First();
+                    System.Diagnostics.Debug.WriteLine($"First item: MaSv={firstItem.MaSv}, TrangThai={firstItem.TrangThai}, TrangThaiText={firstItem.TrangThaiText}");
+                }
+
+                return View(vm);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in DanhSachDiem: {ex.Message}");
+                TempData["Error"] = $"Có lỗi xảy ra: {ex.Message}";
+
+                // Return empty view model
+                var vm = new HuongDanDiemListVm
+                {
+                    Items = new List<HuongDanDiemItemVm>(),
+                    Filter = filter
+                };
+                await LoadDanhSachDiemOptionsAsync(vm);
+                return View(vm);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,GiangVien")]
+        public async Task<IActionResult> CapNhatDiemNhanh(CapNhatDiemNhanhVm vm)
+        {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+            if (!ModelState.IsValid)
+            {
+                if (isAjax)
+                {
+                    var firstError = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(s => !string.IsNullOrWhiteSpace(s)));
+                    return Json(new { success = false, message = firstError.Length > 0 ? firstError : "Dữ liệu không hợp lệ." });
+                }
+                TempData["Error"] = "Dữ liệu không hợp lệ.";
+                return RedirectToAction(nameof(DanhSachDiem));
+            }
+
+            // Nếu là Giảng viên, buộc MaGv theo claims để đảm bảo an toàn
+            if (User.IsInRole("GiangVien"))
+            {
+                var rawMaGv = User.FindFirst("MaGv")?.Value
+                               ?? User.FindFirst("code")?.Value
+                               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(rawMaGv, out var maGvFromClaims))
+                {
+                    if (isAjax) return Json(new { success = false, message = "Không xác định giảng viên." });
+                    return Forbid();
+                }
+                vm.MaGv = maGvFromClaims;
+            }
+
+            var (ok, error) = await _repo.UpdateDiemAsync(vm.MaGv, vm.MaSv, vm.MaDt, vm.DiemMoi, vm.GhiChu);
+
+            if (isAjax)
+            {
+                return Json(new { success = ok, message = ok ? "Cập nhật điểm thành công!" : (error ?? "Có lỗi xảy ra khi cập nhật điểm.") });
+            }
+
+            if (ok)
+            {
+                TempData["Success"] = "Cập nhật điểm thành công!";
+            }
+            else
+            {
+                TempData["Error"] = error ?? "Có lỗi xảy ra khi cập nhật điểm.";
+            }
+
+            return RedirectToAction(nameof(DanhSachDiem));
+        }
+
+        private async Task LoadNhapDiemOptionsAsync(NhapDiemVm vm)
+        {
+            // Load giảng viên options
+            var giangViens = await _gvRepo.GetOptionsAsync();
+            vm.GiangVienOptions = giangViens.Select(g => new SelectListItem
+            {
+                Value = g.MaGv.ToString(),
+                Text = $"{g.MaGv} - {g.TenGv}",
+                Selected = vm.MaGv == g.MaGv
+            }).ToList();
+
+            // Load đề tài options (nếu đã chọn giảng viên)
+            if (vm.MaGv.HasValue)
+            {
+                var deTais = await _repo.GetLecturerTopicOptionsAsync(vm.MaGv.Value, null, null);
+                vm.DeTaiOptions = deTais.ToList();
+            }
+
+            // Load sinh viên options (nếu đã chọn đề tài)
+            if (!string.IsNullOrWhiteSpace(vm.MaDt))
+            {
+                var sinhViens = await _db.HuongDans
+                    .Include(h => h.SinhVien)
+                    .Where(h => h.MaDt == vm.MaDt &&
+                               (h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress))
+                    .Select(h => new SelectListItem
+                    {
+                        Value = h.MaSv.ToString(),
+                        Text = $"{h.MaSv} - {h.SinhVien!.HoTenSv}",
+                        Selected = vm.MaSv == h.MaSv
+                    })
+                    .ToListAsync();
+                vm.SinhVienOptions = sinhViens;
+            }
+        }
+
+        private async Task LoadDanhSachDiemOptionsAsync(HuongDanDiemListVm vm)
+        {
+            // Load giảng viên options
+            var giangViens = await _gvRepo.GetOptionsAsync();
+            vm.GiangVienOptions = new List<SelectListItem> {}
+                .Concat(giangViens.Select(g => new SelectListItem
+                {
+                    Value = g.MaGv.ToString(),
+                    Text = $"{g.MaGv} - {g.TenGv}",
+                    Selected = vm.Filter.MaGv == g.MaGv
+                })).ToList();
+
+            // Đề tài options phụ thuộc Giảng viên; giữ item đã chọn nếu có
+            var deTaiOptions = new List<SelectListItem>();
+            if (vm.Filter.MaGv.HasValue)
+            {
+                deTaiOptions = (await _repo.GetLecturerTopicOptionsAsync(vm.Filter.MaGv.Value, null, null)).ToList();
+            }
+            if (!string.IsNullOrWhiteSpace(vm.Filter.MaDt) && !deTaiOptions.Any(o => string.Equals(o.Value, vm.Filter.MaDt, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Thêm option đang chọn để giữ hiển thị nếu không thuộc danh sách mới
+                deTaiOptions.Insert(0, new SelectListItem(vm.Filter.MaDt, vm.Filter.MaDt) { Selected = true });
+            }
+            vm.DeTaiOptions = deTaiOptions;
+
+            // Trạng thái options
+            vm.TrangThaiOptions = new List<SelectListItem>
+            {
+                new("Chờ duyệt", "0"),
+                new("Đã chấp nhận", "1"),
+                new("Đang thực hiện", "2"),
+                new("Đã hoàn thành", "3"),
+                new("Đã từ chối", "4"),
+                new("Đã rút", "5")
+            };
+        }
+
+        #endregion
+
+        #region API Endpoints for Cascade Dropdowns
+
+        [HttpGet]
+        public async Task<IActionResult> GetTopicsByLecturer(int maGv, byte? hocKy, string? namHoc)
+        {
+            try
+            {
+                var deTais = await _repo.GetLecturerTopicOptionsAsync(maGv, hocKy, namHoc);
+                return Json(deTais);
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<SelectListItem>());
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetStudentsByTopic(int maGv, string maDt)
+        {
+            try
+            {
+                var sinhViens = await _repo.GetStudentsByTopicAsync(maGv, maDt);
+                return Json(sinhViens);
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<SelectListItem>());
+            }
+        }
+
+        #endregion
 
     }
 }

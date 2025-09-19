@@ -29,6 +29,10 @@ namespace InternshipManagement.Repositories.Interfaces
         Task<List<StudentMyTopicItemVm>> GetStudentMyTopicsAsync(int maSv, byte? hocKy, string? namHoc, byte? trangThai);
         Task<(bool ok, string? error)> CompleteHuongDanAsync(int maGv, int maSv, string maDt, decimal ketQua, string? ghiChu);
 
+        // Admin methods for score management
+        Task<(bool ok, string? error)> UpdateDiemAsync(int maGv, int maSv, string maDt, decimal diemMoi, string? ghiChu = null);
+        Task<List<HuongDanDiemItemVm>> GetHuongDanForDiemAsync(NhapDiemFilterVm filter);
+        Task<List<SelectListItem>> GetStudentsByTopicAsync(int maGv, string maDt);
 
     }
 }

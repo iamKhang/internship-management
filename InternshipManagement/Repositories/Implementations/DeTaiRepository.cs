@@ -1076,6 +1076,147 @@ namespace InternshipManagement.Repositories.Implementations
                 return (false, $"Lỗi cập nhật: {ex.GetBaseException().Message}");
             }
         }
+
+        /// <summary>
+        /// Cập nhật điểm cho sinh viên (Admin only) - Logic theo yêu cầu
+        /// </summary>
+        public async Task<(bool ok, string? error)> UpdateDiemAsync(int maGv, int maSv, string maDt, decimal diemMoi, string? ghiChu = null)
+        {
+            // Validate score (0-10 scale)
+            if (diemMoi < 0m || diemMoi > 10m)
+                return (false, "Điểm phải từ 0 đến 10.");
+
+            var code = NormCode(maDt);
+
+            // Find the guidance record
+            var huongDan = await _db.HuongDans
+                .FirstOrDefaultAsync(h => h.MaGv == maGv && h.MaSv == maSv && h.MaDt == code);
+
+            if (huongDan == null)
+                return (false, "Không tìm thấy hướng dẫn với thông tin đã cung cấp.");
+
+            // Không cho phép khi Pending/Rejected/Withdrawn
+            if (huongDan.TrangThai == HuongDanStatus.Pending ||
+                huongDan.TrangThai == HuongDanStatus.Rejected ||
+                huongDan.TrangThai == HuongDanStatus.Withdrawn)
+            {
+                return (false, "Sinh viên chưa đăng ký đề tài này hoặc đã bị từ chối/rút đăng ký.");
+            }
+
+            // Cho phép cập nhật khi Accepted (1), InProgress (2) hoặc Completed (3)
+            huongDan.KetQua = diemMoi;
+            if (huongDan.TrangThai == HuongDanStatus.Accepted || huongDan.TrangThai == HuongDanStatus.InProgress)
+            {
+                // Khi đang ở 1/2, cập nhật điểm sẽ chuyển sang Hoàn thành
+                huongDan.TrangThai = HuongDanStatus.Completed;
+            }
+
+            if (!string.IsNullOrWhiteSpace(ghiChu))
+            {
+                huongDan.GhiChu = ghiChu;
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                return (true, null);
+            }
+            catch (DbUpdateException ex)
+            {
+                return (false, $"Lỗi cập nhật điểm: {ex.GetBaseException().Message}");
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách hướng dẫn có thể cập nhật điểm (Admin)
+        /// </summary>
+        public async Task<List<HuongDanDiemItemVm>> GetHuongDanForDiemAsync(NhapDiemFilterVm filter)
+        {
+            var query = _db.HuongDans
+                .Include(h => h.SinhVien)
+                .ThenInclude(s => s.Khoa)
+                .Include(h => h.DeTai)
+                .Include(h => h.GiangVien)
+                .AsNoTracking()
+                .AsQueryable();
+
+            // Apply filters
+            if (filter.MaGv.HasValue)
+            {
+                query = query.Where(h => h.MaGv == filter.MaGv.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.MaDt))
+            {
+                var code = NormCode(filter.MaDt);
+                query = query.Where(h => h.MaDt == code);
+            }
+
+            if (filter.MaSv.HasValue)
+            {
+                query = query.Where(h => h.MaSv == filter.MaSv.Value);
+            }
+
+            if (filter.TrangThai.HasValue)
+            {
+                query = query.Where(h => (byte)h.TrangThai == filter.TrangThai.Value);
+            }
+
+
+
+            // Project to ViewModel
+            return await query
+                .OrderByDescending(h => h.CreatedAt)
+                .Select(h => new HuongDanDiemItemVm
+                {
+                    MaSv = h.MaSv,
+                    HoTenSv = h.SinhVien != null ? h.SinhVien.HoTenSv : null,
+                    MaKhoa = h.SinhVien != null ? h.SinhVien.MaKhoa : null,
+                    TenKhoa = h.SinhVien != null && h.SinhVien.Khoa != null ? h.SinhVien.Khoa.TenKhoa : null,
+
+                    MaDt = h.MaDt,
+                    TenDt = h.DeTai != null ? h.DeTai.TenDt : null,
+
+                    MaGv = h.MaGv,
+                    HoTenGv = h.GiangVien != null ? h.GiangVien.HoTenGv : null,
+
+                    TrangThai = (byte)h.TrangThai,
+                    TrangThaiText = h.TrangThai == HuongDanStatus.Pending ? "Chờ duyệt" :
+                                   h.TrangThai == HuongDanStatus.Accepted ? "Đã chấp nhận" :
+                                   h.TrangThai == HuongDanStatus.InProgress ? "Đang thực hiện" :
+                                   h.TrangThai == HuongDanStatus.Completed ? "Đã hoàn thành" :
+                                   h.TrangThai == HuongDanStatus.Rejected ? "Đã từ chối" :
+                                   h.TrangThai == HuongDanStatus.Withdrawn ? "Đã rút" : "Khác",
+
+                    NgayDangKy = h.CreatedAt,
+                    NgayChapNhan = h.AcceptedAt,
+                    KetQua = h.KetQua,
+                    GhiChu = h.GhiChu,
+
+                    HocKy = h.DeTai != null ? h.DeTai.HocKy : (byte)0,
+                    NamHoc = h.DeTai != null ? h.DeTai.NamHoc ?? "" : ""
+                })
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Lấy danh sách sinh viên theo đề tài (cho cascade dropdown)
+        /// </summary>
+        public async Task<List<SelectListItem>> GetStudentsByTopicAsync(int maGv, string maDt)
+        {
+            return await _db.SinhViens
+                .Where(sv => _db.HuongDans
+                    .Any(hd => hd.MaSv == sv.MaSv &&
+                               hd.MaGv == maGv &&
+                               hd.MaDt == maDt &&
+                               (hd.TrangThai == HuongDanStatus.Accepted || hd.TrangThai == HuongDanStatus.InProgress || hd.TrangThai == HuongDanStatus.Completed))) // Accepted, InProgress, Completed
+                .Select(sv => new SelectListItem
+                {
+                    Value = sv.MaSv.ToString(),
+                    Text = $"{sv.MaSv} - {sv.HoTenSv}"
+                })
+                .ToListAsync();
+        }
     }
 
 

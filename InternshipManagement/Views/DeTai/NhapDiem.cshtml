@@ -1,0 +1,512 @@
+@model InternshipManagement.Models.ViewModels.NhapDiemVm
+@{
+    ViewData["Title"] = "Nhập/Cập nhật điểm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Nhập/Cập nhật điểm sinh viên</h5>
+        <div class="d-flex gap-2">
+            <a asp-action="DanhSachDiem" class="btn btn-outline-primary">
+                <i class="bi bi-list-ul me-1"></i> Danh sách điểm
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <form asp-action="NhapDiem" method="post" id="nhapDiemForm">
+            @Html.AntiForgeryToken()
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="MaGv" class="form-label required">Giảng viên</label>
+                    <div class="searchable-dropdown" id="giangVienDropdown">
+                        <input type="hidden" asp-for="MaGv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                @foreach (var gv in Model.GiangVienOptions)
+                                {
+                                    <a class="dropdown-item" href="#" data-value="@gv.Value">@gv.Text</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <span asp-validation-for="MaGv" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Học kỳ/Năm học</label>
+                    <div class="searchable-dropdown" id="termDropdownNhapDiem">
+                        <input type="hidden" value="" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="hocKy" value="" />
+                    <input type="hidden" name="namHoc" value="" />
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MaDt" class="form-label required">Đề tài</label>
+                    <div class="searchable-dropdown" id="deTaiDropdown">
+                        <input type="hidden" asp-for="MaDt" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm đề tài..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Chọn đề tài --</a>
+                                @foreach (var dt in Model.DeTaiOptions)
+                                {
+                                    <a class="dropdown-item" href="#" data-value="@dt.Value">@dt.Text</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <span asp-validation-for="MaDt" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MaSv" class="form-label required">Sinh viên</label>
+                    <div class="searchable-dropdown" id="sinhVienDropdown">
+                        <input type="hidden" asp-for="MaSv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm sinh viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                @foreach (var sv in Model.SinhVienOptions)
+                                {
+                                    <a class="dropdown-item" href="#" data-value="@sv.Value">@sv.Text</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <span asp-validation-for="MaSv" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DiemMoi" class="form-label required">Điểm mới</label>
+                    <input asp-for="DiemMoi" class="form-control" type="number" step="0.01" min="0" max="10" placeholder="Nhập điểm từ 0 đến 10" required />
+                    <span asp-validation-for="DiemMoi" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="GhiChu" class="form-label">Ghi chú</label>
+                    <textarea asp-for="GhiChu" class="form-control" rows="3" placeholder="Nhập ghi chú (tùy chọn)"></textarea>
+                    <span asp-validation-for="GhiChu" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a asp-action="DanhSachDiem" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Quay lại
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i> Cập nhật điểm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Syncfusion Toast *@
+<ejs-toast id="toast_type" close="onclose" beforeOpen="onBeforeOpen" created="created" timeOut="10000">
+    <e-toast-position X="Right" Y="Top"></e-toast-position>
+</ejs-toast>
+
+@* Server messages bridge for toasts *@
+<div id="serverMessages"
+     data-success="@TempData["Success"]"
+     data-warning="@TempData["Warning"]"
+     data-error="@TempData["Error"]"
+     style="display:none;"></div>
+
+<script>
+    // Toast functions must be defined BEFORE the tag helper renders
+    var toastObj;
+    
+    window.created = function() {
+        toastObj = this;
+        toastObj.target = document.body;
+        toastObj.position = { X: 'Right', Y: 'Top' };
+        toastObj.timeOut = 10000;
+    };
+
+    window.onclose = function(e) {
+        // Toast closed
+    };
+
+    window.onBeforeOpen = function() {
+        // Toast opening
+    };
+</script>
+
+@section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
+    <script>
+        var toastObj;
+        var toasts = [
+            { title: 'Warning!', content: 'There was a problem with your network connection.', cssClass: 'e-toast-warning', icon: 'e-warning toast-icons' },
+            { title: 'Success!', content: 'Your message has been sent successfully.', cssClass: 'e-toast-success', icon: 'e-success toast-icons' },
+            { title: 'Error!', content: 'A problem has been occurred while submitting your data.', cssClass: 'e-toast-danger', icon: 'e-error toast-icons' },
+            { title: 'Information!', content: 'Please read the comments carefully.', cssClass: 'e-toast-info', icon: 'e-info toast-icons' }
+        ];
+
+        // Function to show toast notification
+        function showMessage(content, severity = 'Info') {
+            if (!toastObj) return;
+
+            let toastIndex;
+            switch(severity) {
+                case 'Success':
+                    toastIndex = 1;
+                    toasts[toastIndex].content = content;
+                    break;
+                case 'Error':
+                    toastIndex = 2;
+                    toasts[toastIndex].content = content;
+                    break;
+                case 'Warning':
+                    toastIndex = 0;
+                    toasts[toastIndex].content = content;
+                    break;
+                default:
+                    toastIndex = 3;
+                    toasts[toastIndex].content = content;
+                    break;
+            }
+
+            toastObj.show(toasts[toastIndex]);
+        }
+
+        // Function to update DeTai options based on selected lecturer and term
+        async function updateDeTaiOptions(maGv) {
+            try {
+                const deTaiEl = document.getElementById('deTaiDropdown');
+                const deTaiDd = deTaiEl.searchableDropdownInstance;
+
+                if (!deTaiDd) return;
+
+                if (maGv) {
+                    const hk = (document.querySelector('input[name="hocKy"]')?.value || '').trim();
+                    const nh = (document.querySelector('input[name="namHoc"]')?.value || '').trim();
+                    const params = new URLSearchParams({ maGv: String(maGv) });
+                    if (hk) params.append('hocKy', hk);
+                    if (nh) params.append('namHoc', nh);
+                    const response = await fetch(`/DeTai/GetLecturerTopicOptionsAsync?${params.toString()}`);
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        // Clear existing options
+                        const optionsContainer = deTaiEl.querySelector('.dropdown-options');
+                        optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">-- Chọn đề tài --</a>';
+
+                        // Update options using SearchableDropdown's method
+                        const options = [{ value: '', text: '-- Chọn đề tài --' }, ...result.data];
+                        await deTaiDd.updateOptions(options);
+
+                        // Setup search function for new options
+                        deTaiDd.searchData = async function (query) {
+                            const q = (query || '').toLowerCase();
+                            const filtered = options.filter(o => !q || o.text.toLowerCase().includes(q));
+                            await deTaiDd.updateOptions(filtered);
+                        };
+
+                        // Reset display
+                        const deTaiInput = deTaiEl.querySelector('input.form-control');
+                        if (deTaiInput) deTaiInput.value = '-- Chọn đề tài --';
+                        const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
+                        if (deTaiHidden) deTaiHidden.value = '';
+                    }
+                } else {
+                    // Clear options when no lecturer selected
+                    const options = [{ value: '', text: '-- Chọn đề tài --' }];
+                    await deTaiDd.updateOptions(options);
+
+                    const deTaiInput = deTaiEl.querySelector('input.form-control');
+                    if (deTaiInput) deTaiInput.value = '-- Chọn đề tài --';
+                    const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
+                    if (deTaiHidden) deTaiHidden.value = '';
+                }
+
+                // Also clear sinh viên when đề tài changes
+                await updateSinhVienOptions('');
+            } catch (error) {
+                console.error('Error loading topics:', error);
+            }
+        }
+
+        // Function to update SinhVien options based on selected topic
+        async function updateSinhVienOptions(maDt) {
+            try {
+                const sinhVienEl = document.getElementById('sinhVienDropdown');
+                const sinhVienDd = sinhVienEl.searchableDropdownInstance;
+
+                if (!sinhVienDd) return;
+
+                if (maDt) {
+                    const response = await fetch(`/DeTai/GetStudentsByTopic?maDt=${maDt}`);
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        // Clear existing options
+                        const optionsContainer = sinhVienEl.querySelector('.dropdown-options');
+                        optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">-- Chọn sinh viên --</a>';
+
+                        // Update options using SearchableDropdown's method
+                        const options = [{ value: '', text: '-- Chọn sinh viên --' }, ...result.data];
+                        await sinhVienDd.updateOptions(options);
+
+                        // Setup search function for new options
+                        sinhVienDd.searchData = async function (query) {
+                            const q = (query || '').toLowerCase();
+                            const filtered = options.filter(o => !q || o.text.toLowerCase().includes(q));
+                            await sinhVienDd.updateOptions(filtered);
+                        };
+
+                        // Reset display
+                        const sinhVienInput = sinhVienEl.querySelector('input.form-control');
+                        if (sinhVienInput) sinhVienInput.value = '-- Chọn sinh viên --';
+                        const sinhVienHidden = sinhVienEl.querySelector('input[type="hidden"]');
+                        if (sinhVienHidden) sinhVienHidden.value = '';
+                    }
+                } else {
+                    // Clear options when no topic selected
+                    const options = [{ value: '', text: '-- Chọn sinh viên --' }];
+                    await sinhVienDd.updateOptions(options);
+
+                    const sinhVienInput = sinhVienEl.querySelector('input.form-control');
+                    if (sinhVienInput) sinhVienInput.value = '-- Chọn sinh viên --';
+                    const sinhVienHidden = sinhVienEl.querySelector('input[type="hidden"]');
+                    if (sinhVienHidden) sinhVienHidden.value = '';
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Show server messages as toasts
+            const serverMessages = document.getElementById('serverMessages');
+            if (serverMessages) {
+                const success = serverMessages.getAttribute('data-success');
+                const warning = serverMessages.getAttribute('data-warning');
+                const error = serverMessages.getAttribute('data-error');
+
+                if (success) showMessage(success, 'Success');
+                if (warning) showMessage(warning, 'Warning');
+                if (error) showMessage(error, 'Error');
+            }
+
+            // Initialize searchable dropdowns
+            const giangVienEl = document.getElementById('giangVienDropdown');
+            const termEl = document.getElementById('termDropdownNhapDiem');
+            const deTaiEl = document.getElementById('deTaiDropdown');
+            const sinhVienEl = document.getElementById('sinhVienDropdown');
+
+            // Giảng viên dropdown
+            const giangVienDd = new SearchableDropdown('giangVienDropdown', {
+                placeholder: 'Tìm kiếm giảng viên...',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            // Get initial options from DOM
+            function getOptionsFromDom(container) {
+                const opts = [];
+                container.querySelectorAll('.dropdown-options a.dropdown-item').forEach(a => {
+                    const v = a.getAttribute('data-value') ?? '';
+                    const t = a.textContent ?? '';
+                    opts.push({ value: v, text: t });
+                });
+                return opts;
+            }
+
+            const giangVienOptions = getOptionsFromDom(giangVienEl);
+            giangVienDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const filtered = giangVienOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await giangVienDd.updateOptions(filtered);
+            };
+            giangVienDd.searchData('');
+
+            // Store reference for later use
+            giangVienEl.searchableDropdownInstance = giangVienDd;
+
+            // Handle giảng viên selection change
+            giangVienEl.addEventListener('selectionChanged', function (e) {
+                const maGv = e?.detail?.value ?? '';
+                updateDeTaiOptions(maGv);
+            });
+
+            // Term combobox (same logic as Index.cshtml)
+            const termDd = new SearchableDropdown('termDropdownNhapDiem', { placeholder: '', searchUrl: null, allowClear: true });
+            function generateTerms(baseYear) {
+                const out = [];
+                for (let y = baseYear - 5; y <= baseYear; y++) {
+                    const nh = `${y}-${y + 1}`;
+                    for (let hk = 1; hk <= 3; hk++) out.push({ value: `${hk}|${nh}`, text: `HK${hk} (${nh})`, hk, nh });
+                }
+                return out;
+            }
+            function filterTerms(all, query) {
+                if (!query) return all;
+                const q = String(query).toLowerCase().replace(/\s+/g, '');
+                const m = q.match(/^(\d{4})$/);
+                if (m) {
+                    const Y = parseInt(m[1], 10);
+                    const expanded = [];
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y}-${Y + 1}`, text: `HK${hk} (${Y}-${Y + 1})`, hk, nh: `${Y}-${Y + 1}` });
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y - 1}-${Y}`, text: `HK${hk} (${Y - 1}-${Y})`, hk, nh: `${Y - 1}-${Y}` });
+                    return expanded;
+                }
+                return all.filter(x => x.text.toLowerCase().includes(q));
+            }
+            const nowY = new Date().getFullYear();
+            let allTerms = generateTerms(nowY).sort((a, b) => (a.nh < b.nh ? 1 : a.nh > b.nh ? -1 : b.hk - a.hk));
+            termDd.searchData = async function (query) {
+                const options = filterTerms(allTerms, query);
+                await termDd.updateOptions(options.map(o => ({ value: o.value, text: o.text })));
+            };
+            termDd.searchData('');
+            termEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const [hk, nh] = val.includes('|') ? val.split('|') : ['', ''];
+                const hkInput = document.querySelector('input[name="hocKy"]');
+                const nhInput = document.querySelector('input[name="namHoc"]');
+                if (hkInput) hkInput.value = hk;
+                if (nhInput) nhInput.value = nh;
+
+                // Refresh topics using current lecturer and selected term
+                const maGv = giangVienEl.querySelector('input[type="hidden"]')?.value || '';
+                if (maGv) updateDeTaiOptions(maGv);
+            });
+
+            // Initialize term display
+            (function initTermDisplay(){
+                const input = termEl?.querySelector('input.form-control');
+                const hkHidden = document.querySelector('input[name="hocKy"]');
+                const nhHidden = document.querySelector('input[name="namHoc"]');
+                if (input) {
+                    if (hkHidden?.value && nhHidden?.value) {
+                        input.value = `HK${hkHidden.value} (${nhHidden.value})`;
+                    } else {
+                        input.value = '-- Tất cả --';
+                    }
+                }
+            })();
+
+            // Đề tài dropdown
+            const deTaiDd = new SearchableDropdown('deTaiDropdown', {
+                placeholder: 'Tìm kiếm đề tài...',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            const deTaiOptions = getOptionsFromDom(deTaiEl);
+            deTaiDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const filtered = deTaiOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await deTaiDd.updateOptions(filtered);
+            };
+            deTaiDd.searchData('');
+
+            // Store reference for later use
+            deTaiEl.searchableDropdownInstance = deTaiDd;
+
+            // Handle đề tài selection change
+            deTaiEl.addEventListener('selectionChanged', function (e) {
+                const maDt = e?.detail?.value ?? '';
+                updateSinhVienOptions(maDt);
+            });
+
+            // Sinh viên dropdown
+            const sinhVienDd = new SearchableDropdown('sinhVienDropdown', {
+                placeholder: 'Tìm kiếm sinh viên...',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            const sinhVienOptions = getOptionsFromDom(sinhVienEl);
+            sinhVienDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const filtered = sinhVienOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await sinhVienDd.updateOptions(filtered);
+            };
+            sinhVienDd.searchData('');
+
+            // Store reference for later use
+            sinhVienEl.searchableDropdownInstance = sinhVienDd;
+
+            // Initialize display values if any
+            (function initDisplayValues() {
+                // Giảng viên
+                const giangVienHidden = giangVienEl.querySelector('input[type="hidden"]');
+                const giangVienInput = giangVienEl.querySelector('input.form-control');
+                if (giangVienHidden?.value && giangVienInput) {
+                    const selectedGv = giangVienOptions.find(opt => opt.value === giangVienHidden.value);
+                    if (selectedGv) {
+                        giangVienInput.value = selectedGv.text;
+                        // Load đề tài for selected giảng viên
+                        updateDeTaiOptions(giangVienHidden.value);
+                    }
+                }
+
+                // Đề tài
+                const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
+                const deTaiInput = deTaiEl.querySelector('input.form-control');
+                if (deTaiHidden?.value && deTaiInput) {
+                    const selectedDt = deTaiOptions.find(opt => opt.value === deTaiHidden.value);
+                    if (selectedDt) {
+                        deTaiInput.value = selectedDt.text;
+                        // Load sinh viên for selected đề tài
+                        updateSinhVienOptions(deTaiHidden.value);
+                    }
+                }
+
+                // Sinh viên
+                const sinhVienHidden = sinhVienEl.querySelector('input[type="hidden"]');
+                const sinhVienInput = sinhVienEl.querySelector('input.form-control');
+                if (sinhVienHidden?.value && sinhVienInput) {
+                    const selectedSv = sinhVienOptions.find(opt => opt.value === sinhVienHidden.value);
+                    if (selectedSv) {
+                        sinhVienInput.value = selectedSv.text;
+                    }
+                }
+            })();
+        });
+    </script>
+
+    <style>
+        .required::after {
+            content: " *";
+            color: red;
+        }
+        
+        /* Toast styles */
+        .e-toast-container {
+            z-index: 9999 !important;
+        }
+        
+        .e-toast {
+            z-index: 9999 !important;
+        }
+        
+        /* Fix scroll issue */
+        body {
+            overflow: auto !important;
+            height: auto !important;
+        }
+        
+        html {
+            overflow: auto !important;
+        }
+    </style>
+}

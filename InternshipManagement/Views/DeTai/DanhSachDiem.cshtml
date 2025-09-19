@@ -1,0 +1,866 @@
+@model InternshipManagement.Models.ViewModels.HuongDanDiemListVm
+@{
+    ViewData["Title"] = "Danh sách điểm sinh viên";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Danh sách điểm sinh viên</h5>
+        <div class="d-flex gap-2"></div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" id="filterForm" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-md-3">
+                    <label class="form-label">Giảng viên</label>
+                    <div class="searchable-dropdown" id="filterGiangVienDropdown">
+                        <input type="hidden" asp-for="Filter.MaGv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm giảng viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                @foreach (var gv in Model.GiangVienOptions)
+                                {
+                                    <a class="dropdown-item" href="#" data-value="@gv.Value">@gv.Text</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Học kỳ/Năm học</label>
+                    <div class="searchable-dropdown" id="filterTermDropdown">
+                        <input type="hidden" value="" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="hocKy" value="" />
+                    <input type="hidden" name="namHoc" value="" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đề tài</label>
+                    <div class="searchable-dropdown" id="filterDeTaiDropdown">
+                        <input type="hidden" asp-for="Filter.MaDt" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm đề tài..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                @foreach (var dt in Model.DeTaiOptions)
+                                {
+                                    <a class="dropdown-item" href="#" data-value="@dt.Value">@dt.Text</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trạng thái</label>
+                    <div class="searchable-dropdown" id="filterTrangThaiDropdown">
+                        <input type="hidden" asp-for="Filter.TrangThai" />
+                        <input type="text" class="form-control" autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                @foreach (var tt in Model.TrangThaiOptions)
+                                {
+                                    <a class="dropdown-item" href="#" data-value="@tt.Value">@tt.Text</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Sinh viên</label>
+                    <div class="searchable-dropdown" id="filterSinhVienDropdown">
+                        <input type="hidden" asp-for="Filter.MaSv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm sinh viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-12 d-flex justify-content-end gap-2">
+                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                    <a asp-action="DanhSachDiem" class="btn btn-outline-secondary d-flex align-items-center px-3 py-2">
+                        <i class="bi-arrow-clockwise me-1"></i> Hủy
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* Syncfusion Toast *@
+    <ejs-toast id="toast_type" close="onclose" beforeOpen="onBeforeOpen" created="created" timeOut="10000">
+        <e-toast-position X="Right" Y="Top"></e-toast-position>
+    </ejs-toast>
+
+    @* Server messages bridge for toasts *@
+    <div id="serverMessages" data-success="@TempData["Success"]" data-warning="@TempData["Warning"]"
+        data-error="@TempData["Error"]" style="display:none;"></div>
+
+    <script>
+        // Toast functions must be defined BEFORE the tag helper renders
+        var toastObj;
+
+        window.created = function () {
+            toastObj = this;
+            toastObj.target = document.body;
+            toastObj.position = { X: 'Right', Y: 'Top' };
+            toastObj.timeOut = 10000;
+        };
+
+        window.onclose = function (e) {
+            // Toast closed
+        };
+
+        window.onBeforeOpen = function () {
+            // Toast opening
+        };
+    </script>
+
+    <!-- Responsive Grid Container -->
+    <div class="grid-responsive">
+        <div class="grid-container">
+            <ejs-grid id="DiemGrid" dataSource="@Model.Items" allowPaging="true" allowSorting="true"
+                allowMultiSorting="true" allowFiltering="false" allowResizing="true" gridLines="Both" height="600"
+                width="100%" grid-lines="Both" enable-hover="false" enable-alt-row="true" queryCellInfo="onDiemCell">
+                <e-grid-pagesettings pageSize="20" pageSizes="new List<int>{10,20,50,100}"></e-grid-pagesettings>
+                <e-grid-columns>
+                    <e-grid-column field="MaSv" headerText="Mã SV" width="100"></e-grid-column>
+                    <e-grid-column field="HoTenSv" headerText="Họ tên SV" width="200"></e-grid-column>
+                    <e-grid-column field="TenKhoa" headerText="Khoa" width="120"></e-grid-column>
+                    <e-grid-column field="MaDt" headerText="Mã ĐT" width="100"></e-grid-column>
+                    <e-grid-column field="TenDt" headerText="Tên đề tài" width="250"></e-grid-column>
+                    <e-grid-column field="HoTenGv" headerText="Giảng viên" width="180"></e-grid-column>
+                    <e-grid-column field="HocKyNamHoc" headerText="Học kỳ" width="120"
+                        textAlign="Center"></e-grid-column>
+                    <e-grid-column field="TrangThaiText" headerText="Trạng thái" width="130" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="KetQua" headerText="Điểm" width="80" textAlign="Center"></e-grid-column>
+                    <e-grid-column headerText="Cập nhật điểm" width="150" textAlign="Center"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+    @* Render three columns via queryCellInfo to avoid template parsing issues *@
+    <script>
+        window.onDiemCell = function (args) {
+            try {
+                var col = args.column;
+                var data = args.data || {};
+                if (!col || !args.cell) return;
+
+                // Trạng thái column: use badge colors
+                if (col.field === 'TrangThaiText' || col.headerText === 'Trạng thái') {
+                    var badgeClass = 'bg-secondary text-white';
+                    switch (data.TrangThai) {
+                        case 0: badgeClass = 'bg-warning text-dark'; break;
+                        case 1: badgeClass = 'bg-info text-white'; break;
+                        case 2: badgeClass = 'bg-primary text-white'; break;
+                        case 3: badgeClass = 'bg-success text-white'; break;
+                        case 4: badgeClass = 'bg-danger text-white'; break;
+                        case 5: badgeClass = 'bg-secondary text-white'; break;
+                    }
+                    args.cell.innerHTML = '<span class="badge ' + badgeClass + '">' + (data.TrangThaiText ?? '') + '</span>';
+                }
+
+                // Điểm column: show colored score or -- when null
+                if (col.field === 'KetQua' || col.headerText === 'Điểm') {
+                    var val = data.KetQua;
+                    if (val === null || val === undefined) {
+                        args.cell.innerHTML = '<span class="text-muted">--</span>';
+                    } else {
+                        var cls = 'fw-bold text-danger';
+                        if (val >= 8) cls = 'fw-bold text-success';
+                        else if (val >= 6.5) cls = 'fw-bold text-primary';
+                        else if (val >= 5) cls = 'fw-bold text-warning';
+                        args.cell.innerHTML = '<span class="' + cls + '">' + val + '</span>';
+                    }
+                }
+
+                // Cập nhật điểm column: update or locked
+                if (!col.field && col.headerText === 'Cập nhật điểm') {
+                    var can = (data.TrangThai === 1 || data.TrangThai === 2 || data.TrangThai === 3);
+                    args.cell.innerHTML = '';
+                    var wrap = document.createElement('div');
+                    wrap.className = 'd-flex gap-1 justify-content-center';
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    if (can) {
+                        btn.className = 'btn btn-sm btn-primary text-white';
+                        btn.title = 'Nhập/Cập nhật điểm';
+                        btn.addEventListener('click', function () {
+                            openDiemDialog(data.MaGv, data.MaSv, data.MaDt, (data.KetQua == null ? null : data.KetQua), data.HoTenSv, data.TenDt, data.HoTenGv);
+                        });
+                    } else {
+                        btn.className = 'btn btn-sm btn-secondary';
+                        btn.disabled = true;
+                        btn.title = 'Không thể cập nhật điểm';
+                    }
+                    btn.innerHTML = '<i class="bi bi-pencil-square"></i>';
+                    wrap.appendChild(btn);
+                    args.cell.appendChild(wrap);
+                }
+            } catch (e) {
+                // Fallback: leave default text
+                console.error('onDiemCell error', e);
+            }
+        }
+    </script>
+
+</div>
+
+<div id="hiddenDialogs" class="d-none">
+    @* Syncfusion Dialog: Cập nhật điểm *@
+    <ejs-dialog id="diemDialog" header="Nhập/Cập nhật điểm" isModal="true" showCloseIcon="true" width="500px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <form method="post" asp-action="CapNhatDiemNhanh" id="capNhatDiemForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MaGv" id="dlgMaGv" />
+                <input type="hidden" name="MaSv" id="dlgMaSv" />
+                <input type="hidden" name="MaDt" id="dlgMaDt" />
+
+                <div class="mb-2">
+                    <div id="dlgInfo" class="alert alert-info p-2 mb-0"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label required">Điểm</label>
+                    <input type="number" class="form-control" name="DiemMoi" id="dlgDiemMoi" step="0.01" min="0" max="10" required />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú</label>
+                    <textarea class="form-control" name="GhiChu" id="dlgGhiChu" rows="3"></textarea>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-2">
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.closeDiemDialog()">Hủy</button>
+                    <button type="button" class="btn btn-primary" onclick="window.submitDiemDialog()">Lưu</button>
+                </div>
+            </form>
+        </e-content-template>
+    </ejs-dialog>
+</div>
+
+@section Scripts {
+    <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
+    <script src="~/js/searchable-dropdown.js"></script>
+
+
+    <script>
+        // Cascade dropdown functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            const giangVienDropdown = document.getElementById('filterGiangVienDropdown');
+            const deTaiDropdown = document.getElementById('filterDeTaiDropdown');
+            const termEl = document.getElementById('filterTermDropdown');
+
+            // Handle giảng viên selection change
+            giangVienDropdown.addEventListener('change', function () {
+                const selectedGvId = this.querySelector('input[type="hidden"]').value;
+                loadDeTaiByGiangVien(selectedGvId);
+            });
+
+            // Handle đề tài selection change
+            deTaiDropdown.addEventListener('change', function () {
+                // Auto submit form when đề tài changes
+                document.getElementById('filterForm').submit();
+            });
+
+            // Initialize term dropdown (SearchableDropdown)
+            const termDd = new SearchableDropdown('filterTermDropdown', { placeholder: '', searchUrl: null, allowClear: true });
+            function generateTerms(baseYear) {
+                const out = [];
+                for (let y = baseYear - 5; y <= baseYear; y++) {
+                    const nh = `${y}-${y + 1}`;
+                    for (let hk = 1; hk <= 3; hk++) out.push({ value: `${hk}|${nh}`, text: `HK${hk} (${nh})`, hk, nh });
+                }
+                return out;
+            }
+            function filterTerms(all, query) {
+                if (!query) return all;
+                const q = String(query).toLowerCase().replace(/\s+/g, '');
+                const m = q.match(/^(\d{4})$/);
+                if (m) {
+                    const Y = parseInt(m[1], 10);
+                    const expanded = [];
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y}-${Y + 1}`, text: `HK${hk} (${Y}-${Y + 1})`, hk, nh: `${Y}-${Y + 1}` });
+                    for (let hk = 1; hk <= 3; hk++) expanded.push({ value: `${hk}|${Y - 1}-${Y}`, text: `HK${hk} (${Y - 1}-${Y})`, hk, nh: `${Y - 1}-${Y}` });
+                    return expanded;
+                }
+                return all.filter(x => x.text.toLowerCase().includes(q));
+            }
+            const nowY = new Date().getFullYear();
+            let allTerms = generateTerms(nowY).sort((a, b) => (a.nh < b.nh ? 1 : a.nh > b.nh ? -1 : b.hk - a.hk));
+            termDd.searchData = async function (query) {
+                const options = filterTerms(allTerms, query);
+                await termDd.updateOptions(options.map(o => ({ value: o.value, text: o.text })));
+            };
+            termDd.searchData('');
+            termEl.addEventListener('selectionChanged', function (e) {
+                const val = e?.detail?.value ?? '';
+                const [hk, nh] = val.includes('|') ? val.split('|') : ['', ''];
+                const hkInput = document.querySelector('input[name="hocKy"]');
+                const nhInput = document.querySelector('input[name="namHoc"]');
+                if (hkInput) hkInput.value = hk;
+                if (nhInput) nhInput.value = nh;
+                // reload topics with lecturer + term
+                const selectedGvId = giangVienDropdown.querySelector('input[type="hidden"]').value;
+                loadDeTaiByGiangVien(selectedGvId);
+            });
+            // Initialize display
+            (function initTermDisplay(){
+                const input = termEl?.querySelector('input.form-control');
+                const hkHidden = document.querySelector('input[name="hocKy"]');
+                const nhHidden = document.querySelector('input[name="namHoc"]');
+                if (input) {
+                    if (hkHidden?.value && nhHidden?.value) {
+                        input.value = `HK${hkHidden.value} (${nhHidden.value})`;
+                    } else {
+                        input.value = '-- Tất cả --';
+                    }
+                }
+            })();
+        });
+
+        // Load đề tài by giảng viên
+        function loadDeTaiByGiangVien(maGv) {
+            const deTaiDropdown = document.getElementById('filterDeTaiDropdown');
+            const optionsContainer = deTaiDropdown.querySelector('.dropdown-options');
+
+            if (!maGv) {
+                // Reset đề tài dropdown
+                optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">-- Chọn đề tài --</a>';
+                deTaiDropdown.querySelector('input[type="text"]').value = '-- Chọn đề tài --';
+                deTaiDropdown.querySelector('input[type="hidden"]').value = '';
+                return;
+            }
+
+            // Show loading
+            optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">Đang tải...</a>';
+
+            // Fetch đề tài with optional term
+            const hk = (document.querySelector('input[name="hocKy"]').value || '').trim();
+            const nh = (document.querySelector('input[name="namHoc"]').value || '').trim();
+            const params = new URLSearchParams({ maGv: String(maGv) });
+            if (hk) params.append('hocKy', hk);
+            if (nh) params.append('namHoc', nh);
+            fetch(`/DeTai/GetTopicsByLecturer?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    let html = '<a class="dropdown-item" href="#" data-value="">-- Chọn đề tài --</a>';
+                    data.forEach(item => {
+                        html += `<a class=\"dropdown-item\" href=\"#\" data-value=\"${item.value}\">${item.text}</a>`;
+                    });
+                    optionsContainer.innerHTML = html;
+
+                    // Reset selection
+                    deTaiDropdown.querySelector('input[type="text"]').value = '-- Chọn đề tài --';
+                    deTaiDropdown.querySelector('input[type="hidden"]').value = '';
+                })
+                .catch(error => {
+                    console.error('Error loading đề tài:', error);
+                    optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">Lỗi tải dữ liệu</a>';
+                });
+        }
+    </script>
+    <script>
+        var toastObj;
+        var toasts = [
+            { title: 'Warning!', content: 'There was a problem with your network connection.', cssClass: 'e-toast-warning', icon: 'e-warning toast-icons' },
+            { title: 'Success!', content: 'Your message has been sent successfully.', cssClass: 'e-toast-success', icon: 'e-success toast-icons' },
+            { title: 'Error!', content: 'A problem has been occurred while submitting your data.', cssClass: 'e-toast-danger', icon: 'e-error toast-icons' },
+            { title: 'Information!', content: 'Please read the comments carefully.', cssClass: 'e-toast-info', icon: 'e-info toast-icons' }
+        ];
+
+        // Function to show toast notification
+        function showMessage(content, severity = 'Info') {
+            if (!toastObj) return;
+
+            let toastIndex;
+            switch (severity) {
+                case 'Success':
+                    toastIndex = 1;
+                    toasts[toastIndex].content = content;
+                    break;
+                case 'Error':
+                    toastIndex = 2;
+                    toasts[toastIndex].content = content;
+                    break;
+                case 'Warning':
+                    toastIndex = 0;
+                    toasts[toastIndex].content = content;
+                    break;
+                default:
+                    toastIndex = 3;
+                    toasts[toastIndex].content = content;
+                    break;
+            }
+
+            toastObj.show(toasts[toastIndex]);
+        }
+
+
+
+        function capNhatDiem(maGv, maSv, maDt, diemHienTai) {
+            // Tìm thông tin sinh viên từ grid
+            const grid = document.getElementById('DiemGrid').ej2_instances[0];
+            const rowData = grid.dataSource.find(item => item.MaGv == maGv && item.MaSv == maSv && item.MaDt == maDt);
+
+            if (rowData) {
+                document.getElementById('modalMaGv').value = maGv;
+                document.getElementById('modalMaSv').value = maSv;
+                document.getElementById('modalMaDt').value = maDt;
+                document.getElementById('modalDiemMoi').value = diemHienTai || '';
+                document.getElementById('modalGhiChu').value = rowData.GhiChu || '';
+
+                document.getElementById('modalThongTin').innerHTML =
+                    `<strong>Sinh viên:</strong> ${rowData.MaSv} - ${rowData.HoTenSv}<br/>` +
+                    `<strong>Đề tài:</strong> ${rowData.MaDt} - ${rowData.TenDt}<br/>` +
+                    `<strong>Giảng viên:</strong> ${rowData.HoTenGv}<br/>` +
+                    `<strong>Trạng thái:</strong> ${rowData.TrangThaiText}`;
+
+                const modal = new bootstrap.Modal(document.getElementById('capNhatDiemModal'));
+                modal.show();
+            }
+        }
+
+        // Open Syncfusion Dialog to enter/update score
+        window.openDiemDialog = function (maGv, maSv, maDt, ketQua, hoTenSv, tenDt, hoTenGv) {
+            try {
+                document.getElementById('dlgMaGv').value = maGv;
+                document.getElementById('dlgMaSv').value = maSv;
+                document.getElementById('dlgMaDt').value = maDt;
+                var input = document.getElementById('dlgDiemMoi');
+                input.value = (ketQua === null || ketQua === undefined) ? '' : ketQua;
+                document.getElementById('dlgGhiChu').value = '';
+
+                var infoHtml = '<strong>Sinh viên:</strong> ' + (maSv ?? '') + ' - ' + (hoTenSv ?? '') + '<br/>'
+                    + '<strong>Đề tài:</strong> ' + (maDt ?? '') + ' - ' + (tenDt ?? '') + '<br/>'
+                    + '<strong>Giảng viên:</strong> ' + (hoTenGv ?? '');
+                document.getElementById('dlgInfo').innerHTML = infoHtml;
+
+                var dlg = document.getElementById('diemDialog').ej2_instances?.[0];
+                if (dlg) dlg.show();
+            } catch (e) {
+                console.error('openDiemDialog error', e);
+            }
+        }
+
+        window.closeDiemDialog = function () {
+            var dlg = document.getElementById('diemDialog').ej2_instances?.[0];
+            if (dlg) dlg.hide();
+        }
+
+        window.submitDiemDialog = async function () {
+            try {
+                var form = document.getElementById('capNhatDiemForm');
+                if (!form) return;
+                const payload = new FormData(form);
+                const url = '@Url.Action("CapNhatDiemNhanh", "DeTai")';
+                const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: payload,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(token ? { 'RequestVerificationToken': token } : {})
+                    }
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                let result = null;
+                if (ct.includes('application/json')) {
+                    result = await res.json();
+                } else {
+                    // Fallback if server returned HTML (redirect/view)
+                    await res.text();
+                }
+
+                const isSuccess = (result && result.success) || (!result && res.ok);
+                if (isSuccess) {
+                    showMessage((result && result.message) || 'Cập nhật thành công', 'Success');
+                    var grid = document.getElementById('DiemGrid').ej2_instances?.[0];
+                    if (grid) {
+                        const maGv = payload.get('MaGv');
+                        const maSv = payload.get('MaSv');
+                        const maDt = payload.get('MaDt');
+                        const diemMoi = payload.get('DiemMoi');
+                        const ds = grid.dataSource || [];
+                        const item = ds.find(r => String(r.MaGv) === String(maGv) && String(r.MaSv) === String(maSv) && String(r.MaDt) === String(maDt));
+                        if (item) {
+                            item.KetQua = diemMoi ? parseFloat(diemMoi) : null;
+                            grid.refresh();
+                        }
+                    }
+                    closeDiemDialog();
+                } else {
+                    showMessage((result && result.message) || 'Cập nhật thất bại', 'Error');
+                }
+            } catch (e) {
+                console.error('submitDiemDialog error', e);
+                showMessage('Có lỗi xảy ra khi cập nhật.', 'Error');
+            }
+        }
+
+        // Function to update DeTai options based on selected lecturer
+        async function updateFilterDeTaiOptions(maGv) {
+            try {
+                const deTaiEl = document.getElementById('filterDeTaiDropdown');
+                const deTaiDd = deTaiEl?.searchableDropdownInstance;
+                if (!deTaiDd) return;
+
+                // Helper to apply options to dropdown
+                async function applyDeTaiOptions(arr) {
+                    const options = [{ value: '', text: '-- Tất cả --' }, ...arr];
+                    await deTaiDd.updateOptions(options);
+                    const deTaiInput = deTaiEl.querySelector('input.form-control');
+                    const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
+                    const currentVal = (deTaiHidden?.value || '').trim();
+                    if (currentVal) {
+                        const found = options.find(o => String((o.value||'').trim()) === currentVal);
+                        if (found && deTaiInput) deTaiInput.value = found.text;
+                    } else {
+                        if (deTaiInput) deTaiInput.value = '-- Tất cả --';
+                    }
+                }
+
+                if (!maGv) {
+                    await applyDeTaiOptions([]);
+                    // Also clear Sinh viên when no lecturer
+                    if (typeof updateFilterSinhVienOptions === 'function') updateFilterSinhVienOptions('');
+                    return;
+                }
+
+                // Use public endpoint to avoid 404 on admin-guarded action
+                const urls = [
+                    `/DeTai/GetTopicsByLecturer?maGv=${encodeURIComponent(maGv)}`
+                ];
+
+                let data = null;
+                for (const u of urls) {
+                    try {
+                        const res = await fetch(u, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                        if (!res.ok) continue;
+                        const ct = res.headers.get('content-type') || '';
+                        const text = await res.text();
+                        if (!text) continue;
+                        let parsed = null;
+                        if (ct.includes('application/json')) parsed = JSON.parse(text);
+                        else { try { parsed = JSON.parse(text); } catch { parsed = null; }
+                        }
+                        if (!parsed) continue;
+                        // Both shapes supported: {success,data} or plain array
+                        data = Array.isArray(parsed) ? parsed : (parsed.data || []);
+                        break;
+                    } catch {}
+                }
+
+                if (Array.isArray(data)) {
+                    // Normalize to {value,text}
+                    const normalized = data.map(x => ({ value: x.value ?? x.Value ?? '', text: x.text ?? x.Text ?? '' }));
+                    // Try to restore selection; if missing in list, inject it
+                    const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
+                    const deTaiInput = deTaiEl.querySelector('input.form-control');
+                    const currentVal = (deTaiHidden?.value || '').trim();
+                    let list = normalized.slice();
+                    if (currentVal && !list.some(o => String((o.value||'').trim()) === currentVal)) {
+                        list.unshift({ value: currentVal, text: currentVal });
+                    }
+                    await applyDeTaiOptions(list);
+                    if (currentVal && deTaiInput) {
+                        const found = list.find(o => String((o.value||'').trim()) === currentVal);
+                        if (found) deTaiInput.value = found.text;
+                    }
+                } else {
+                    await applyDeTaiOptions([]);
+                }
+            } catch (error) {
+                console.error('Error loading topics:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Show server messages as toasts
+            const serverMessages = document.getElementById('serverMessages');
+            if (serverMessages) {
+                const success = serverMessages.getAttribute('data-success');
+                const warning = serverMessages.getAttribute('data-warning');
+                const error = serverMessages.getAttribute('data-error');
+
+                if (success) showMessage(success, 'Success');
+                if (warning) showMessage(warning, 'Warning');
+                if (error) showMessage(error, 'Error');
+            }
+
+            // Initialize searchable dropdowns for filters
+            const filterGiangVienEl = document.getElementById('filterGiangVienDropdown');
+            const filterDeTaiEl = document.getElementById('filterDeTaiDropdown');
+            const filterTrangThaiEl = document.getElementById('filterTrangThaiDropdown');
+            const filterSinhVienEl = document.getElementById('filterSinhVienDropdown');
+
+            // Get initial options from DOM
+            function getOptionsFromDom(container) {
+                const opts = [];
+                container.querySelectorAll('.dropdown-options a.dropdown-item').forEach(a => {
+                    const v = a.getAttribute('data-value') ?? '';
+                    const t = a.textContent ?? '';
+                    opts.push({ value: v, text: t });
+                });
+                return opts;
+            }
+
+            // Filter Giảng viên dropdown
+            const filterGiangVienDd = new SearchableDropdown('filterGiangVienDropdown', {
+                placeholder: 'Tìm kiếm giảng viên...',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            const filterGiangVienOptions = getOptionsFromDom(filterGiangVienEl);
+            filterGiangVienDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const filtered = filterGiangVienOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await filterGiangVienDd.updateOptions(filtered);
+            };
+            filterGiangVienDd.searchData('');
+
+            // Store reference for later use
+            filterGiangVienEl.searchableDropdownInstance = filterGiangVienDd;
+
+            // Handle giảng viên selection change
+            filterGiangVienEl.addEventListener('selectionChanged', function (e) {
+                const maGv = e?.detail?.value ?? '';
+                updateFilterDeTaiOptions(maGv);
+            });
+
+            // Filter Đề tài dropdown
+            const filterDeTaiDd = new SearchableDropdown('filterDeTaiDropdown', {
+                placeholder: 'Tìm kiếm đề tài...',
+                searchUrl: null,
+                allowClear: true
+            });
+
+            const filterDeTaiOptions = getOptionsFromDom(filterDeTaiEl);
+            filterDeTaiDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const filtered = filterDeTaiOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await filterDeTaiDd.updateOptions(filtered);
+            };
+            filterDeTaiDd.searchData('');
+
+            // Store reference for later use
+            filterDeTaiEl.searchableDropdownInstance = filterDeTaiDd;
+
+            // Khi chọn Đề tài: chỉ fetch danh sách Sinh viên (không reload)
+            filterDeTaiEl.addEventListener('selectionChanged', function (e) {
+                const maDt = e?.detail?.value ?? '';
+                updateFilterSinhVienOptions(maDt);
+            });
+
+            // Filter Sinh viên dropdown
+            const filterSinhVienDd = new SearchableDropdown('filterSinhVienDropdown', {
+                placeholder: 'Tìm kiếm sinh viên...',
+                searchUrl: null,
+                allowClear: true
+            });
+            filterSinhVienEl.searchableDropdownInstance = filterSinhVienDd;
+
+            // Filter Trạng thái dropdown
+            const filterTrangThaiDd = new SearchableDropdown('filterTrangThaiDropdown', {
+                placeholder: '',
+                searchUrl: null,
+                allowClear: false
+            });
+
+            const filterTrangThaiOptions = getOptionsFromDom(filterTrangThaiEl);
+            filterTrangThaiDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const filtered = filterTrangThaiOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await filterTrangThaiDd.updateOptions(filtered);
+            };
+            filterTrangThaiDd.searchData('');
+
+            // Store reference for later use
+            filterTrangThaiEl.searchableDropdownInstance = filterTrangThaiDd;
+
+            // Initialize display values if any
+            (function initFilterDisplayValues() {
+                // Giảng viên
+                const giangVienHidden = filterGiangVienEl.querySelector('input[type="hidden"]');
+                const giangVienInput = filterGiangVienEl.querySelector('input.form-control');
+                if (giangVienHidden?.value && giangVienInput) {
+                    const selectedGv = filterGiangVienOptions.find(opt => opt.value === giangVienHidden.value);
+                    if (selectedGv) {
+                        giangVienInput.value = selectedGv.text;
+                        // Load đề tài for selected giảng viên
+                        updateFilterDeTaiOptions(giangVienHidden.value);
+                    }
+                } else if (giangVienInput) {
+                    giangVienInput.value = '-- Tất cả --';
+                }
+
+                // Đề tài
+                const deTaiHidden = filterDeTaiEl.querySelector('input[type="hidden"]');
+                const deTaiInput = filterDeTaiEl.querySelector('input.form-control');
+                if (deTaiHidden?.value && deTaiInput) {
+                    const opts = getOptionsFromDom(filterDeTaiEl);
+                    const selectedDt = opts.find(opt => opt.value === deTaiHidden.value) || { value: deTaiHidden.value, text: deTaiHidden.value };
+                    deTaiInput.value = selectedDt.text;
+                    // load sinh viên cho đề tài đã chọn
+                    updateFilterSinhVienOptions(selectedDt.value);
+                } else if (deTaiInput) {
+                    deTaiInput.value = '-- Tất cả --';
+                }
+
+                // Trạng thái
+                const trangThaiHidden = filterTrangThaiEl.querySelector('input[type="hidden"]');
+                const trangThaiInput = filterTrangThaiEl.querySelector('input.form-control');
+                if (trangThaiHidden?.value && trangThaiInput) {
+                    const selectedTt = filterTrangThaiOptions.find(opt => opt.value === trangThaiHidden.value);
+                    if (selectedTt) {
+                        trangThaiInput.value = selectedTt.text;
+                    }
+                } else if (trangThaiInput) {
+                    trangThaiInput.value = '-- Tất cả --';
+                }
+
+                // Sinh viên hiển thị mặc định
+                const svHidden = filterSinhVienEl.querySelector('input[type="hidden"]');
+                const svInput = filterSinhVienEl.querySelector('input.form-control');
+                if (svInput && !svHidden?.value) svInput.value = '-- Tất cả --';
+            })();
+
+            // Handle filter form submission
+            const filterForm = document.getElementById('filterForm');
+            filterForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                // Build query string with filter parameters
+                var formData = new FormData(this);
+                var queryParams = new URLSearchParams();
+
+                for (var pair of formData.entries()) {
+                    if (pair[1]) { // Only add non-empty values
+                        queryParams.append(pair[0], pair[1]);
+                    }
+                }
+
+                window.location.href = '@Url.Action("DanhSachDiem", "DeTai")?' + queryParams.toString();
+            });
+
+            // Load sinh viên khi chọn đề tài
+            filterDeTaiEl.addEventListener('selectionChanged', function (e) {
+                const maDt = e?.detail?.value ?? '';
+                updateFilterSinhVienOptions(maDt);
+            });
+
+            async function updateFilterSinhVienOptions(maDt) {
+                try {
+                    const svEl = filterSinhVienEl;
+                    const svDd = svEl.searchableDropdownInstance;
+                    if (!svDd) return;
+
+                    const input = svEl.querySelector('input.form-control');
+                    const hidden = svEl.querySelector('input[type="hidden"]');
+
+                    // Normalize maDt (trim spaces)
+                    maDt = (maDt || '').trim();
+
+                    // Need both maGv and maDt to fetch students
+                    const maGv = filterGiangVienEl.querySelector('input[type="hidden"]')?.value || '';
+
+                    if (!maDt || !maGv) {
+                        await svDd.updateOptions([{ value: '', text: '-- Tất cả --' }]);
+                        if (input) input.value = '-- Tất cả --';
+                        if (hidden) hidden.value = '';
+                        return;
+                    }
+
+                    const url = `/DeTai/GetStudentsByTopic?maGv=${encodeURIComponent(maGv)}&maDt=${encodeURIComponent(maDt)}`;
+                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (!res.ok) {
+                        await svDd.updateOptions([{ value: '', text: '-- Tất cả --' }]);
+                        if (input) input.value = '-- Tất cả --';
+                        if (hidden) hidden.value = '';
+                        return;
+                    }
+                    const data = await res.json();
+                    const arr = Array.isArray(data) ? data : (data?.data || data || []);
+                    const options = [{ value: '', text: '-- Tất cả --' }, ...arr.map(x => ({ value: x.value, text: x.text }))];
+                    await svDd.updateOptions(options);
+
+                    // Restore selected MaSv if present
+                    const svHiddenVal = hidden?.value || '';
+                    if (svHiddenVal) {
+                        const selected = options.find(o => String(o.value) === String(svHiddenVal));
+                        if (selected && input) {
+                            input.value = selected.text;
+                        }
+                    } else {
+                        if (input) input.value = '-- Tất cả --';
+                        if (hidden) hidden.value = '';
+                    }
+                } catch (err) {
+                    console.error('Error loading students:', err);
+                }
+            }
+        });
+    </script>
+
+    <style>
+        .required::after {
+            content: " *";
+            color: red;
+        }
+
+        .ma-sv-code {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #0066cc;
+        }
+
+        /* Toast styles */
+        .e-toast-container {
+            z-index: 9999 !important;
+        }
+
+        .e-toast {
+            z-index: 9999 !important;
+        }
+
+        /* Fix scroll issue */
+        body {
+            overflow: auto !important;
+            height: auto !important;
+        }
+
+        html {
+            overflow: auto !important;
+        }
+
+        /* Đảm bảo modal hoạt động */
+        .modal {
+            z-index: 1055 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 1050 !important;
+        }
+    </style>
+}

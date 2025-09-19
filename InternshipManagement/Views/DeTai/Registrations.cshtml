@@ -80,9 +80,9 @@
                     asp-route-trangThai="@(Model.Filter.TrangThai)" asp-route-maDt="@(Model.Filter.MaDt)">
                     <i class="bi bi-file-earmark-excel me-1"></i>Excel
                 </a>
-                    <button class="btn btn-primary py-2" type="submit" id="btnFilter">
-                        <i class="bi bi-funnel me-1"></i>Lọc
-                    </button>
+                <button class="btn btn-primary py-2" type="submit" id="btnFilter">
+                    <i class="bi bi-funnel me-1"></i>Lọc
+                </button>
             </div>
         </form>
 
@@ -95,20 +95,25 @@
                         pageSizes="new List<int>{10,20,50,100,500}"></e-grid-pagesettings>
                     <e-grid-columns>
                         <e-grid-column field="Stt" headerText="STT" width="60" textAlign="Center"></e-grid-column>
-                        <e-grid-column field="NgayDangKy" headerText="Ngày đăng ký" width="130" type="date" format="dd/MM/yyyy"></e-grid-column>
+                        <e-grid-column field="NgayDangKy" headerText="Ngày đăng ký" width="130" type="date"
+                            format="dd/MM/yyyy"></e-grid-column>
                         <e-grid-column field="HotenSv" headerText="Sinh viên" width="220"></e-grid-column>
                         <e-grid-column field="Sv_TenKhoa" headerText="Khoa" width="180"></e-grid-column>
                         <e-grid-column field="MaDt" headerText="Mã ĐT" width="120"></e-grid-column>
                         <e-grid-column field="TenDt" headerText="Tên đề tài" width="300"></e-grid-column>
-                        <e-grid-column field="HocKyNamHoc" headerText="Học kỳ" width="140" textAlign="Center"></e-grid-column>
-                        <e-grid-column headerText="Trạng thái" width="140" textAlign="Center" template="#trangThaiTemplate"></e-grid-column>
-                        <e-grid-column field="KetQua" headerText="Kết quả" width="100" textAlign="Center"></e-grid-column>
-                        <e-grid-column headerText="Thao tác" width="180" textAlign="Center" template="#actionTemplate"></e-grid-column>
+                        <e-grid-column field="HocKyNamHoc" headerText="Học kỳ" width="140"
+                            textAlign="Center"></e-grid-column>
+                        <e-grid-column headerText="Trạng thái" width="140" textAlign="Center"
+                            template="#trangThaiTemplate"></e-grid-column>
+                        <e-grid-column field="KetQua" headerText="Kết quả" width="100"
+                            textAlign="Center"></e-grid-column>
+                        <e-grid-column headerText="Thao tác" width="180" textAlign="Center"
+                            template="#actionTemplate"></e-grid-column>
                     </e-grid-columns>
                 </ejs-grid>
             </div>
         </div>
-        
+
         <script id="sinhVienTemplate" type="text/x-template">
             <div class="fw-semibold">${HotenSv} (#${Masv})</div>
             <div class="text-muted small">${Sv_TenKhoa} (${Sv_MaKhoa})</div>
@@ -151,77 +156,77 @@
         </script>
 
         <form id="frmApprove" method="post" asp-action="ApproveRegistration" class="d-none">
-                                                    @Html.AntiForgeryToken()
+            @Html.AntiForgeryToken()
             <input type="hidden" name="maSv" />
             <input type="hidden" name="maDt" />
             <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
             <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
             <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
             <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
-                                                </form>
+        </form>
         <form id="frmReject" method="post" asp-action="RejectRegistration" class="d-none">
-                                                    @Html.AntiForgeryToken()
+            @Html.AntiForgeryToken()
             <input type="hidden" name="maSv" />
             <input type="hidden" name="maDt" />
             <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
             <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
             <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
             <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
-                                                </form>
+        </form>
         <form id="frmStart" method="post" asp-action="SetHuongDanInProgress" class="d-none">
-                                                @Html.AntiForgeryToken()
+            @Html.AntiForgeryToken()
             <input type="hidden" name="maSv" />
             <input type="hidden" name="maDt" />
-                                                <input type="hidden" name="ghiChu" value="Bắt đầu thực hiện" />
+            <input type="hidden" name="ghiChu" value="Bắt đầu thực hiện" />
             <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
             <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
             <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
             <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
-                                            </form>
+        </form>
 
         <div class="modal fade" id="completeModalReg" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog modal-dialog-centered">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Nhập điểm hoàn thành</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Nhập điểm hoàn thành</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                     <form method="post" asp-action="SetHuongDanCompleted" id="frmComplete">
-                                                        @Html.AntiForgeryToken()
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Sinh viên</label>
+                        @Html.AntiForgeryToken()
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Sinh viên</label>
                                 <div class="form-control-plaintext fw-semibold" id="cmSv"></div>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Đề tài</label>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Đề tài</label>
                                 <div class="form-control-plaintext" id="cmDt"></div>
-                                                            </div>
-                                                            <div class="mb-3">
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label" for="cmKetQua">Điểm (0–10)</label>
                                 <input type="number" step="0.01" min="0" max="10" class="form-control" id="cmKetQua"
                                     name="ketQua" required />
-                                                            </div>
-                                                            <div class="mb-2">
+                            </div>
+                            <div class="mb-2">
                                 <label class="form-label" for="cmGhiChu">Ghi chú</label>
                                 <input type="text" class="form-control" id="cmGhiChu" name="ghiChu" />
-                                                            </div>
+                            </div>
                             <input type="hidden" name="maSv" id="cmMaSv" />
                             <input type="hidden" name="maDt" id="cmMaDt" />
                             <input type="hidden" name="hocKy" value="@(Model.Filter.HocKy)" />
                             <input type="hidden" name="namHoc" value="@(Model.Filter.NamHoc)" />
                             <input type="hidden" name="trangThai" value="@(Model.Filter.TrangThai)" />
                             <input type="hidden" name="filterMaDt" value="@(Model.Filter.MaDt)" />
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                                                            <button type="submit" class="btn btn-success">
-                                                                <i class="bi bi-check2-circle me-1"></i>Xác nhận hoàn thành
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check2-circle me-1"></i>Xác nhận hoàn thành
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -244,35 +249,35 @@
                     const params = new URLSearchParams();
                     if (hocKy) params.append('hocKy', hocKy);
                     if (namHoc) params.append('namHoc', namHoc);
-                    
+
                     const response = await fetch(`${url}?${params}`);
                     const result = await response.json();
-                    
+
                     if (result.success) {
                         // Use SearchableDropdown's updateOptions method instead of manual DOM manipulation
                         const deTaiEl = document.getElementById('deTaiDropdownReg');
                         const deTaiDd = deTaiEl.searchableDropdownInstance;
-                        
+
                         if (deTaiDd) {
                             // Clear existing options first to prevent duplicates
                             const optionsContainer = deTaiEl.querySelector('.dropdown-options');
                             optionsContainer.innerHTML = '';
-                            
+
                             // Update options using SearchableDropdown's method (preserves event handlers)
                             await deTaiDd.updateOptions(result.data);
-                            
+
                             // Setup search function for new options
                             deTaiDd.searchData = async function (query) {
                                 const q = (query || '').toLowerCase();
                                 const filtered = result.data.filter(o => !q || o.text.toLowerCase().includes(q));
                                 await deTaiDd.updateOptions(filtered);
                             };
-                            
+
                             // Preserve existing DeTai selection if any
                             const deTaiInput = deTaiEl.querySelector('input.form-control');
                             const deTaiHidden = document.querySelector('input[name="maDt"]');
                             const currentMaDt = deTaiHidden?.value || '';
-                            
+
                             if (currentMaDt) {
                                 // Try to find and maintain the selected option
                                 const selectedOption = result.data.find(opt => opt.value === currentMaDt);
@@ -332,11 +337,11 @@
                 const nhInput = document.querySelector('input[name="namHoc"]');
                 if (hkInput) hkInput.value = hk;
                 if (nhInput) nhInput.value = nh;
-                
+
                 // Fetch đề tài theo học kỳ đã chọn
                 updateDeTaiOptions(hk, nh);
             });
-            
+
             // Initialize display value and load initial topics
             (function initTermDisplay() {
                 const input = termEl?.querySelector('input.form-control');
@@ -393,7 +398,7 @@
             // DeTai combobox with dynamic options
             const deTaiEl = document.getElementById('deTaiDropdownReg');
             const deTaiDd = new SearchableDropdown('deTaiDropdownReg', { placeholder: 'Tìm kiếm đề tài...', searchUrl: null, allowClear: true });
-            
+
             // Store reference for later use
             deTaiEl.searchableDropdownInstance = deTaiDd;
             // searchData will be set dynamically after loading options from API
