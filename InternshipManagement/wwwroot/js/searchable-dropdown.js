@@ -19,6 +19,7 @@ class SearchableDropdown {
         this.isDropdownOpen = false;
         this.currentSearchQuery = '';
         this.selectedIndex = -1;
+        this._originalStaticOptions = null; // [{value,text}]
         
         this.init();
     }
@@ -41,6 +42,9 @@ class SearchableDropdown {
             return;
         }
         
+        // Capture initial static options (if any) for local filtering mode
+        this._captureInitialStaticOptions();
+        
         this.setupEventListeners();
         this.loadInitialData();
         // Ensure static DOM options (if any) are clickable even without remote search
@@ -52,8 +56,20 @@ class SearchableDropdown {
     setupEventListeners() {
         // Input focus
         this.textInput.addEventListener('focus', () => {
+            // Do not clear default text on focus; allow click selection to replace it
             if (!this.isDropdownOpen) {
                 this.openDropdown();
+            }
+        });
+        
+        // Select-all on first click (before caret placement)
+        this.textInput.addEventListener('mousedown', (e) => {
+            const notFocused = document.activeElement !== this.textInput;
+            const fullSelected = this.textInput.selectionStart === 0 && this.textInput.selectionEnd === this.textInput.value.length;
+            if (notFocused || !fullSelected) {
+                e.preventDefault();
+                this.textInput.focus();
+                this.textInput.select();
             }
         });
         
@@ -66,6 +82,7 @@ class SearchableDropdown {
                 this.hiddenInput.value = '';
             }
             
+            // When typing, do not auto-revert to default; just perform search/filter
             if (this.isDropdownOpen) {
                 this.debouncedSearch(e.target.value);
             } else {
@@ -78,14 +95,10 @@ class SearchableDropdown {
             this.handleKeyboardNavigation(e);
         });
         
-        // Input click
+        // Input click (open dropdown if needed)
         this.textInput.addEventListener('click', () => {
             if (!this.isDropdownOpen) {
                 this.openDropdown();
-            }
-            // Select all text when clicking on input with existing value
-            if (this.textInput.value && this.hiddenInput.value) {
-                this.textInput.select();
             }
         });
         
@@ -259,8 +272,11 @@ class SearchableDropdown {
     
     async searchData(query = '', filterValue = '') {
         if (!this.options.searchUrl) {
-            // No remote URL: just ensure existing DOM options are clickable
-            this.bindDomOptions();
+            // Static DOM mode: perform client-side filtering using captured options
+            const base = Array.isArray(this._originalStaticOptions) ? this._originalStaticOptions : this._readCurrentDomOptions();
+            const q = String(query || '').toLowerCase();
+            const filtered = base.filter(o => !q || (o.text || '').toLowerCase().includes(q) || String(o.value || '').toLowerCase().includes(q));
+            await this.updateOptions(filtered);
             return;
         }
         
@@ -277,7 +293,7 @@ class SearchableDropdown {
             // Handle different response formats
             let options = [];
             if (data.success && data.data) {
-                // API format: {success: true, data: [...]}
+                // API format: {success: true, data: [...]} 
                 options = data.data;
             } else if (data.options) {
                 options = data.options;
@@ -303,10 +319,8 @@ class SearchableDropdown {
         this.selectedIndex = -1;
         this.clearSelection();
         
-        // Load initial data if not loaded
-        if (this.optionsContainer.children.length <= (this.options.allowClear ? 1 : 0)) {
-            this.searchData(this.currentSearchQuery, this.getFilterValue());
-        }
+        // Always run a search/filter pass when opening to reflect current query
+        this.searchData(this.currentSearchQuery, this.getFilterValue());
     }
     
     closeDropdown() {
@@ -317,6 +331,11 @@ class SearchableDropdown {
         this.isDropdownOpen = false;
         this.selectedIndex = -1;
         this.clearSelection();
+        
+        // On close, if there is no selected value, revert to default display
+        if (!this.hiddenInput.value) {
+            this._applyDefaultDisplay();
+        }
     }
     
     selectOption(index) {
@@ -348,20 +367,36 @@ class SearchableDropdown {
             const defaultText = firstOption.textContent || '-- Tất cả --';
             this.hiddenInput.value = defaultValue;
             this.textInput.value = defaultText;
+        } else {
+            // Fallback text
+            this.hiddenInput.value = '';
+            this.textInput.value = '-- Tất cả --';
         }
     }
 
-    // Ensure combobox never stays empty - auto-revert to default when cleared
+    _applyDefaultDisplay() {
+        // Ensure the text input shows default display when no selection
+        const defaultText = this._getDefaultText();
+        this.textInput.value = defaultText;
+    }
+
+    _getDefaultText() {
+        const defaultAnchor = this.optionsContainer.querySelector('.dropdown-item[data-value=""]');
+        return defaultAnchor ? (defaultAnchor.textContent || '-- Tất cả --') : '-- Tất cả --';
+    }
+
+    _isDefaultDisplay(text) {
+        const t = String(text || '').trim();
+        const def = String(this._getDefaultText() || '').trim();
+        return t === def;
+    }
+    
+    // Ensure combobox never stays with arbitrary text when leaving without a selection
     _setupComboboxBehavior() {
-        this.textInput.addEventListener('input', (e) => {
-            if (e.target.value.trim() === '' && this.hiddenInput.value === '') {
-                this._findAndSelectDefaultOption();
-            }
-        });
-        
+        // Do NOT auto-revert to default on input while typing; only on blur/close if no selection
         this.textInput.addEventListener('blur', (e) => {
-            if (e.target.value.trim() === '' && this.hiddenInput.value === '') {
-                this._findAndSelectDefaultOption();
+            if (!this.hiddenInput.value) {
+                this._applyDefaultDisplay();
             }
         });
     }
@@ -436,6 +471,9 @@ class SearchableDropdown {
                         this.textInput.value = `#${initialValue}`;
                     }
                 }
+            } else {
+                // No initial value; show default text
+                this._applyDefaultDisplay();
             }
         } else if (this.options.searchUrl && initialValue) {
             // If no filter but there's a value, load all data to find the selected one
@@ -453,13 +491,17 @@ class SearchableDropdown {
                     this.textInput.value = `#${initialValue}`;
                 }
             }
-        } else if (!this.options.searchUrl) {
-            // Static DOM mode: reflect initial hidden value to text if possible
+        } else {
+            // Static DOM mode: reflect initial hidden value to text if possible, otherwise default
             if (initialValue) {
                 const selectedOption = this.optionsContainer.querySelector(`[data-value="${initialValue}"]`);
                 if (selectedOption) {
                     this.textInput.value = selectedOption.textContent;
+                } else {
+                    this._applyDefaultDisplay();
                 }
+            } else {
+                this._applyDefaultDisplay();
             }
             this.bindDomOptions();
         }
@@ -473,6 +515,30 @@ class SearchableDropdown {
             }, this.options.debounceDelay);
         }
         return this._debouncedSearch;
+    }
+
+    _readCurrentDomOptions() {
+        const all = [];
+        this.optionsContainer.querySelectorAll('.dropdown-item').forEach(a => {
+            const value = a.getAttribute('data-value');
+            const text = a.textContent || '';
+            if (value !== null) all.push({ value, text });
+        });
+        // Remove the default option from base (value == '') to avoid duplicate when filtering
+        return all.filter(o => String(o.value) !== '');
+    }
+
+    _captureInitialStaticOptions() {
+        // Build a base list of options from initial DOM for static filtering
+        const opts = [];
+        const anchors = this.optionsContainer ? this.optionsContainer.querySelectorAll('.dropdown-item') : [];
+        anchors.forEach(a => {
+            const v = a.getAttribute('data-value');
+            if (v === null) return;
+            const t = a.textContent || '';
+            opts.push({ value: v, text: t });
+        });
+        this._originalStaticOptions = opts.filter(o => String(o.value) !== '');
     }
 }
 

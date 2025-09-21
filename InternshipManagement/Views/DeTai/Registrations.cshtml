@@ -141,10 +141,10 @@
         </script>
         <script id="actionTemplate" type="text/x-template">
             ${if(TrangThai==0)}
-                <div class="d-flex gap-2 justify-content-center">
+                <div class="d-flex gap-2 justify-content-center" id="action-${Masv}-${MaDt}">
                     <button type="button" class="btn btn-primary btn-sm w-100 btn-approve" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-check-circle me-1"></i>Duyệt</button>
                     <button type="button" class="btn btn-danger btn-sm w-100 btn-reject" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-x-circle me-1"></i>Từ chối</button>
-                                            </div>
+                </div>
             ${/if}
             ${if(TrangThai==1)}
                 <button type="button" class="btn btn-outline-primary btn-sm btn-start" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-play-circle me-1"></i>Bắt đầu</button>
@@ -240,8 +240,73 @@
 @section Scripts {
     <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
     <script src="~/js/searchable-dropdown.js"></script>
-    <script>
+        <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Function to calculate registration end date based on HocKy and NamHoc
+            function calculateRegistrationEnd(hocKy, namHoc) {
+                if (!hocKy || !namHoc) return null;
+                
+                const yearParts = namHoc.split('-');
+                if (yearParts.length !== 2) return null;
+                
+                const baseYear = parseInt(yearParts[0], 10);
+                const today = new Date();
+                let regStart, regEnd;
+                
+                switch (parseInt(hocKy, 10)) {
+                    case 1:
+                        // HK1: 5/9 -> 31/12, nằm trong năm đầu của năm học
+                        regStart = new Date(baseYear, 8, 5); // Month is 0-indexed
+                        break;
+                    case 2:
+                        // HK2: 1/1 -> 25/5, nhưng của NĂM SAU
+                        regStart = new Date(baseYear + 1, 0, 1);
+                        break;
+                    case 3:
+                        // HK3: 26/5 -> 4/9, nhưng của NĂM SAU
+                        regStart = new Date(baseYear + 1, 4, 26);
+                        break;
+                    default:
+                        return null;
+                }
+                
+                regEnd = new Date(regStart);
+                regEnd.setDate(regEnd.getDate() + 24); // Add 24 days
+                
+                return regEnd;
+            }
+            
+            // Function to check if registration is expired
+            function isRegistrationExpired(hocKy, namHoc) {
+                const regEnd = calculateRegistrationEnd(hocKy, namHoc);
+                if (!regEnd) return false;
+                
+                const today = new Date();
+                return today > regEnd;
+            }
+            
+            // Store the functions globally so they can be used in templates
+            window.calculateRegistrationEnd = calculateRegistrationEnd;
+            window.isRegistrationExpired = isRegistrationExpired;
+            
+            // Check and update expired registrations after grid is rendered
+            setTimeout(function() {
+                const gridData = @Html.Raw(Json.Serialize(Model.Items));
+                gridData.forEach(item => {
+                    if (item.TrangThai === 0 && isRegistrationExpired(item.HocKy, item.NamHoc)) {
+                        const actionElement = document.getElementById(`action-${item.Masv}-${item.MaDt}`);
+                        if (actionElement) {
+                            actionElement.innerHTML = `
+                                <div class="d-flex justify-content-center">
+                                    <span class="badge bg-secondary text-white">
+                                        <i class="bi bi-clock-history me-1"></i>Đã qua thời gian chấp nhận
+                                    </span>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+            }, 500); // Wait for grid to render
             // Function to update DeTai options based on term
             async function updateDeTaiOptions(hocKy, namHoc) {
                 try {

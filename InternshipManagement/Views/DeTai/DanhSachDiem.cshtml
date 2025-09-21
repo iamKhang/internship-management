@@ -273,7 +273,7 @@
             // Handle giảng viên selection change
             giangVienDropdown.addEventListener('change', function () {
                 const selectedGvId = this.querySelector('input[type="hidden"]').value;
-                loadDeTaiByGiangVien(selectedGvId);
+                updateFilterDeTaiOptions(selectedGvId);
             });
 
             // Handle đề tài selection change
@@ -321,7 +321,7 @@
                 if (nhInput) nhInput.value = nh;
                 // reload topics with lecturer + term
                 const selectedGvId = giangVienDropdown.querySelector('input[type="hidden"]').value;
-                loadDeTaiByGiangVien(selectedGvId);
+                updateFilterDeTaiOptions(selectedGvId);
             });
             // Initialize display
             (function initTermDisplay(){
@@ -338,46 +338,6 @@
             })();
         });
 
-        // Load đề tài by giảng viên
-        function loadDeTaiByGiangVien(maGv) {
-            const deTaiDropdown = document.getElementById('filterDeTaiDropdown');
-            const optionsContainer = deTaiDropdown.querySelector('.dropdown-options');
-
-            if (!maGv) {
-                // Reset đề tài dropdown
-                optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">-- Chọn đề tài --</a>';
-                deTaiDropdown.querySelector('input[type="text"]').value = '-- Chọn đề tài --';
-                deTaiDropdown.querySelector('input[type="hidden"]').value = '';
-                return;
-            }
-
-            // Show loading
-            optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">Đang tải...</a>';
-
-            // Fetch đề tài with optional term
-            const hk = (document.querySelector('input[name="hocKy"]').value || '').trim();
-            const nh = (document.querySelector('input[name="namHoc"]').value || '').trim();
-            const params = new URLSearchParams({ maGv: String(maGv) });
-            if (hk) params.append('hocKy', hk);
-            if (nh) params.append('namHoc', nh);
-            fetch(`/DeTai/GetTopicsByLecturer?${params.toString()}`)
-                .then(response => response.json())
-                .then(data => {
-                    let html = '<a class="dropdown-item" href="#" data-value="">-- Chọn đề tài --</a>';
-                    data.forEach(item => {
-                        html += `<a class=\"dropdown-item\" href=\"#\" data-value=\"${item.value}\">${item.text}</a>`;
-                    });
-                    optionsContainer.innerHTML = html;
-
-                    // Reset selection
-                    deTaiDropdown.querySelector('input[type="text"]').value = '-- Chọn đề tài --';
-                    deTaiDropdown.querySelector('input[type="hidden"]').value = '';
-                })
-                .catch(error => {
-                    console.error('Error loading đề tài:', error);
-                    optionsContainer.innerHTML = '<a class="dropdown-item" href="#" data-value="">Lỗi tải dữ liệu</a>';
-                });
-        }
     </script>
     <script>
         var toastObj;
@@ -527,17 +487,16 @@
 
                 // Helper to apply options to dropdown
                 async function applyDeTaiOptions(arr) {
-                    const options = [{ value: '', text: '-- Tất cả --' }, ...arr];
+                    const options = [ ...arr];
+                    // Update the currentOptions for the search function
+                    deTaiDd.currentOptions = options;
                     await deTaiDd.updateOptions(options);
+                    
+                    // Always reset to "-- Tất cả --" when loading new options
                     const deTaiInput = deTaiEl.querySelector('input.form-control');
                     const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
-                    const currentVal = (deTaiHidden?.value || '').trim();
-                    if (currentVal) {
-                        const found = options.find(o => String((o.value||'').trim()) === currentVal);
-                        if (found && deTaiInput) deTaiInput.value = found.text;
-                    } else {
-                        if (deTaiInput) deTaiInput.value = '-- Tất cả --';
-                    }
+                    if (deTaiInput) deTaiInput.value = '-- Tất cả --';
+                    if (deTaiHidden) deTaiHidden.value = '';
                 }
 
                 if (!maGv) {
@@ -548,8 +507,14 @@
                 }
 
                 // Use public endpoint to avoid 404 on admin-guarded action
+                const hk = (document.querySelector('input[name="hocKy"]')?.value || '').trim();
+                const nh = (document.querySelector('input[name="namHoc"]')?.value || '').trim();
+                const params = new URLSearchParams({ maGv: String(maGv) });
+                if (hk) params.append('hocKy', hk);
+                if (nh) params.append('namHoc', nh);
+                
                 const urls = [
-                    `/DeTai/GetTopicsByLecturer?maGv=${encodeURIComponent(maGv)}`
+                    `/DeTai/GetTopicsByLecturer?${params.toString()}`
                 ];
 
                 let data = null;
@@ -572,21 +537,14 @@
                 }
 
                 if (Array.isArray(data)) {
-                    // Normalize to {value,text}
-                    const normalized = data.map(x => ({ value: x.value ?? x.Value ?? '', text: x.text ?? x.Text ?? '' }));
-                    // Try to restore selection; if missing in list, inject it
-                    const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
-                    const deTaiInput = deTaiEl.querySelector('input.form-control');
-                    const currentVal = (deTaiHidden?.value || '').trim();
-                    let list = normalized.slice();
-                    if (currentVal && !list.some(o => String((o.value||'').trim()) === currentVal)) {
-                        list.unshift({ value: currentVal, text: currentVal });
-                    }
-                    await applyDeTaiOptions(list);
-                    if (currentVal && deTaiInput) {
-                        const found = list.find(o => String((o.value||'').trim()) === currentVal);
-                        if (found) deTaiInput.value = found.text;
-                    }
+                    // Normalize to {value,text} and trim values
+                    const normalized = data.map(x => ({ 
+                        value: String(x.value ?? x.Value ?? '').trim(), 
+                        text: String(x.text ?? x.Text ?? '').trim() 
+                    }));
+                    
+                    // Apply new options (selection will be cleared by applyDeTaiOptions)
+                    await applyDeTaiOptions(normalized);
                 } else {
                     await applyDeTaiOptions([]);
                 }
@@ -656,10 +614,13 @@
                 allowClear: true
             });
 
+            // Get initial options from DOM and set up search function
             const filterDeTaiOptions = getOptionsFromDom(filterDeTaiEl);
+            filterDeTaiDd.currentOptions = filterDeTaiOptions;
             filterDeTaiDd.searchData = async function (query) {
                 const q = (query || '').toLowerCase();
-                const filtered = filterDeTaiOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                const currentOptions = filterDeTaiDd.currentOptions || [];
+                const filtered = currentOptions.filter(o => !q || o.text.toLowerCase().includes(q));
                 await filterDeTaiDd.updateOptions(filtered);
             };
             filterDeTaiDd.searchData('');
@@ -699,6 +660,30 @@
             // Store reference for later use
             filterTrangThaiEl.searchableDropdownInstance = filterTrangThaiDd;
 
+            // Helpers to default to '-- Tất cả --' and behave like comboboxes
+            function setAllIfEmpty(container, hiddenSelector) {
+                const input = container?.querySelector('input.form-control');
+                const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container?.querySelector('input[type="hidden"]');
+                if (input && (!input.value || input.value.trim() === '') && (!hidden || !hidden.value || hidden.value === '')) {
+                    input.value = '-- Tất cả --';
+                }
+            }
+            
+            function installComboBehavior(container, hiddenSelector) {
+                const input = container?.querySelector('input.form-control');
+                const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container?.querySelector('input[type="hidden"]');
+                if (!input) return;
+                input.addEventListener('focus', function () {
+                    if (this.value.trim() === '-- Tất cả --') this.value = '';
+                });
+                input.addEventListener('blur', function () {
+                    const hv = hidden ? hidden.value : '';
+                    if (this.value.trim() === '' && (!hv || hv === '')) {
+                        this.value = '-- Tất cả --';
+                    }
+                });
+            }
+
             // Initialize display values if any
             (function initFilterDisplayValues() {
                 // Giảng viên
@@ -709,23 +694,22 @@
                     if (selectedGv) {
                         giangVienInput.value = selectedGv.text;
                         // Load đề tài for selected giảng viên
-                        updateFilterDeTaiOptions(giangVienHidden.value);
+                        setTimeout(() => {
+                            updateFilterDeTaiOptions(giangVienHidden.value);
+                        }, 100);
                     }
                 } else if (giangVienInput) {
                     giangVienInput.value = '-- Tất cả --';
                 }
 
-                // Đề tài
+                // Đề tài - luôn reset về "-- Tất cả --" khi khởi tạo
                 const deTaiHidden = filterDeTaiEl.querySelector('input[type="hidden"]');
                 const deTaiInput = filterDeTaiEl.querySelector('input.form-control');
-                if (deTaiHidden?.value && deTaiInput) {
-                    const opts = getOptionsFromDom(filterDeTaiEl);
-                    const selectedDt = opts.find(opt => opt.value === deTaiHidden.value) || { value: deTaiHidden.value, text: deTaiHidden.value };
-                    deTaiInput.value = selectedDt.text;
-                    // load sinh viên cho đề tài đã chọn
-                    updateFilterSinhVienOptions(selectedDt.value);
-                } else if (deTaiInput) {
+                if (deTaiInput) {
                     deTaiInput.value = '-- Tất cả --';
+                }
+                if (deTaiHidden) {
+                    deTaiHidden.value = '';
                 }
 
                 // Trạng thái
@@ -745,6 +729,17 @@
                 const svInput = filterSinhVienEl.querySelector('input.form-control');
                 if (svInput && !svHidden?.value) svInput.value = '-- Tất cả --';
             })();
+
+            // Apply combobox behaviors to all dropdowns
+            setAllIfEmpty(filterGiangVienEl);
+            setAllIfEmpty(filterDeTaiEl);
+            setAllIfEmpty(filterTrangThaiEl);
+            setAllIfEmpty(filterSinhVienEl);
+            
+            installComboBehavior(filterGiangVienEl);
+            installComboBehavior(filterDeTaiEl);
+            installComboBehavior(filterTrangThaiEl);
+            installComboBehavior(filterSinhVienEl);
 
             // Handle filter form submission
             const filterForm = document.getElementById('filterForm');

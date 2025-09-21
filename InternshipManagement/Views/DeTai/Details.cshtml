@@ -144,9 +144,9 @@
             regStart = regEnd = today.AddDays(-1); // đóng luôn nếu dữ liệu kỳ lạ
             break;
     }
-    regEnd = regStart.AddDays(14);
+    regEnd = regStart.AddDays(24);
 
-    bool registrationClosed = today < regStart || today > regEnd;
+    bool registrationClosed = today > regEnd;
 }
 
 
@@ -158,22 +158,29 @@
             <span class="align-middle p-1">Đăng nhập để đăng ký</span>
         </div>
     }
-    else if (registrationClosed && (reg is null || reg.ThisTrangThai is null || reg.ThisTrangThai == 4 || reg.ThisTrangThai == 5))
-    {
-        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
-            <i class="bi bi-info-circle align-middle p-1"></i>
-            <span class="align-middle p-1">Đã qua lượt đăng ký</span>
-        </div>
-    }
     else if (!isStudent)
     {
         @* GV/Admin: không hiển thị gì thêm *@
     }
-    else if (Model.SoChoConLai <= 0 && (reg is null || reg.ThisTrangThai is null))
+    else if (Model.SoChoConLai <= 0)
     {
         <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
             <i class="bi bi-info-circle align-middle p-1"></i>
             <span class="align-middle p-1">Đề tài này đã đủ số lượng</span>
+        </div>
+    }
+    else if (today < regStart)
+    {
+        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+            <i class="bi bi-info-circle align-middle p-1"></i>
+            <span class="align-middle p-1">Chưa tới đợt đăng ký</span>
+        </div>
+    }
+    else if (today > regEnd)
+    {
+        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+            <i class="bi bi-info-circle align-middle p-1"></i>
+            <span class="align-middle p-1">Đã qua lượt đăng ký</span>
         </div>
     }
     else
@@ -187,6 +194,22 @@
                 <input type="hidden" name="maDt" value="@maDt" />
                 <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
                 <button type="submit" class="btn btn-sm btn-primary mt-1">Đăng ký đề tài</button>
+            </form>
+        }
+        else if (reg.ThisTrangThai == 0) // Chờ duyệt
+        {
+            <div class="d-inline-flex align-items-center mt-1 text-warning gap-2 lh-1">
+                <i class="bi bi-clock align-middle p-1"></i>
+                <span class="align-middle p-1">Đang chờ duyệt</span>
+            </div>
+            <form asp-controller="DeTai" asp-action="ThuHoi" method="post" class="d-inline ms-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="maDt" value="@maDt" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" class="btn btn-sm btn-outline-danger mt-1" 
+                        onclick="return confirm('Bạn có chắc chắn muốn hủy đăng ký đề tài này?')">
+                    <i class="bi bi-x-circle me-1"></i>Hủy đăng ký
+                </button>
             </form>
         }
         else if (reg.ThisTrangThai == -1)
