@@ -1235,6 +1235,175 @@ namespace InternshipManagement.Repositories.Implementations
                 })
                 .ToListAsync();
         }
+
+        /// <summary>
+        /// Cập nhật cả trạng thái và điểm với các ràng buộc (Admin only)
+        /// </summary>
+        public async Task<(bool ok, string? error, bool requiresConfirmation, string? confirmationMessage)> 
+            UpdateTrangThaiVaDiemAsync(int maGv, int maSv, string maDt, byte trangThaiMoi, decimal? diemMoi, string? ghiChu = null)
+        {
+            var code = NormCode(maDt);
+
+            // Find the guidance record
+            var huongDan = await _db.HuongDans
+                .Include(h => h.DeTai)
+                .FirstOrDefaultAsync(h => h.MaGv == maGv && h.MaSv == maSv && h.MaDt == code);
+
+            if (huongDan == null)
+                return (false, "Không tìm thấy hướng dẫn với thông tin đã cung cấp.", false, null);
+
+            var trangThaiHienTai = (byte)huongDan.TrangThai;
+            var diemHienTai = huongDan.KetQua;
+
+            // Validate score if provided
+            if (diemMoi.HasValue && (diemMoi.Value < 0m || diemMoi.Value > 10m))
+                return (false, "Điểm phải từ 0 đến 10.", false, null);
+
+            // Validate status
+            if (trangThaiMoi > 5)
+                return (false, "Trạng thái không hợp lệ.", false, null);
+
+            // Ràng buộc 1: Khi cập nhật từ Pending/Rejected/Withdrawn lên Accepted, kiểm tra số lượng
+            if ((trangThaiHienTai == 0 || trangThaiHienTai == 4 || trangThaiHienTai == 5) && trangThaiMoi == 1)
+            {
+                // Count current active students (status 1, 2, 3)
+                var currentActiveCount = await _db.HuongDans
+                    .CountAsync(h => h.MaDt == code && 
+                        (h.TrangThai == HuongDanStatus.Accepted || 
+                         h.TrangThai == HuongDanStatus.InProgress || 
+                         h.TrangThai == HuongDanStatus.Completed));
+
+                // Check if adding this student would exceed capacity
+                if (currentActiveCount >= huongDan.DeTai.SoLuongToiDa)
+                {
+                    return (false, $"Đề tài đã đạt số lượng tối đa ({huongDan.DeTai.SoLuongToiDa}). Không thể chấp nhận thêm sinh viên.", false, null);
+                }
+            }
+
+            // Ràng buộc 2: Khi cập nhật từ Completed sang trạng thái khác, cần xác nhận xóa điểm
+            if (trangThaiHienTai == 3 && trangThaiMoi != 3 && diemHienTai.HasValue)
+            {
+                var confirmationMessage = $"Đề tài đã có điểm ({diemHienTai.Value}). " +
+                    $"Nếu bạn cập nhật trạng thái khác, điểm sẽ bị xóa. Bạn có chắc chắn muốn tiếp tục?";
+                return (false, null, true, confirmationMessage);
+            }
+
+            // Ràng buộc 3: Khi chuyển sang Completed, bắt buộc phải có điểm
+            if (trangThaiMoi == 3 && !diemMoi.HasValue && !diemHienTai.HasValue)
+            {
+                return (false, "Khi chuyển trạng thái sang 'Đã hoàn thành', bắt buộc phải nhập điểm.", false, null);
+            }
+
+            // Ràng buộc 4: Không cho phép nhập điểm khi trạng thái là Pending/Rejected/Withdrawn
+            if (diemMoi.HasValue && (trangThaiMoi == 0 || trangThaiMoi == 4 || trangThaiMoi == 5))
+            {
+                return (false, "Không thể nhập điểm khi trạng thái là chờ duyệt/từ chối/rút đăng ký.", false, null);
+            }
+
+            // Thực hiện cập nhật
+            huongDan.TrangThai = (HuongDanStatus)trangThaiMoi;
+
+            // Cập nhật điểm
+            if (diemMoi.HasValue)
+            {
+                // Có nhập điểm mới (chỉ khi chuyển sang Completed)
+                huongDan.KetQua = diemMoi.Value;
+            }
+            else if (trangThaiMoi != 3 && diemHienTai.HasValue)
+            {
+                // Chuyển từ Completed sang trạng thái khác và có điểm cũ, xóa điểm
+                huongDan.KetQua = null;
+            }
+            // Nếu không có diemMoi và không phải chuyển từ Completed, giữ nguyên điểm cũ
+
+            // Cập nhật thời gian chấp nhận nếu chuyển sang Accepted
+            if (trangThaiMoi == 1 && trangThaiHienTai != 1)
+            {
+                huongDan.AcceptedAt = DateTime.UtcNow;
+            }
+
+            // Cập nhật ghi chú nếu có
+            if (!string.IsNullOrWhiteSpace(ghiChu))
+            {
+                huongDan.GhiChu = ghiChu;
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                return (true, null, false, null);
+            }
+            catch (DbUpdateException ex)
+            {
+                return (false, $"Lỗi cập nhật: {ex.GetBaseException().Message}", false, null);
+            }
+        }
+
+        /// <summary>
+        /// Xác nhận cập nhật trạng thái và xóa điểm (Admin only)
+        /// </summary>
+        public async Task<(bool ok, string? error)> ConfirmUpdateTrangThaiVaXoaDiemAsync(int maGv, int maSv, string maDt, byte trangThaiMoi, string? ghiChu = null)
+        {
+            var code = NormCode(maDt);
+
+            // Find the guidance record
+            var huongDan = await _db.HuongDans
+                .Include(h => h.DeTai)
+                .FirstOrDefaultAsync(h => h.MaGv == maGv && h.MaSv == maSv && h.MaDt == code);
+
+            if (huongDan == null)
+                return (false, "Không tìm thấy hướng dẫn với thông tin đã cung cấp.");
+
+            // Validate status
+            if (trangThaiMoi > 5)
+                return (false, "Trạng thái không hợp lệ.");
+
+            // Ràng buộc: Khi cập nhật từ Pending/Rejected/Withdrawn lên Accepted, kiểm tra số lượng
+            if ((huongDan.TrangThai == HuongDanStatus.Pending || 
+                 huongDan.TrangThai == HuongDanStatus.Rejected || 
+                 huongDan.TrangThai == HuongDanStatus.Withdrawn) && 
+                trangThaiMoi == 1)
+            {
+                // Count current active students (status 1, 2, 3)
+                var currentActiveCount = await _db.HuongDans
+                    .CountAsync(h => h.MaDt == code && 
+                        (h.TrangThai == HuongDanStatus.Accepted || 
+                         h.TrangThai == HuongDanStatus.InProgress || 
+                         h.TrangThai == HuongDanStatus.Completed));
+
+                // Check if adding this student would exceed capacity
+                if (currentActiveCount >= huongDan.DeTai.SoLuongToiDa)
+                {
+                    return (false, $"Đề tài đã đạt số lượng tối đa ({huongDan.DeTai.SoLuongToiDa}). Không thể chấp nhận thêm sinh viên.");
+                }
+            }
+
+            // Thực hiện cập nhật
+            huongDan.TrangThai = (HuongDanStatus)trangThaiMoi;
+            huongDan.KetQua = null; // Xóa điểm
+
+            // Cập nhật thời gian chấp nhận nếu chuyển sang Accepted
+            if (trangThaiMoi == 1)
+            {
+                huongDan.AcceptedAt = DateTime.UtcNow;
+            }
+
+            // Cập nhật ghi chú nếu có
+            if (!string.IsNullOrWhiteSpace(ghiChu))
+            {
+                huongDan.GhiChu = ghiChu;
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                return (true, null);
+            }
+            catch (DbUpdateException ex)
+            {
+                return (false, $"Lỗi cập nhật: {ex.GetBaseException().Message}");
+            }
+        }
     }
 
 

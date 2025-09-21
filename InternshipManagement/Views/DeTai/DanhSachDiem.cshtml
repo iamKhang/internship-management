@@ -152,6 +152,7 @@
                     <e-grid-column field="TrangThaiText" headerText="Trạng thái" width="130" textAlign="Center"></e-grid-column>
                     <e-grid-column field="KetQua" headerText="Điểm" width="80" textAlign="Center"></e-grid-column>
                     <e-grid-column headerText="Cập nhật điểm" width="150" textAlign="Center"></e-grid-column>
+                    <e-grid-column headerText="Cập nhật trạng thái & điểm" width="200" textAlign="Center"></e-grid-column>
                 </e-grid-columns>
             </ejs-grid>
         </div>
@@ -216,6 +217,23 @@
                     wrap.appendChild(btn);
                     args.cell.appendChild(wrap);
                 }
+
+                // Cập nhật trạng thái & điểm column: Admin only
+                if (!col.field && col.headerText === 'Cập nhật trạng thái & điểm') {
+                    args.cell.innerHTML = '';
+                    var wrap = document.createElement('div');
+                    wrap.className = 'd-flex gap-1 justify-content-center';
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-warning text-dark';
+                    btn.title = 'Cập nhật trạng thái & điểm (Admin)';
+                    btn.addEventListener('click', function () {
+                        openTrangThaiVaDiemDialog(data.MaGv, data.MaSv, data.MaDt, data.TrangThai, data.TrangThaiText, (data.KetQua == null ? null : data.KetQua), data.HoTenSv, data.TenDt, data.HoTenGv);
+                    });
+                    btn.innerHTML = '<i class="bi bi-gear"></i>';
+                    wrap.appendChild(btn);
+                    args.cell.appendChild(wrap);
+                }
             } catch (e) {
                 // Fallback: leave default text
                 console.error('onDiemCell error', e);
@@ -254,6 +272,68 @@
                     <button type="button" class="btn btn-primary" onclick="window.submitDiemDialog()">Lưu</button>
                 </div>
             </form>
+        </e-content-template>
+    </ejs-dialog>
+
+    @* Syncfusion Dialog: Cập nhật trạng thái & điểm *@
+    <ejs-dialog id="trangThaiVaDiemDialog" header="Cập nhật trạng thái & điểm" isModal="true" showCloseIcon="true" width="600px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <form method="post" asp-action="CapNhatTrangThaiVaDiem" id="capNhatTrangThaiVaDiemForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MaGv" id="dlgTrangThaiMaGv" />
+                <input type="hidden" name="MaSv" id="dlgTrangThaiMaSv" />
+                <input type="hidden" name="MaDt" id="dlgTrangThaiMaDt" />
+
+                <div class="mb-2">
+                    <div id="dlgTrangThaiInfo" class="alert alert-info p-2 mb-0"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label required">Trạng thái hiện tại</label>
+                    <input type="text" class="form-control" id="dlgTrangThaiHienTai" readonly />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label required">Trạng thái mới</label>
+                    <select class="form-control" name="TrangThaiMoi" id="dlgTrangThaiMoi" required>
+                        <option value="0">Chờ duyệt</option>
+                        <option value="1">Đã chấp nhận</option>
+                        <option value="2">Đang thực hiện</option>
+                        <option value="3">Đã hoàn thành</option>
+                        <option value="4">Từ chối</option>
+                        <option value="5">Rút</option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="dlgTrangThaiDiemContainer">
+                    <label class="form-label">Điểm</label>
+                    <input type="number" class="form-control" name="DiemMoi" id="dlgTrangThaiDiemMoi" step="0.01" min="0" max="10" />
+                    <small class="form-text text-muted" id="dlgTrangThaiDiemHelp">Bắt buộc khi chuyển sang "Đã hoàn thành"</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú</label>
+                    <textarea class="form-control" name="GhiChu" id="dlgTrangThaiGhiChu" rows="3"></textarea>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-2">
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.closeTrangThaiVaDiemDialog()">Hủy</button>
+                    <button type="button" class="btn btn-warning" onclick="window.submitTrangThaiVaDiemDialog()">Cập nhật</button>
+                </div>
+            </form>
+        </e-content-template>
+    </ejs-dialog>
+
+    @* Confirmation Dialog *@
+    <ejs-dialog id="confirmationDialog" header="Xác nhận" isModal="true" showCloseIcon="true" width="500px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+        <e-content-template>
+            <div class="mb-3">
+                <div id="confirmationMessage" class="alert alert-warning p-3"></div>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary" onclick="window.closeConfirmationDialog()">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="window.confirmUpdate()">Xác nhận</button>
+            </div>
         </e-content-template>
     </ejs-dialog>
 </div>
@@ -474,6 +554,182 @@
                 }
             } catch (e) {
                 console.error('submitDiemDialog error', e);
+                showMessage('Có lỗi xảy ra khi cập nhật.', 'Error');
+            }
+        }
+
+        // Open dialog for updating both status and score
+        window.openTrangThaiVaDiemDialog = function (maGv, maSv, maDt, trangThaiHienTai, trangThaiText, ketQua, hoTenSv, tenDt, hoTenGv) {
+            try {
+                document.getElementById('dlgTrangThaiMaGv').value = maGv;
+                document.getElementById('dlgTrangThaiMaSv').value = maSv;
+                document.getElementById('dlgTrangThaiMaDt').value = maDt;
+                document.getElementById('dlgTrangThaiHienTai').value = trangThaiText || '';
+                document.getElementById('dlgTrangThaiMoi').value = trangThaiHienTai || 0;
+                // Giữ nguyên điểm hiện tại làm giá trị mặc định
+                document.getElementById('dlgTrangThaiDiemMoi').value = (ketQua === null || ketQua === undefined) ? '' : ketQua;
+                document.getElementById('dlgTrangThaiGhiChu').value = '';
+
+                var infoHtml = '<strong>Sinh viên:</strong> ' + (maSv ?? '') + ' - ' + (hoTenSv ?? '') + '<br/>'
+                    + '<strong>Đề tài:</strong> ' + (maDt ?? '') + ' - ' + (tenDt ?? '') + '<br/>'
+                    + '<strong>Giảng viên:</strong> ' + (hoTenGv ?? '') + '<br/>'
+                    + '<strong>Điểm hiện tại:</strong> ' + (ketQua !== null && ketQua !== undefined ? ketQua : 'Chưa có') + '<br/>'
+                    + '<small class="text-muted">💡 <strong>Lưu ý:</strong> Ô điểm chỉ hiển thị khi chuyển sang "Đã hoàn thành". Các trường hợp khác chỉ cập nhật trạng thái.</small>';
+                document.getElementById('dlgTrangThaiInfo').innerHTML = infoHtml;
+
+                var dlg = document.getElementById('trangThaiVaDiemDialog').ej2_instances?.[0];
+                if (dlg) dlg.show();
+                
+                // Add event listener for status change
+                document.getElementById('dlgTrangThaiMoi').addEventListener('change', function() {
+                    var selectedStatus = parseInt(this.value);
+                    var diemContainer = document.getElementById('dlgTrangThaiDiemContainer');
+                    var diemInput = document.getElementById('dlgTrangThaiDiemMoi');
+                    var diemHelp = document.getElementById('dlgTrangThaiDiemHelp');
+                    
+                    if (selectedStatus === 3) {
+                        // Completed - show and require score input
+                        diemContainer.style.display = 'block';
+                        diemInput.setAttribute('required', 'required');
+                        diemInput.title = 'Bắt buộc nhập điểm khi trạng thái là "Đã hoàn thành"';
+                        diemHelp.textContent = 'Bắt buộc nhập điểm khi chuyển sang "Đã hoàn thành"';
+                        diemHelp.className = 'form-text text-danger';
+                    } else {
+                        // Other statuses - hide score input completely
+                        diemContainer.style.display = 'none';
+                        diemInput.removeAttribute('required');
+                        diemInput.value = ''; // Clear the value when hidden
+                    }
+                });
+                
+                // Trigger initial validation
+                document.getElementById('dlgTrangThaiMoi').dispatchEvent(new Event('change'));
+            } catch (e) {
+                console.error('openTrangThaiVaDiemDialog error', e);
+            }
+        }
+
+        window.closeTrangThaiVaDiemDialog = function () {
+            var dlg = document.getElementById('trangThaiVaDiemDialog').ej2_instances?.[0];
+            if (dlg) dlg.hide();
+        }
+
+        window.submitTrangThaiVaDiemDialog = async function () {
+            try {
+                var form = document.getElementById('capNhatTrangThaiVaDiemForm');
+                if (!form) return;
+                
+                // Client-side validation
+                var trangThaiMoi = parseInt(document.getElementById('dlgTrangThaiMoi').value);
+                var diemContainer = document.getElementById('dlgTrangThaiDiemContainer');
+                
+                // Nếu chuyển sang "Đã hoàn thành" mà không có điểm thì báo lỗi
+                if (trangThaiMoi === 3) {
+                    var diemMoi = document.getElementById('dlgTrangThaiDiemMoi').value;
+                    if (!diemMoi || diemMoi.trim() === '') {
+                        showMessage('Khi chuyển sang "Đã hoàn thành", bắt buộc phải nhập điểm.', 'Error');
+                        return;
+                    }
+                }
+                
+                const payload = new FormData(form);
+                const url = '@Url.Action("CapNhatTrangThaiVaDiem", "DeTai")';
+                const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: payload,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(token ? { 'RequestVerificationToken': token } : {})
+                    }
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                let result = null;
+                if (ct.includes('application/json')) {
+                    result = await res.json();
+                } else {
+                    await res.text();
+                }
+
+                if (result && result.requiresConfirmation) {
+                    // Show confirmation dialog
+                    window.pendingUpdateData = result.data;
+                    document.getElementById('confirmationMessage').innerHTML = result.confirmationMessage;
+                    var confirmDlg = document.getElementById('confirmationDialog').ej2_instances?.[0];
+                    if (confirmDlg) confirmDlg.show();
+                    closeTrangThaiVaDiemDialog();
+                    return;
+                }
+
+                const isSuccess = (result && result.success) || (!result && res.ok);
+                if (isSuccess) {
+                    showMessage((result && result.message) || 'Cập nhật thành công', 'Success');
+                    // Refresh grid
+                    location.reload();
+                } else {
+                    showMessage((result && result.message) || 'Cập nhật thất bại', 'Error');
+                }
+            } catch (e) {
+                console.error('submitTrangThaiVaDiemDialog error', e);
+                showMessage('Có lỗi xảy ra khi cập nhật.', 'Error');
+            }
+        }
+
+        window.closeConfirmationDialog = function () {
+            var dlg = document.getElementById('confirmationDialog').ej2_instances?.[0];
+            if (dlg) dlg.hide();
+            window.pendingUpdateData = null;
+        }
+
+        window.confirmUpdate = async function () {
+            try {
+                if (!window.pendingUpdateData) return;
+                
+                const url = '@Url.Action("ConfirmCapNhatTrangThaiVaXoaDiem", "DeTai")';
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                // Create FormData instead of JSON to handle anti-forgery token properly
+                const formData = new FormData();
+                formData.append('MaGv', window.pendingUpdateData.maGv);
+                formData.append('MaSv', window.pendingUpdateData.maSv);
+                formData.append('MaDt', window.pendingUpdateData.maDt);
+                formData.append('TrangThaiMoi', window.pendingUpdateData.trangThaiMoi);
+                if (window.pendingUpdateData.ghiChu) {
+                    formData.append('GhiChu', window.pendingUpdateData.ghiChu);
+                }
+                if (token) {
+                    formData.append('__RequestVerificationToken', token);
+                }
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                let result = null;
+                if (ct.includes('application/json')) {
+                    result = await res.json();
+                } else {
+                    await res.text();
+                }
+
+                const isSuccess = (result && result.success) || (!result && res.ok);
+                if (isSuccess) {
+                    showMessage((result && result.message) || 'Cập nhật thành công', 'Success');
+                    closeConfirmationDialog();
+                    // Refresh grid
+                    location.reload();
+                } else {
+                    showMessage((result && result.message) || 'Cập nhật thất bại', 'Error');
+                }
+            } catch (e) {
+                console.error('confirmUpdate error', e);
                 showMessage('Có lỗi xảy ra khi cập nhật.', 'Error');
             }
         }

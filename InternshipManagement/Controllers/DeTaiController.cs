@@ -1562,6 +1562,104 @@ namespace InternshipManagement.Controllers
             return RedirectToAction(nameof(DanhSachDiem));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CapNhatTrangThaiVaDiem(CapNhatTrangThaiVaDiemVm vm)
+        {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+            if (!ModelState.IsValid)
+            {
+                if (isAjax)
+                {
+                    var firstError = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(s => !string.IsNullOrWhiteSpace(s)));
+                    return Json(new { success = false, message = firstError.Length > 0 ? firstError : "Dữ liệu không hợp lệ." });
+                }
+                TempData["Error"] = "Dữ liệu không hợp lệ.";
+                return RedirectToAction(nameof(DanhSachDiem));
+            }
+
+            var (ok, error, requiresConfirmation, confirmationMessage) = await _repo.UpdateTrangThaiVaDiemAsync(
+                vm.MaGv, vm.MaSv, vm.MaDt, vm.TrangThaiMoi, vm.DiemMoi, vm.GhiChu);
+
+            if (isAjax)
+            {
+                if (requiresConfirmation)
+                {
+                    return Json(new { 
+                        success = false, 
+                        requiresConfirmation = true, 
+                        confirmationMessage = confirmationMessage,
+                        data = new { 
+                            maGv = vm.MaGv, 
+                            maSv = vm.MaSv, 
+                            maDt = vm.MaDt, 
+                            trangThaiMoi = vm.TrangThaiMoi, 
+                            ghiChu = vm.GhiChu 
+                        }
+                    });
+                }
+
+                return Json(new { 
+                    success = ok, 
+                    message = ok ? "Cập nhật thành công!" : (error ?? "Có lỗi xảy ra khi cập nhật.") 
+                });
+            }
+
+            if (ok)
+            {
+                TempData["Success"] = "Cập nhật thành công!";
+            }
+            else
+            {
+                TempData["Error"] = error ?? "Có lỗi xảy ra khi cập nhật.";
+            }
+
+            return RedirectToAction(nameof(DanhSachDiem));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ConfirmCapNhatTrangThaiVaXoaDiem(CapNhatTrangThaiVaDiemVm vm)
+        {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+            if (!ModelState.IsValid)
+            {
+                if (isAjax)
+                {
+                    var firstError = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(s => !string.IsNullOrWhiteSpace(s)));
+                    return Json(new { success = false, message = firstError.Length > 0 ? firstError : "Dữ liệu không hợp lệ." });
+                }
+                TempData["Error"] = "Dữ liệu không hợp lệ.";
+                return RedirectToAction(nameof(DanhSachDiem));
+            }
+
+            var (ok, error) = await _repo.ConfirmUpdateTrangThaiVaXoaDiemAsync(
+                vm.MaGv, vm.MaSv, vm.MaDt, vm.TrangThaiMoi, vm.GhiChu);
+
+            if (isAjax)
+            {
+                return Json(new { 
+                    success = ok, 
+                    message = ok ? "Cập nhật thành công!" : (error ?? "Có lỗi xảy ra khi cập nhật.") 
+                });
+            }
+
+            if (ok)
+            {
+                TempData["Success"] = "Cập nhật thành công!";
+            }
+            else
+            {
+                TempData["Error"] = error ?? "Có lỗi xảy ra khi cập nhật.";
+            }
+
+            return RedirectToAction(nameof(DanhSachDiem));
+        }
+
         private async Task LoadNhapDiemOptionsAsync(NhapDiemVm vm)
         {
             // Load giảng viên options

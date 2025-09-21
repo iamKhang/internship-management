@@ -33,6 +33,11 @@ namespace InternshipManagement.Repositories.Interfaces
         Task<(bool ok, string? error)> UpdateDiemAsync(int maGv, int maSv, string maDt, decimal diemMoi, string? ghiChu = null);
         Task<List<HuongDanDiemItemVm>> GetHuongDanForDiemAsync(NhapDiemFilterVm filter);
         Task<List<SelectListItem>> GetStudentsByTopicAsync(int maGv, string maDt);
+        
+        // Admin - Cập nhật cả trạng thái và điểm
+        Task<(bool ok, string? error, bool requiresConfirmation, string? confirmationMessage)> 
+            UpdateTrangThaiVaDiemAsync(int maGv, int maSv, string maDt, byte trangThaiMoi, decimal? diemMoi, string? ghiChu = null);
+        Task<(bool ok, string? error)> ConfirmUpdateTrangThaiVaXoaDiemAsync(int maGv, int maSv, string maDt, byte trangThaiMoi, string? ghiChu = null);
 
     }
 }
