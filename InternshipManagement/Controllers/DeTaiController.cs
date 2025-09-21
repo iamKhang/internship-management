@@ -981,7 +981,7 @@ namespace InternshipManagement.Controllers
                 return Forbid();
 
             var ok = await _repo.UpdateHuongDanStatusAsync(maGv, maSv, maDt, 1, ghiChu); // 1=Accepted
-            TempData["Toast"] = ok ? "Đã duyệt đăng ký." : "Duyệt thất bại.";
+            TempData["Toast"] = ok ? "Đã duyệt đăng ký." : "Duyệt thất bại do đã vượt quá số lượng cho phép.";
             return RedirectToAction(nameof(Registrations), new { hocKy, namHoc, trangThai, maDt = filterMaDt });
         }
 

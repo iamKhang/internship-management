@@ -703,10 +703,28 @@ namespace InternshipManagement.Repositories.Implementations
 
             // Find the guidance record
             var huongDan = await _db.HuongDans
+                .Include(h => h.DeTai)
                 .FirstOrDefaultAsync(h => h.MaGv == maGv && h.MaSv == maSv && h.MaDt == code);
 
             if (huongDan == null)
                 return false;
+
+            // If approving (newStatus = 1), check if topic has reached capacity
+            if (newStatus == (byte)HuongDanStatus.Accepted)
+            {
+                // Count current active students (status 1, 2, 3)
+                var currentActiveCount = await _db.HuongDans
+                    .CountAsync(h => h.MaDt == code && 
+                        (h.TrangThai == HuongDanStatus.Accepted || 
+                         h.TrangThai == HuongDanStatus.InProgress || 
+                         h.TrangThai == HuongDanStatus.Completed));
+
+                // Check if adding this student would exceed capacity
+                if (currentActiveCount >= huongDan.DeTai.SoLuongToiDa)
+                {
+                    return false; // Topic is full
+                }
+            }
 
             // Update status and notes
             huongDan.TrangThai = (HuongDanStatus)newStatus;

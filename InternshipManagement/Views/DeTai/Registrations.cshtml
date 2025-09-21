@@ -141,7 +141,7 @@
         </script>
         <script id="actionTemplate" type="text/x-template">
             ${if(TrangThai==0)}
-                <div class="d-flex gap-2 justify-content-center" id="action-${Masv}-${MaDt}">
+                <div class="d-flex gap-2 justify-content-center" id="action-${Masv}-${MaDt}" data-expired-check="${Masv}-${MaDt}">
                     <button type="button" class="btn btn-primary btn-sm w-100 btn-approve" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-check-circle me-1"></i>Duyệt</button>
                     <button type="button" class="btn btn-danger btn-sm w-100 btn-reject" data-masv="${Masv}" data-madt="${MaDt}"><i class="bi bi-x-circle me-1"></i>Từ chối</button>
                 </div>
@@ -249,30 +249,32 @@
                 const yearParts = namHoc.split('-');
                 if (yearParts.length !== 2) return null;
                 
-                const baseYear = parseInt(yearParts[0], 10);
-                const today = new Date();
+                const startYear = parseInt(yearParts[0], 10);
+                const endYear = parseInt(yearParts[1], 10);
                 let regStart, regEnd;
                 
                 switch (parseInt(hocKy, 10)) {
                     case 1:
-                        // HK1: 5/9 -> 31/12, nằm trong năm đầu của năm học
-                        regStart = new Date(baseYear, 8, 5); // Month is 0-indexed
+                        // HK1: Bắt đầu 01/09 năm đầu của năm học
+                        regStart = new Date(startYear, 8, 1); // Month is 0-indexed
                         break;
                     case 2:
-                        // HK2: 1/1 -> 25/5, nhưng của NĂM SAU
-                        regStart = new Date(baseYear + 1, 0, 1);
+                        // HK2: Bắt đầu 01/01 năm sau
+                        regStart = new Date(endYear, 0, 1);
                         break;
                     case 3:
-                        // HK3: 26/5 -> 4/9, nhưng của NĂM SAU
-                        regStart = new Date(baseYear + 1, 4, 26);
+                        // HK3: Bắt đầu 01/05 năm sau
+                        regStart = new Date(endYear, 4, 1);
                         break;
                     default:
                         return null;
                 }
                 
+                // Ngày kết thúc đăng ký: 25 ngày sau ngày bắt đầu học kỳ
                 regEnd = new Date(regStart);
-                regEnd.setDate(regEnd.getDate() + 24); // Add 24 days
+                regEnd.setDate(regEnd.getDate() + 25); // Add 25 days
                 
+                console.log(`HK${hocKy} (${namHoc}): Start=${regStart.toLocaleDateString()}, End=${regEnd.toLocaleDateString()}`);
                 return regEnd;
             }
             
@@ -282,31 +284,262 @@
                 if (!regEnd) return false;
                 
                 const today = new Date();
-                return today > regEnd;
+                const isExpired = today > regEnd;
+                console.log(`Checking expiration: Today=${today.toLocaleDateString()}, RegEnd=${regEnd.toLocaleDateString()}, Expired=${isExpired}`);
+                return isExpired;
+            }
+            
+            // Function to check if "Start" button should be disabled (3 weeks after acceptance)
+            function isStartButtonExpired(ngayChapNhan) {
+                if (!ngayChapNhan) return false;
+                
+                const acceptDate = new Date(ngayChapNhan);
+                const today = new Date();
+                const threeWeeksLater = new Date(acceptDate);
+                threeWeeksLater.setDate(threeWeeksLater.getDate() + 21); // 3 weeks = 21 days
+                
+                const isExpired = today > threeWeeksLater;
+                console.log(`Checking start button: AcceptDate=${acceptDate.toLocaleDateString()}, 3WeeksLater=${threeWeeksLater.toLocaleDateString()}, Today=${today.toLocaleDateString()}, Expired=${isExpired}`);
+                return isExpired;
+            }
+            
+            // Function to check if "Complete" button should be disabled (4 months after acceptance)
+            function isCompleteButtonExpired(ngayChapNhan) {
+                if (!ngayChapNhan) return false;
+                
+                const acceptDate = new Date(ngayChapNhan);
+                const today = new Date();
+                const fourMonthsLater = new Date(acceptDate);
+                fourMonthsLater.setMonth(fourMonthsLater.getMonth() + 4); // 4 months
+                
+                const isExpired = today > fourMonthsLater;
+                console.log(`Checking complete button: AcceptDate=${acceptDate.toLocaleDateString()}, 4MonthsLater=${fourMonthsLater.toLocaleDateString()}, Today=${today.toLocaleDateString()}, Expired=${isExpired}`);
+                return isExpired;
             }
             
             // Store the functions globally so they can be used in templates
             window.calculateRegistrationEnd = calculateRegistrationEnd;
             window.isRegistrationExpired = isRegistrationExpired;
+            window.isStartButtonExpired = isStartButtonExpired;
+            window.isCompleteButtonExpired = isCompleteButtonExpired;
             
-            // Check and update expired registrations after grid is rendered
-            setTimeout(function() {
+            // Function to check and update expired registrations
+            function checkExpiredRegistrations() {
                 const gridData = @Html.Raw(Json.Serialize(Model.Items));
+                console.log('Checking expired registrations...', gridData.length, 'items');
+                
+                let expiredCount = 0;
                 gridData.forEach(item => {
-                    if (item.TrangThai === 0 && isRegistrationExpired(item.HocKy, item.NamHoc)) {
-                        const actionElement = document.getElementById(`action-${item.Masv}-${item.MaDt}`);
+                    console.log('Item:', item.masv, item.maDt, 'TrangThai:', item.trangThai, 'HocKy:', item.hocKy, 'NamHoc:', item.namHoc, 'NgayChapNhan:', item.ngayChapNhan);
+                    
+                    // Check expired registration (TrangThai = 0)
+                    if (item.trangThai === 0 && isRegistrationExpired(item.hocKy, item.namHoc)) {
+                        expiredCount++;
+                        // Try different ID patterns that Syncfusion might use
+                        const possibleIds = [
+                            `action-${item.masv}-${item.maDt}`,
+                            `action_${item.masv}_${item.maDt}`,
+                            `action${item.masv}${item.maDt}`,
+                            `action-${item.masv}-${item.maDt}-${item.stt}`,
+                            `${item.masv}-${item.maDt}`,
+                            `${item.masv}_${item.maDt}`
+                        ];
+                        
+                        let actionElement = null;
+                        for (const id of possibleIds) {
+                            actionElement = document.getElementById(id);
+                            if (actionElement) {
+                                console.log('Found element with ID:', id);
+                                break;
+                            }
+                        }
+                        
+                        // If still not found, search by data attributes
+                        if (!actionElement) {
+                            actionElement = document.querySelector(`[data-masv="${item.masv}"][data-madt="${item.maDt}"]`);
+                            if (actionElement) {
+                                console.log('Found element by data attributes');
+                            }
+                        }
+                        
+                        // If still not found, search by text content
+                        if (!actionElement) {
+                            const allButtons = document.querySelectorAll('.btn-start, .btn-approve, .btn-reject');
+                            for (const btn of allButtons) {
+                                if (btn.getAttribute('data-masv') === item.masv.toString() && 
+                                    btn.getAttribute('data-madt') === item.maDt.toString()) {
+                                    actionElement = btn.closest('div[id*="action"]') || btn.parentElement;
+                                    console.log('Found element by button data attributes');
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        console.log('Found expired registration:', item.masv, item.maDt, 'Element found:', !!actionElement);
+                        
                         if (actionElement) {
-                            actionElement.innerHTML = `
-                                <div class="d-flex justify-content-center">
-                                    <span class="badge bg-secondary text-white">
-                                        <i class="bi bi-clock-history me-1"></i>Đã qua thời gian chấp nhận
-                                    </span>
-                                </div>
+                            // Create a new div element to replace the button
+                            const newElement = document.createElement('div');
+                            newElement.className = 'd-flex justify-content-center';
+                            newElement.innerHTML = `
+                                <span class="badge bg-secondary text-white">
+                                    <i class="bi bi-clock-history me-1"></i>Đã qua thời gian chấp nhận
+                                </span>
                             `;
+                            // Replace the entire button element
+                            actionElement.parentNode.replaceChild(newElement, actionElement);
+                        }
+                    }
+                    
+                    // Check expired "Start" button (TrangThai = 1)
+                    if (item.trangThai === 1 && isStartButtonExpired(item.ngayChapNhan)) {
+                        expiredCount++;
+                        // Try different ID patterns that Syncfusion might use
+                        const possibleIds = [
+                            `action-${item.masv}-${item.maDt}`,
+                            `action_${item.masv}_${item.maDt}`,
+                            `action${item.masv}${item.maDt}`,
+                            `action-${item.masv}-${item.maDt}-${item.stt}`,
+                            `${item.masv}-${item.maDt}`,
+                            `${item.masv}_${item.maDt}`
+                        ];
+                        
+                        let actionElement = null;
+                        for (const id of possibleIds) {
+                            actionElement = document.getElementById(id);
+                            if (actionElement) {
+                                console.log('Found start button element with ID:', id);
+                                break;
+                            }
+                        }
+                        
+                        // If still not found, search by data attributes
+                        if (!actionElement) {
+                            actionElement = document.querySelector(`[data-masv="${item.masv}"][data-madt="${item.maDt}"]`);
+                            if (actionElement) {
+                                console.log('Found start button element by data attributes');
+                            }
+                        }
+                        
+                        // If still not found, search by text content
+                        if (!actionElement) {
+                            const allButtons = document.querySelectorAll('.btn-start, .btn-approve, .btn-reject');
+                            for (const btn of allButtons) {
+                                if (btn.getAttribute('data-masv') === item.masv.toString() && 
+                                    btn.getAttribute('data-madt') === item.maDt.toString()) {
+                                    actionElement = btn.closest('div[id*="action"]') || btn.parentElement;
+                                    console.log('Found start button element by button data attributes');
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        console.log('Found expired start button:', item.masv, item.maDt, 'Element found:', !!actionElement);
+                        
+                        if (actionElement) {
+                            // Create a new div element to replace the button
+                            const newElement = document.createElement('div');
+                            newElement.className = 'd-flex justify-content-center';
+                            newElement.innerHTML = `
+                                <span class="badge bg-secondary text-white">
+                                    <i class="bi bi-clock-history me-1"></i>Đã qua thời gian bắt đầu
+                                </span>
+                            `;
+                            // Replace the entire button element
+                            actionElement.parentNode.replaceChild(newElement, actionElement);
+                        }
+                    }
+                    
+                    // Check expired "Complete" button (TrangThai = 2)
+                    if (item.trangThai === 2 && isCompleteButtonExpired(item.ngayChapNhan)) {
+                        expiredCount++;
+                        // Try different ID patterns that Syncfusion might use
+                        const possibleIds = [
+                            `action-${item.masv}-${item.maDt}`,
+                            `action_${item.masv}_${item.maDt}`,
+                            `action${item.masv}${item.maDt}`,
+                            `action-${item.masv}-${item.maDt}-${item.stt}`,
+                            `${item.masv}-${item.maDt}`,
+                            `${item.masv}_${item.maDt}`
+                        ];
+                        
+                        let actionElement = null;
+                        for (const id of possibleIds) {
+                            actionElement = document.getElementById(id);
+                            if (actionElement) {
+                                console.log('Found complete button element with ID:', id);
+                                break;
+                            }
+                        }
+                        
+                        // If still not found, search by data attributes
+                        if (!actionElement) {
+                            actionElement = document.querySelector(`[data-masv="${item.masv}"][data-madt="${item.maDt}"]`);
+                            if (actionElement) {
+                                console.log('Found complete button element by data attributes');
+                            }
+                        }
+                        
+                        // If still not found, search by text content
+                        if (!actionElement) {
+                            const allButtons = document.querySelectorAll('.btn-start, .btn-approve, .btn-reject, .btn-complete');
+                            for (const btn of allButtons) {
+                                if (btn.getAttribute('data-masv') === item.masv.toString() && 
+                                    btn.getAttribute('data-madt') === item.maDt.toString()) {
+                                    actionElement = btn.closest('div[id*="action"]') || btn.parentElement;
+                                    console.log('Found complete button element by button data attributes');
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        console.log('Found expired complete button:', item.masv, item.maDt, 'Element found:', !!actionElement);
+                        
+                        if (actionElement) {
+                            // Create a new div element to replace the button
+                            const newElement = document.createElement('div');
+                            newElement.className = 'd-flex justify-content-center';
+                            newElement.innerHTML = `
+                                <span class="badge bg-secondary text-white">
+                                    <i class="bi bi-clock-history me-1"></i>Đã qua thời gian nhập điểm
+                                </span>
+                            `;
+                            // Replace the entire button element
+                            actionElement.parentNode.replaceChild(newElement, actionElement);
                         }
                     }
                 });
-            }, 500); // Wait for grid to render
+                
+                console.log('Total expired items found:', expiredCount);
+            }
+
+            // Try multiple approaches to ensure grid is rendered
+            setTimeout(checkExpiredRegistrations, 1000);
+            setTimeout(checkExpiredRegistrations, 3000);
+            setTimeout(checkExpiredRegistrations, 5000);
+
+            // Also use MutationObserver to detect when grid content changes
+            const gridContainer = document.querySelector('.grid-container');
+            if (gridContainer) {
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            // Check if grid rows were added
+                            const hasGridRows = Array.from(mutation.addedNodes).some(node => 
+                                node.nodeType === 1 && node.querySelector && node.querySelector('[data-expired-check]')
+                            );
+                            if (hasGridRows) {
+                                setTimeout(checkExpiredRegistrations, 500);
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(gridContainer, {
+                    childList: true,
+                    subtree: true
+                });
+            }
             // Function to update DeTai options based on term
             async function updateDeTaiOptions(hocKy, namHoc) {
                 try {
