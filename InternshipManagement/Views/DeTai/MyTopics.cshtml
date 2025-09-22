@@ -54,13 +54,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-1 d-flex align-items-end mx-2">
-                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2 flex-fill">
                         <i class="bi bi-funnel me-1"></i> Lọc
                     </button>
-                </div>
-                <div class="col-md-1 d-flex align-items-end mx-2">
-                    <a asp-action="MyTopics" class="btn btn-outline-secondary d-flex align-items-center px-3 py-2">
+                    <a asp-action="MyTopics" class="btn btn-outline-secondary d-flex align-items-center px-3 py-2 flex-fill">
                         <i class="bi-arrow-clockwise me-1"></i> Hủy
                     </a>
                 </div>
@@ -110,6 +108,32 @@
 @section Scripts {
     <link href="~/css/searchable-dropdown.css" rel="stylesheet" />
     <script src="~/js/searchable-dropdown.js"></script>
+    
+    <style>
+        /* Responsive button layout for MyTopics */
+        @@media (max-width: 768px) {
+            .col-md-2.d-flex {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+            
+            .col-md-2.d-flex .btn {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+        }
+        
+        @@media (max-width: 576px) {
+            .col-md-2.d-flex {
+                gap: 0.25rem !important;
+            }
+            
+            .col-md-2.d-flex .btn {
+                padding: 0.5rem 1rem !important;
+                font-size: 0.875rem !important;
+            }
+        }
+    </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Term dropdown HKX (YYYY-YYYY)

@@ -17,8 +17,10 @@
         }
         .sidebar-normal {
             width: 25%;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
+        }
+        .sidebar-normal:not(.preload) {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sidebar-normal.collapsed {
             width: 0;
@@ -32,9 +34,11 @@
             align-items: flex-start;
             justify-content: center;
             flex-shrink: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             margin-left: 0.5rem;
             margin-right: 0.5rem;
+        }
+        .sidebar-toggle-container:not(.preload) {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sidebar-normal.collapsed + .sidebar-toggle-container {
             margin-left: 0;
@@ -77,16 +81,21 @@
         }
         
         @@media (max-width: 991.98px) {
-            .d-flex {
+            .container-xxl > .d-flex {
                 flex-direction: column;
             }
             .sidebar-normal {
-                width: 100%;
+                width: 100% !important;
                 order: 1;
                 flex: none;
+                opacity: 1 !important;
+                overflow: visible !important;
             }
             .sidebar-normal.collapsed {
-                display: none;
+                display: block !important;
+                width: 100% !important;
+                opacity: 1 !important;
+                overflow: visible !important;
             }
             .sidebar-toggle-container {
                 display: none;
@@ -134,13 +143,28 @@
         document.addEventListener('DOMContentLoaded', function() {
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebar = document.getElementById('sidebar');
+            const toggleContainer = document.getElementById('toggleButtonContainer');
             const mainContent = document.getElementById('mainContent');
+            
+            // Thêm class preload để ngăn animation khi load
+            sidebar.classList.add('preload');
+            if (toggleContainer) {
+                toggleContainer.classList.add('preload');
+            }
             
             // Load saved state from localStorage
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
             if (isCollapsed) {
-                toggleSidebar();
+                sidebar.classList.add('collapsed');
             }
+            
+            // Xóa class preload sau khi load xong để cho phép animation
+            setTimeout(() => {
+                sidebar.classList.remove('preload');
+                if (toggleContainer) {
+                    toggleContainer.classList.remove('preload');
+                }
+            }, 100);
             
             sidebarToggle.addEventListener('click', function() {
                 toggleSidebar();
