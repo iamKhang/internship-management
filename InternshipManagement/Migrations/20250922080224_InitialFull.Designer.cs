@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InternshipManagement.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250922071014_SyncModel_20250922")]
-    partial class SyncModel_20250922
+    [Migration("20250922080224_InitialFull")]
+    partial class InitialFull
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
