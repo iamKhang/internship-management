@@ -74,7 +74,7 @@ namespace InternshipManagement.Data
                     CreatedAt = new DateTime(2024, 9, 25), AcceptedAt = null,
                     KetQua = null, GhiChu = "Sinh viên xin rút đăng ký"
                 }
-                
+
             };
 
             return huongDans;
@@ -944,7 +944,7 @@ namespace InternshipManagement.Data
                 new DeTai { MaDt = "DT399", TenDt = "Ứng dụng học máy phát hiện đạo văn đa ngôn ngữ", KinhPhi = 20, NoiThucTap = "Turnitin VN", MaGv = 80, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 4 },
                 new DeTai { MaDt = "DT400", TenDt = "Tối ưu quy trình trao đổi SV quốc tế dựa trên dữ liệu", KinhPhi = 16, NoiThucTap = "ASEAN University Network", MaGv = 80, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
 
-               
+
                 // ===== GV 81 (CNSH_TP) =====
                 new DeTai { MaDt = "DT401", TenDt = "Chiết xuất hợp chất chống oxy hóa từ trà xanh", KinhPhi = 15, NoiThucTap = "Vinamilk", MaGv = 81, HocKy = 1, NamHoc = "2018-2019", SoLuongToiDa = 2 },
                 new DeTai { MaDt = "DT402", TenDt = "Sản xuất probiotic từ vi khuẩn lactic", KinhPhi = 18, NoiThucTap = "Acecook VN", MaGv = 81, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
@@ -980,7 +980,7 @@ namespace InternshipManagement.Data
                 new DeTai { MaDt = "DT424", TenDt = "Tối ưu hóa quy trình sản xuất bánh mì", KinhPhi = 12, NoiThucTap = "ABC Bakery", MaGv = 85, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 2 },
                 new DeTai { MaDt = "DT425", TenDt = "Phát triển sản phẩm thức uống từ thảo mộc", KinhPhi = 18, NoiThucTap = "Nestlé VN", MaGv = 85, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
 
-   
+
                 // ===== GV 86 (KHCNMT) =====
                 new DeTai { MaDt = "DT426", TenDt = "Đánh giá chất lượng không khí TP.HCM bằng mô hình AQI", KinhPhi = 14, NoiThucTap = "Trung tâm Quan trắc TNMT", MaGv = 86, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 2 },
                 new DeTai { MaDt = "DT427", TenDt = "Ứng dụng IoT giám sát bụi mịn PM2.5", KinhPhi = 18, NoiThucTap = "Sở TNMT TP.HCM", MaGv = 86, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
@@ -1025,13 +1025,111 @@ namespace InternshipManagement.Data
                 new DeTai { MaDt = "DT457", TenDt = "Chatbot hỗ trợ sinh viên (RAG + Vector DB + LangChain)", KinhPhi = 21, NoiThucTap = "Zalo AI", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 4 },
                 new DeTai { MaDt = "DT458", TenDt = "Nền tảng kết nối thực tập & việc làm (Matching + Recommender)", KinhPhi = 18, NoiThucTap = "TopCV", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
                 new DeTai { MaDt = "DT459", TenDt = "Đăng ký học phần chịu tải cao (CQRS + Event Sourcing)", KinhPhi = 23, NoiThucTap = "CMC Global", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 4 },
-                new DeTai { MaDt = "DT460", TenDt = "Điểm danh nhận diện khuôn mặt (Edge AI + ONNX)", KinhPhi = 16, NoiThucTap = "VinAI", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 }
+                new DeTai { MaDt = "DT460", TenDt = "Điểm danh nhận diện khuôn mặt (Edge AI + ONNX)", KinhPhi = 16, NoiThucTap = "VinAI", MaGv = 1, HocKy = 1, NamHoc = "2025-2026", SoLuongToiDa = 3 },
 
+                new DeTai { MaDt = "DT461", TenDt = "Nền tảng quản lý khóa học microservices (.NET + React)", KinhPhi = 22, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 1, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT462", TenDt = "Trợ lý học tập dùng LLM (RAG + Azure OpenAI)", KinhPhi = 24, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 1, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT463", TenDt = "Hệ thống chấm bài lập trình tự động (Online Judge)", KinhPhi = 18, NoiThucTap = "NashTech VN", MaGv = 1, HocKy = 1, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT464", TenDt = "Dashboard IoT giám sát phòng lab (MQTT + Timeseries DB)", KinhPhi = 17, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 1, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT465", TenDt = "Phân tích dữ liệu sinh viên & dự báo rủi ro học tập (BI/ML)", KinhPhi = 20, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 1, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT466", TenDt = "Cổng tuyển sinh số đa kênh (Next.js + Keycloak SSO)", KinhPhi = 19, NoiThucTap = "Axon Active", MaGv = 1, HocKy = 1, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT467", TenDt = "Chatbot hỗ trợ sinh viên (RAG + Vector DB + LangChain)", KinhPhi = 21, NoiThucTap = "Zalo AI", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT468", TenDt = "Kết nối thực tập & việc làm (Matching + Recommender)", KinhPhi = 18, NoiThucTap = "TopCV", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT469", TenDt = "Đăng ký học phần chịu tải cao (CQRS + Event Sourcing)", KinhPhi = 23, NoiThucTap = "CMC Global", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT470", TenDt = "Điểm danh nhận diện khuôn mặt (Edge AI + ONNX)", KinhPhi = 16, NoiThucTap = "VinAI", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT471", TenDt = "Cổng thông tin cựu sinh viên & mentor", KinhPhi = 15, NoiThucTap = "VNU-HCM Alumni", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT472", TenDt = "Chấm thi trắc nghiệm bảo mật (Scan + Anti-cheat)", KinhPhi = 17, NoiThucTap = "HCMUT", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT473", TenDt = "Tối ưu xếp thời khóa biểu (ILP/Heuristic)", KinhPhi = 19, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 2, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT474", TenDt = "E-Library tìm kiếm ngữ nghĩa (Elastic + BERT)", KinhPhi = 20, NoiThucTap = "VietAI", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT475", TenDt = "Hệ thống quản lý thực tập (Portal + Mobile App)", KinhPhi = 18, NoiThucTap = "Be Group", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT476", TenDt = "ETL hồ sơ học tập & kho dữ liệu (DWH)", KinhPhi = 22, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT477", TenDt = "Chấm điểm đồ án bằng rubric (Workflow + Review)", KinhPhi = 17, NoiThucTap = "HCMUS", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT478", TenDt = "Giám sát hạ tầng học tập (K8s + Prometheus + Grafana)", KinhPhi = 21, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT479", TenDt = "Hệ thống phản hồi chất lượng dạy học (Text Mining)", KinhPhi = 16, NoiThucTap = "VNExpress Data Lab", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT480", TenDt = "Proctoring thi trực tuyến (FaceID + Liveness)", KinhPhi = 23, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT481", TenDt = "Cố vấn học tập thông minh (Rule-based + ML)", KinhPhi = 19, NoiThucTap = "HCMUE", MaGv = 1, HocKy = 3, NamHoc = "2019-2020", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT482", TenDt = "Portal tuyển dụng thực tập sinh (ATS + Scoring)", KinhPhi = 18, NoiThucTap = "TopDev", MaGv = 1, HocKy = 1, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT483", TenDt = "Chấm báo cáo trình bày tự động (NLP + Layout)", KinhPhi = 17, NoiThucTap = "VCCorp", MaGv = 1, HocKy = 1, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT484", TenDt = "Quản trị học bổng & xếp hạng (BI Dashboard)", KinhPhi = 20, NoiThucTap = "Vietcombank Digital", MaGv = 1, HocKy = 1, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT485", TenDt = "Tối ưu phòng thi & coi thi (ILP)", KinhPhi = 16, NoiThucTap = "HUST", MaGv = 1, HocKy = 1, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT486", TenDt = "Kho học liệu số & chống đạo văn (NLP)", KinhPhi = 21, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 1, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+
+                new DeTai { MaDt = "DT487", TenDt = "Đăng ký tín chỉ tối ưu (Heuristic + Constraint)", KinhPhi = 19, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 2, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT488", TenDt = "Chợ đề tài đồ án & matching giảng viên–sinh viên", KinhPhi = 18, NoiThucTap = "Axon Active", MaGv = 1, HocKy = 2, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT489", TenDt = "Hồ sơ năng lực sinh viên (e-Portfolio)", KinhPhi = 17, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 2, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT490", TenDt = "SSO toàn hệ thống (Keycloak + OIDC) & phân quyền RBAC", KinhPhi = 22, NoiThucTap = "CMC Global", MaGv = 1, HocKy = 2, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT491", TenDt = "Giám sát lớp học thông minh (IoT + CV)", KinhPhi = 20, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 2, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT492", TenDt = "Tư vấn lộ trình học & chứng chỉ (Recommender)", KinhPhi = 18, NoiThucTap = "Udemy VN", MaGv = 1, HocKy = 2, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT493", TenDt = "Hệ thống đánh giá giảng dạy (Survey + NLP Insight)", KinhPhi = 16, NoiThucTap = "HCMUT", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT494", TenDt = "Data Lake học tập & chuẩn hóa pipeline (Airflow)", KinhPhi = 21, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT495", TenDt = "Giảng đường ảo 3D (WebGL + XR)", KinhPhi = 23, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT496", TenDt = "Chống gian lận thi code (AST + Similarity)", KinhPhi = 17, NoiThucTap = "NashTech VN", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT497", TenDt = "Xếp lịch bảo trì phòng máy & thiết bị (Rule Engine)", KinhPhi = 18, NoiThucTap = "HCMUTE", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT498", TenDt = "Cảnh báo sớm rủi ro học vụ (Early Warning)", KinhPhi = 20, NoiThucTap = "VinBigData", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT499", TenDt = "Cổng minh bạch học phí & hóa đơn (FinTech)", KinhPhi = 19, NoiThucTap = "MoMo", MaGv = 1, HocKy = 3, NamHoc = "2021-2022", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT500", TenDt = "Hồ sơ học tập suốt đời (LRS + xAPI)", KinhPhi = 20, NoiThucTap = "OpenEdu", MaGv = 1, HocKy = 1, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT501", TenDt = "Quản trị đề cương & chuẩn đầu ra (OBE)", KinhPhi = 18, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 1, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT502", TenDt = "Chấm bài luận bằng rubric + gợi ý phản hồi (NLP)", KinhPhi = 19, NoiThucTap = "Zalo AI", MaGv = 1, HocKy = 1, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT503", TenDt = "Giám sát SLA dịch vụ đào tạo (SRE + Grafana)", KinhPhi = 21, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 1, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT504", TenDt = "Phân bổ phòng học tối ưu (ILP + Constraint)", KinhPhi = 17, NoiThucTap = "HCMUT", MaGv = 1, HocKy = 1, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT505", TenDt = "Cổng kiến tập doanh nghiệp (Matching theo kỹ năng)", KinhPhi = 18, NoiThucTap = "TopCV", MaGv = 1, HocKy = 1, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT506", TenDt = "LMS tích hợp proctoring & plagiarism (SDK)", KinhPhi = 22, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT507", TenDt = "Kho học liệu số hóa (OCR + Search)", KinhPhi = 18, NoiThucTap = "VNExpress Data Lab", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT508", TenDt = "Nền tảng MOOC nội bộ (Streaming + CDN)", KinhPhi = 24, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT509", TenDt = "Tối ưu trực nhật & mượn phòng lab (Workflow)", KinhPhi = 16, NoiThucTap = "HCMUS", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT510", TenDt = "Chấm điểm bài thuyết trình (Audio+NLP)", KinhPhi = 19, NoiThucTap = "VCCorp", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT511", TenDt = "Hệ thống lịch thực tập & nhắc việc (Mobile)", KinhPhi = 17, NoiThucTap = "Be Group", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT512", TenDt = "Xếp lịch thi tập trung (Constraint + ILP)", KinhPhi = 20, NoiThucTap = "HUST", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT513", TenDt = "Phân tích năng lực giảng viên (BI + KPI)", KinhPhi = 18, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 2, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT514", TenDt = "Hồ sơ năng lực số (Verifiable Credential)", KinhPhi = 21, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT515", TenDt = "Cố vấn chọn chuyên ngành (Recommender)", KinhPhi = 18, NoiThucTap = "MoMo", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT516", TenDt = "Giám sát lớp học thông minh (Camera + Privacy)", KinhPhi = 20, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT517", TenDt = "Quản trị đề tài tốt nghiệp (Workflow + Rubric)", KinhPhi = 17, NoiThucTap = "HCMUT", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT518", TenDt = "Phân tích phản hồi môn học (Sentiment Mining)", KinhPhi = 16, NoiThucTap = "VCCorp", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT519", TenDt = "Hệ thống KPI thực tập & mentor (BI)", KinhPhi = 19, NoiThucTap = "TopCV", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT520", TenDt = "Data Catalog cho học liệu (OpenMetadata)", KinhPhi = 22, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 3, NamHoc = "2022-2023", SoLuongToiDa = 4 },
+
+                new DeTai { MaDt = "DT521", TenDt = "Quản trị máy chủ dạy–học (K8s + GitOps)", KinhPhi = 21, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT522", TenDt = "Cổng dịch vụ sinh viên một cửa (Portal + Queue)", KinhPhi = 18, NoiThucTap = "CMC Global", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT523", TenDt = "Chấm bài lập trình containerized (Sandbox + Judge)", KinhPhi = 20, NoiThucTap = "NashTech VN", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT524", TenDt = "Giám sát thiết bị phòng lab (IoT + Grafana)", KinhPhi = 17, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT525", TenDt = "Cổng đăng ký xét tốt nghiệp (Workflow + E-Sign)", KinhPhi = 19, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT526", TenDt = "Bản đồ số cơ sở vật chất (GIS + Campus Map)", KinhPhi = 16, NoiThucTap = "HCMUT", MaGv = 1, HocKy = 1, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+
+                new DeTai { MaDt = "DT527", TenDt = "Tối ưu lịch thi vấn đáp (ILP + Timeslot)", KinhPhi = 18, NoiThucTap = "HUST", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT528", TenDt = "Phân tích hiệu quả môn học (Cohort Analysis)", KinhPhi = 19, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT529", TenDt = "Trợ giảng ảo cho lớp lập trình (LLM + Code Review)", KinhPhi = 23, NoiThucTap = "Zalo AI", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT530", TenDt = "Quản trị thực tập theo năng lực (Skill Matrix)", KinhPhi = 17, NoiThucTap = "TopCV", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT531", TenDt = "Đồng bộ dữ liệu đa hệ (ESB + CDC)", KinhPhi = 22, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT532", TenDt = "Theo dõi tiến độ đồ án (Burndown + Kanban)", KinhPhi = 16, NoiThucTap = "Axon Active", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT533", TenDt = "Trung tâm dịch vụ học thuật (ITSM for EDU)", KinhPhi = 20, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 2, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+
+                new DeTai { MaDt = "DT534", TenDt = "Đánh giá chuẩn đầu ra tự động (NLP + Rubric)", KinhPhi = 19, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT535", TenDt = "Kho dữ liệu minh chứng kiểm định (DWH + Lineage)", KinhPhi = 21, NoiThucTap = "VNPT Data", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT536", TenDt = "Hệ thống lịch phòng thông minh (IoT + Booking)", KinhPhi = 18, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT537", TenDt = "Tính điểm rèn luyện bán tự động (Rule + Evidence)", KinhPhi = 17, NoiThucTap = "HCMUE", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT538", TenDt = "Phân tích truy cập bất thường (SIEM + ML)", KinhPhi = 22, NoiThucTap = "VNG Cloud", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT539", TenDt = "Tra cứu văn bản – công văn (OCR + Search)", KinhPhi = 16, NoiThucTap = "VCCorp", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT540", TenDt = "Cổng workshop & seminar (Registration + Ticket)", KinhPhi = 18, NoiThucTap = "Be Group", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT541", TenDt = "CI/CD cho hạ tầng dạy–học (ArgoCD + Helm)", KinhPhi = 23, NoiThucTap = "FPT Software", MaGv = 1, HocKy = 3, NamHoc = "2023-2024", SoLuongToiDa = 4 },
+
+                new DeTai { MaDt = "DT542", TenDt = "Hệ thống hỏi đáp học thuật (RAG + Retrieval Filter)", KinhPhi = 22, NoiThucTap = "Zalo AI", MaGv = 1, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 4 },
+                new DeTai { MaDt = "DT543", TenDt = "Quản trị lịch cố vấn học tập (Advisor Portal)", KinhPhi = 17, NoiThucTap = "VNU-HCM", MaGv = 1, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT544", TenDt = "Cảnh báo nợ học phí & nhắc hạn (FinOps)", KinhPhi = 18, NoiThucTap = "Vietcombank Digital", MaGv = 1, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT545", TenDt = "Đề xuất lộ trình chứng chỉ CNTT (Career Path)", KinhPhi = 19, NoiThucTap = "TopCV", MaGv = 1, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 3 },
+                new DeTai { MaDt = "DT546", TenDt = "Theo dõi chất lượng mạng lớp học (AP + NQI)", KinhPhi = 20, NoiThucTap = "Viettel Solutions", MaGv = 1, HocKy = 1, NamHoc = "2024-2025", SoLuongToiDa = 4 }
 
             );
 
 
-                     // ===== HUONG DAN (Random seed với ràng buộc chặt chẽ) =====
+            // ===== HUONG DAN (Random seed với ràng buộc chặt chẽ) =====
             var huongDanData = GenerateHuongDanData();
             mb.Entity<HuongDan>().HasData(huongDanData.ToArray());
 
