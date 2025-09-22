@@ -173,6 +173,7 @@ class SearchableDropdown {
     }
     
     async updateOptions(data) {
+        console.log('updateOptions called with data:', data);
         // Clear current options
         this.optionsContainer.innerHTML = '';
 
@@ -188,7 +189,9 @@ class SearchableDropdown {
 
         // Add new options
         if (data && data.length > 0) {
-            data.forEach(option => {
+            console.log('Adding options, count:', data.length);
+            data.forEach((option, index) => {
+                console.log(`Processing option ${index}:`, option);
                 const opt = document.createElement('a');
                 opt.className = 'dropdown-item';
                 opt.href = '#';
@@ -201,6 +204,7 @@ class SearchableDropdown {
                     opt.setAttribute('data-value', value);
                     opt.textContent = text;
                     this.optionsContainer.appendChild(opt);
+                    console.log(`Added formatted option: ${text} (${value})`);
                     return;
                 }
 
@@ -238,8 +242,10 @@ class SearchableDropdown {
                 opt.setAttribute('data-value', value);
                 opt.textContent = text;
                 this.optionsContainer.appendChild(opt);
+                console.log(`Added option: ${text} (${value})`);
             });
         } else {
+            console.log('No data to add, showing "Không tìm thấy kết quả"');
             const noResultOption = document.createElement('a');
             noResultOption.className = 'dropdown-item text-muted';
             noResultOption.href = '#';

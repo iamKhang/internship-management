@@ -10,17 +10,113 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link href="https://cdn.syncfusion.com/ej2/29.1.33/bootstrap.css" rel="stylesheet" />
+    <style>
+        .container-xxl {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        .sidebar-normal {
+            width: 25%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+        }
+        .sidebar-normal.collapsed {
+            width: 0;
+            overflow: hidden;
+            opacity: 0;
+        }
+        
+        .sidebar-toggle-container {
+            width: 20px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+        }
+        .sidebar-normal.collapsed + .sidebar-toggle-container {
+            margin-left: 0;
+        }
+        
+        .main-content {
+            flex: 1;
+            min-width: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Sidebar Toggle Button */
+        .sidebar-toggle-btn {
+            border-radius: 0 8px 8px 0;
+            width: 20px;
+            height: 60px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #3338A0;
+            border: none;
+            color: white;
+            box-shadow: 2px 0 8px rgba(51,56,160,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.9;
+        }
+        .sidebar-toggle-btn:hover {
+            background: #2a2d85;
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 2px 0 12px rgba(51,56,160,0.4);
+        }
+        .sidebar-toggle-btn:hover i {
+            color: white;
+        }
+        .sidebar-toggle-btn i {
+            font-size: 12px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        @@media (max-width: 991.98px) {
+            .d-flex {
+                flex-direction: column;
+            }
+            .sidebar-normal {
+                width: 100%;
+                order: 1;
+                flex: none;
+            }
+            .sidebar-normal.collapsed {
+                display: none;
+            }
+            .sidebar-toggle-container {
+                display: none;
+            }
+            .main-content {
+                width: 100%;
+                order: 2;
+                flex: none;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-light">
     <partial name="_Header" />
 
     <div class="container-xxl my-4">
-        <div class="row">
-            <aside class="col-12 col-lg-3 mb-4">
+        <div class="d-flex position-relative" style="max-width: 100%; overflow-x: hidden;">
+            <aside class="sidebar-normal" id="sidebar">
                 <partial name="_Sidebar" />
             </aside>
-            <main class="col-12 col-lg-9">
+            
+            <!-- Sidebar Toggle Button -->
+            <div class="sidebar-toggle-container" id="toggleButtonContainer">
+                <button class="btn btn-sm sidebar-toggle-btn" type="button" id="sidebarToggle" title="Thu nhỏ/mở rộng sidebar">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+            </div>
+            
+            <main class="main-content" id="mainContent">
                 @RenderBody()
             </main>
         </div>
@@ -33,7 +129,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrender/1.0.0/jsrender.min.js"></script>
     <script src="https://cdn.syncfusion.com/ej2/29.1.33/dist/ej2.min.js"></script>
     <ejs-scripts></ejs-scripts>
-ß    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            // Load saved state from localStorage
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                toggleSidebar();
+            }
+            
+            sidebarToggle.addEventListener('click', function() {
+                toggleSidebar();
+                // Save state to localStorage
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
+            
+            function toggleSidebar() {
+                sidebar.classList.toggle('collapsed');
+                
+                // Update button icon
+                const icon = sidebarToggle.querySelector('i');
+                if (sidebar.classList.contains('collapsed')) {
+                    icon.className = 'bi bi-chevron-right';
+                    sidebarToggle.title = 'Mở rộng sidebar';
+                } else {
+                    icon.className = 'bi bi-chevron-left';
+                    sidebarToggle.title = 'Thu nhỏ sidebar';
+                }
+            }
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 

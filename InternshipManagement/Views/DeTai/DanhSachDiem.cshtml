@@ -14,7 +14,7 @@
         <div class="card-body">
             <form method="get" id="filterForm" class="row g-3">
                 @Html.AntiForgeryToken()
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">Giảng viên</label>
                     <div class="searchable-dropdown" id="filterGiangVienDropdown">
                         <input type="hidden" asp-for="Filter.MaGv" />
@@ -45,7 +45,7 @@
                     <input type="hidden" name="hocKy" value="" />
                     <input type="hidden" name="namHoc" value="" />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-5">
                     <label class="form-label">Đề tài</label>
                     <div class="searchable-dropdown" id="filterDeTaiDropdown">
                         <input type="hidden" asp-for="Filter.MaDt" />
@@ -61,7 +61,22 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+
+
+                <div class="col-md-4">
+                    <label class="form-label">Sinh viên</label>
+                    <div class="searchable-dropdown" id="filterSinhVienDropdown">
+                        <input type="hidden" asp-for="Filter.MaSv" />
+                        <input type="text" class="form-control" placeholder="Tìm kiếm sinh viên..." autocomplete="off">
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-options">
+                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
                     <label class="form-label">Trạng thái</label>
                     <div class="searchable-dropdown" id="filterTrangThaiDropdown">
                         <input type="hidden" asp-for="Filter.TrangThai" />
@@ -78,21 +93,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">Sinh viên</label>
-                    <div class="searchable-dropdown" id="filterSinhVienDropdown">
-                        <input type="hidden" asp-for="Filter.MaSv" />
-                        <input type="text" class="form-control" placeholder="Tìm kiếm sinh viên..." autocomplete="off">
-                        <i class="bi bi-chevron-down dropdown-arrow"></i>
-                        <div class="dropdown-menu">
-                            <div class="dropdown-options">
-                                <a class="dropdown-item" href="#" data-value="">-- Tất cả --</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-12 d-flex justify-content-end gap-2">
+                <div class="col-md-4 d-flex justify-content-end align-items-end gap-2">
                     <button type="submit" form="filterForm" class="btn btn-primary d-flex align-items-center px-3 py-2">
                         <i class="bi bi-funnel me-1"></i> Lọc
                     </button>
@@ -100,6 +101,8 @@
                         <i class="bi-arrow-clockwise me-1"></i> Hủy
                     </a>
                 </div>
+
+
             </form>
         </div>
     </div>
@@ -149,10 +152,11 @@
                     <e-grid-column field="HoTenGv" headerText="Giảng viên" width="180"></e-grid-column>
                     <e-grid-column field="HocKyNamHoc" headerText="Học kỳ" width="120"
                         textAlign="Center"></e-grid-column>
-                    <e-grid-column field="TrangThaiText" headerText="Trạng thái" width="130" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="TrangThaiText" headerText="Trạng thái" width="130"
+                        textAlign="Center"></e-grid-column>
                     <e-grid-column field="KetQua" headerText="Điểm" width="80" textAlign="Center"></e-grid-column>
-                    <e-grid-column headerText="Cập nhật điểm" width="150" textAlign="Center"></e-grid-column>
-                    <e-grid-column headerText="Cập nhật trạng thái & điểm" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column headerText="Cập nhật trạng thái & điểm" width="200"
+                        textAlign="Center"></e-grid-column>
                 </e-grid-columns>
             </ejs-grid>
         </div>
@@ -194,29 +198,6 @@
                     }
                 }
 
-                // Cập nhật điểm column: update or locked
-                if (!col.field && col.headerText === 'Cập nhật điểm') {
-                    var can = (data.TrangThai === 1 || data.TrangThai === 2 || data.TrangThai === 3);
-                    args.cell.innerHTML = '';
-                    var wrap = document.createElement('div');
-                    wrap.className = 'd-flex gap-1 justify-content-center';
-                    var btn = document.createElement('button');
-                    btn.type = 'button';
-                    if (can) {
-                        btn.className = 'btn btn-sm btn-primary text-white';
-                        btn.title = 'Nhập/Cập nhật điểm';
-                        btn.addEventListener('click', function () {
-                            openDiemDialog(data.MaGv, data.MaSv, data.MaDt, (data.KetQua == null ? null : data.KetQua), data.HoTenSv, data.TenDt, data.HoTenGv);
-                        });
-                    } else {
-                        btn.className = 'btn btn-sm btn-secondary';
-                        btn.disabled = true;
-                        btn.title = 'Không thể cập nhật điểm';
-                    }
-                    btn.innerHTML = '<i class="bi bi-pencil-square"></i>';
-                    wrap.appendChild(btn);
-                    args.cell.appendChild(wrap);
-                }
 
                 // Cập nhật trạng thái & điểm column: Admin only
                 if (!col.field && col.headerText === 'Cập nhật trạng thái & điểm') {
@@ -245,7 +226,10 @@
 
 <div id="hiddenDialogs" class="d-none">
     @* Syncfusion Dialog: Cập nhật điểm *@
-    <ejs-dialog id="diemDialog" header="Nhập/Cập nhật điểm" isModal="true" showCloseIcon="true" width="500px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+    <ejs-dialog id="diemDialog" header="Nhập/Cập nhật điểm" isModal="true" showCloseIcon="true" width="500px"
+        height="auto"
+        animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }"
+        visible="false">
         <e-content-template>
             <form method="post" asp-action="CapNhatDiemNhanh" id="capNhatDiemForm">
                 @Html.AntiForgeryToken()
@@ -259,7 +243,8 @@
 
                 <div class="mb-3">
                     <label class="form-label required">Điểm</label>
-                    <input type="number" class="form-control" name="DiemMoi" id="dlgDiemMoi" step="0.01" min="0" max="10" required />
+                    <input type="number" class="form-control" name="DiemMoi" id="dlgDiemMoi" step="0.01" min="0"
+                        max="10" required />
                 </div>
 
                 <div class="mb-3">
@@ -268,7 +253,8 @@
                 </div>
 
                 <div class="d-flex justify-content-end gap-2 mt-2">
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.closeDiemDialog()">Hủy</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                        onclick="window.closeDiemDialog()">Hủy</button>
                     <button type="button" class="btn btn-primary" onclick="window.submitDiemDialog()">Lưu</button>
                 </div>
             </form>
@@ -276,7 +262,10 @@
     </ejs-dialog>
 
     @* Syncfusion Dialog: Cập nhật trạng thái & điểm *@
-    <ejs-dialog id="trangThaiVaDiemDialog" header="Cập nhật trạng thái & điểm" isModal="true" showCloseIcon="true" width="600px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+    <ejs-dialog id="trangThaiVaDiemDialog" header="Cập nhật trạng thái & điểm" isModal="true" showCloseIcon="true"
+        width="600px" height="auto"
+        animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }"
+        visible="false">
         <e-content-template>
             <form method="post" asp-action="CapNhatTrangThaiVaDiem" id="capNhatTrangThaiVaDiemForm">
                 @Html.AntiForgeryToken()
@@ -307,8 +296,10 @@
 
                 <div class="mb-3" id="dlgTrangThaiDiemContainer">
                     <label class="form-label">Điểm</label>
-                    <input type="number" class="form-control" name="DiemMoi" id="dlgTrangThaiDiemMoi" step="0.01" min="0" max="10" />
-                    <small class="form-text text-muted" id="dlgTrangThaiDiemHelp">Bắt buộc khi chuyển sang "Đã hoàn thành"</small>
+                    <input type="number" class="form-control" name="DiemMoi" id="dlgTrangThaiDiemMoi" step="0.01"
+                        min="0" max="10" />
+                    <small class="form-text text-muted" id="dlgTrangThaiDiemHelp">Bắt buộc khi chuyển sang "Đã hoàn
+                        thành"</small>
                 </div>
 
                 <div class="mb-3">
@@ -317,21 +308,27 @@
                 </div>
 
                 <div class="d-flex justify-content-end gap-2 mt-2">
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.closeTrangThaiVaDiemDialog()">Hủy</button>
-                    <button type="button" class="btn btn-warning" onclick="window.submitTrangThaiVaDiemDialog()">Cập nhật</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                        onclick="window.closeTrangThaiVaDiemDialog()">Hủy</button>
+                    <button type="button" class="btn btn-warning" onclick="window.submitTrangThaiVaDiemDialog()">Cập
+                        nhật</button>
                 </div>
             </form>
         </e-content-template>
     </ejs-dialog>
 
     @* Confirmation Dialog *@
-    <ejs-dialog id="confirmationDialog" header="Xác nhận" isModal="true" showCloseIcon="true" width="500px" height="auto" animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }" visible="false">
+    <ejs-dialog id="confirmationDialog" header="Xác nhận" isModal="true" showCloseIcon="true" width="500px"
+        height="auto"
+        animationSettings="new Syncfusion.EJ2.Popups.DialogAnimationSettings { Effect = Syncfusion.EJ2.Popups.DialogEffect.Zoom }"
+        visible="false">
         <e-content-template>
             <div class="mb-3">
                 <div id="confirmationMessage" class="alert alert-warning p-3"></div>
             </div>
             <div class="d-flex justify-content-end gap-2">
-                <button type="button" class="btn btn-outline-secondary" onclick="window.closeConfirmationDialog()">Hủy</button>
+                <button type="button" class="btn btn-outline-secondary"
+                    onclick="window.closeConfirmationDialog()">Hủy</button>
                 <button type="button" class="btn btn-danger" onclick="window.confirmUpdate()">Xác nhận</button>
             </div>
         </e-content-template>
@@ -404,7 +401,7 @@
                 updateFilterDeTaiOptions(selectedGvId);
             });
             // Initialize display
-            (function initTermDisplay(){
+            (function initTermDisplay() {
                 const input = termEl?.querySelector('input.form-control');
                 const hkHidden = document.querySelector('input[name="hocKy"]');
                 const nhHidden = document.querySelector('input[name="namHoc"]');
@@ -579,14 +576,14 @@
 
                 var dlg = document.getElementById('trangThaiVaDiemDialog').ej2_instances?.[0];
                 if (dlg) dlg.show();
-                
+
                 // Add event listener for status change
-                document.getElementById('dlgTrangThaiMoi').addEventListener('change', function() {
+                document.getElementById('dlgTrangThaiMoi').addEventListener('change', function () {
                     var selectedStatus = parseInt(this.value);
                     var diemContainer = document.getElementById('dlgTrangThaiDiemContainer');
                     var diemInput = document.getElementById('dlgTrangThaiDiemMoi');
                     var diemHelp = document.getElementById('dlgTrangThaiDiemHelp');
-                    
+
                     if (selectedStatus === 3) {
                         // Completed - show and require score input
                         diemContainer.style.display = 'block';
@@ -601,7 +598,7 @@
                         diemInput.value = ''; // Clear the value when hidden
                     }
                 });
-                
+
                 // Trigger initial validation
                 document.getElementById('dlgTrangThaiMoi').dispatchEvent(new Event('change'));
             } catch (e) {
@@ -618,11 +615,11 @@
             try {
                 var form = document.getElementById('capNhatTrangThaiVaDiemForm');
                 if (!form) return;
-                
+
                 // Client-side validation
                 var trangThaiMoi = parseInt(document.getElementById('dlgTrangThaiMoi').value);
                 var diemContainer = document.getElementById('dlgTrangThaiDiemContainer');
-                
+
                 // Nếu chuyển sang "Đã hoàn thành" mà không có điểm thì báo lỗi
                 if (trangThaiMoi === 3) {
                     var diemMoi = document.getElementById('dlgTrangThaiDiemMoi').value;
@@ -631,11 +628,11 @@
                         return;
                     }
                 }
-                
+
                 const payload = new FormData(form);
                 const url = '@Url.Action("CapNhatTrangThaiVaDiem", "DeTai")';
                 const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
-                
+
                 const res = await fetch(url, {
                     method: 'POST',
                     body: payload,
@@ -686,10 +683,10 @@
         window.confirmUpdate = async function () {
             try {
                 if (!window.pendingUpdateData) return;
-                
+
                 const url = '@Url.Action("ConfirmCapNhatTrangThaiVaXoaDiem", "DeTai")';
                 const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-                
+
                 // Create FormData instead of JSON to handle anti-forgery token properly
                 const formData = new FormData();
                 formData.append('MaGv', window.pendingUpdateData.maGv);
@@ -702,7 +699,7 @@
                 if (token) {
                     formData.append('__RequestVerificationToken', token);
                 }
-                
+
                 const res = await fetch(url, {
                     method: 'POST',
                     body: formData,
@@ -743,11 +740,11 @@
 
                 // Helper to apply options to dropdown
                 async function applyDeTaiOptions(arr) {
-                    const options = [ ...arr];
+                    const options = [...arr];
                     // Update the currentOptions for the search function
                     deTaiDd.currentOptions = options;
                     await deTaiDd.updateOptions(options);
-                    
+
                     // Always reset to "-- Tất cả --" when loading new options
                     const deTaiInput = deTaiEl.querySelector('input.form-control');
                     const deTaiHidden = deTaiEl.querySelector('input[type="hidden"]');
@@ -768,7 +765,7 @@
                 const params = new URLSearchParams({ maGv: String(maGv) });
                 if (hk) params.append('hocKy', hk);
                 if (nh) params.append('namHoc', nh);
-                
+
                 const urls = [
                     `/DeTai/GetTopicsByLecturer?${params.toString()}`
                 ];
@@ -783,22 +780,23 @@
                         if (!text) continue;
                         let parsed = null;
                         if (ct.includes('application/json')) parsed = JSON.parse(text);
-                        else { try { parsed = JSON.parse(text); } catch { parsed = null; }
+                        else {
+                            try { parsed = JSON.parse(text); } catch { parsed = null; }
                         }
                         if (!parsed) continue;
                         // Both shapes supported: {success,data} or plain array
                         data = Array.isArray(parsed) ? parsed : (parsed.data || []);
                         break;
-                    } catch {}
+                    } catch { }
                 }
 
                 if (Array.isArray(data)) {
                     // Normalize to {value,text} and trim values
-                    const normalized = data.map(x => ({ 
-                        value: String(x.value ?? x.Value ?? '').trim(), 
-                        text: String(x.text ?? x.Text ?? '').trim() 
+                    const normalized = data.map(x => ({
+                        value: String(x.value ?? x.Value ?? '').trim(),
+                        text: String(x.text ?? x.Text ?? '').trim()
                     }));
-                    
+
                     // Apply new options (selection will be cleared by applyDeTaiOptions)
                     await applyDeTaiOptions(normalized);
                 } else {
@@ -896,6 +894,17 @@
                 searchUrl: null,
                 allowClear: true
             });
+
+            // Set up search function for sinh viên dropdown
+            filterSinhVienDd.currentOptions = [];
+            filterSinhVienDd.searchData = async function (query) {
+                const q = (query || '').toLowerCase();
+                const currentOptions = filterSinhVienDd.currentOptions || [];
+                const filtered = currentOptions.filter(o => !q || o.text.toLowerCase().includes(q));
+                await filterSinhVienDd.updateOptions(filtered);
+            };
+            filterSinhVienDd.searchData('');
+
             filterSinhVienEl.searchableDropdownInstance = filterSinhVienDd;
 
             // Filter Trạng thái dropdown
@@ -924,7 +933,7 @@
                     input.value = '-- Tất cả --';
                 }
             }
-            
+
             function installComboBehavior(container, hiddenSelector) {
                 const input = container?.querySelector('input.form-control');
                 const hidden = hiddenSelector ? document.querySelector(hiddenSelector) : container?.querySelector('input[type="hidden"]');
@@ -991,7 +1000,7 @@
             setAllIfEmpty(filterDeTaiEl);
             setAllIfEmpty(filterTrangThaiEl);
             setAllIfEmpty(filterSinhVienEl);
-            
+
             installComboBehavior(filterGiangVienEl);
             installComboBehavior(filterDeTaiEl);
             installComboBehavior(filterTrangThaiEl);
@@ -1037,24 +1046,34 @@
                     const maGv = filterGiangVienEl.querySelector('input[type="hidden"]')?.value || '';
 
                     if (!maDt || !maGv) {
-                        await svDd.updateOptions([{ value: '', text: '-- Tất cả --' }]);
+                        svDd.currentOptions = [];
+                        await svDd.searchData('');
                         if (input) input.value = '-- Tất cả --';
                         if (hidden) hidden.value = '';
                         return;
                     }
 
                     const url = `/DeTai/GetStudentsByTopic?maGv=${encodeURIComponent(maGv)}&maDt=${encodeURIComponent(maDt)}`;
+                    console.log('Fetching URL:', url);
+                    console.log('maGv:', maGv, 'maDt:', maDt);
                     const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                     if (!res.ok) {
-                        await svDd.updateOptions([{ value: '', text: '-- Tất cả --' }]);
+                        svDd.currentOptions = [];
+                        await svDd.searchData('');
                         if (input) input.value = '-- Tất cả --';
                         if (hidden) hidden.value = '';
                         return;
                     }
                     const data = await res.json();
+                    console.log('Students data received:', data);
                     const arr = Array.isArray(data) ? data : (data?.data || data || []);
-                    const options = [{ value: '', text: '-- Tất cả --' }, ...arr.map(x => ({ value: x.value, text: x.text }))];
-                    await svDd.updateOptions(options);
+                    const options = arr.map(x => ({ value: x.value, text: x.text }));
+                    console.log('Options to update:', options);
+
+                    // Store options and trigger searchData to properly update and show dropdown
+                    svDd.currentOptions = options;
+                    await svDd.searchData('');
+                    console.log('Options updated successfully');
 
                     // Restore selected MaSv if present
                     const svHiddenVal = hidden?.value || '';

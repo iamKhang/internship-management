@@ -1,6 +1,7 @@
 ﻿/* ============ TOKENS ============ */
 :root {
     --primary: #3338A0; /* màu chủ đạo */
+    --bs-primary: #3338A0; /* Bootstrap primary color */
     --bs-primary-rgb: 51, 56, 160;
     --primary-contrast: #fff;
     --success: #168F5A;
