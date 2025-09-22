@@ -161,7 +161,7 @@ namespace InternshipManagement.Repositories.Implementations
                         TenKhoa = d.GiangVien != null && d.GiangVien.Khoa != null ? d.GiangVien.Khoa.TenKhoa ?? "" : ""
                     },
                     SoDangKy = d.HuongDans.Count,
-                    SoChapNhan = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress),
+                    SoChapNhan = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress || h.TrangThai == HuongDanStatus.Completed),
                     IsFull = d.HuongDans.Count(h => h.TrangThai == HuongDanStatus.Accepted || h.TrangThai == HuongDanStatus.InProgress) >= d.SoLuongToiDa
                 })
                 .ToListAsync();

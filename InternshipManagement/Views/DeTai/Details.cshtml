@@ -176,13 +176,6 @@
             <span class="align-middle p-1">Chưa tới đợt đăng ký</span>
         </div>
     }
-    else if (today > regEnd)
-    {
-        <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
-            <i class="bi bi-info-circle align-middle p-1"></i>
-            <span class="align-middle p-1">Đã qua lượt đăng ký</span>
-        </div>
-    }
     else
     {
         // Quy ước: ThisTrangThai == -1 => đã có đề tài khác trong kỳ
@@ -241,6 +234,19 @@
             <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
                 <i class="bi bi-info-circle align-middle p-1"></i>
                 <span class="align-middle p-1">Bạn đã hủy đăng ký trước đó</span>
+            </div>
+            <form asp-controller="DeTai" asp-action="DangKy" method="post" class="d-inline ms-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="maDt" value="@maDt" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" class="btn btn-sm btn-outline-primary mt-1">Đăng ký lại</button>
+            </form>
+        }
+        else if (today > regEnd)
+        {
+            <div class="d-inline-flex align-items-center mt-1 text-muted gap-2 lh-1">
+                <i class="bi bi-info-circle align-middle p-1"></i>
+                <span class="align-middle p-1">Đã qua lượt đăng ký</span>
             </div>
         }
     }
